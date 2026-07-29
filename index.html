@@ -1,1 +1,38 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Golf Score</title>
+  <meta name="theme-color" content="#1a3a2a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Golf Score" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="canonical" href="./golf-score.html" />
+  <!-- Doorverwijzing zonder JavaScript -->
+  <meta http-equiv="refresh" content="0; url=./golf-score.html" />
+  <style>
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+           background:#1a3a2a; color:#e8e8e8; font-family:system-ui,-apple-system,sans-serif; }
+    a { color:#c9a84c; }
+  </style>
+  <script>
+    // Registreer de service worker al hier, zodat installatie/offline-gebruik
+    // ook werkt als de gebruiker precies op index.html landt vóór de doorverwijzing.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .catch(() => { /* service worker niet beschikbaar (bijv. file://) */ });
+    }
+    // Vervang de historie-ingang, zodat "terug" niet in een lus belandt.
+    location.replace('./golf-score.html');
+  </script>
+</head>
+<body>
+  <p>Doorsturen naar <a href="./golf-score.html">golf-score.html</a>&hellip;</p>
+</body>
+</html>
 
