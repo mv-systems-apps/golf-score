@@ -11,7 +11,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-ce3f781a408a';
+const CACHE_VERSION = 'golf-score-fce4af6be832';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
@@ -20,6 +20,9 @@ const APP_FILES = [
   './golf-score.html',
   './manifest.json',
   './icon.svg',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png',
 ];
 
 self.addEventListener('install', e => {
@@ -61,4 +64,3 @@ self.addEventListener('fetch', e => {
     })
   );
 });
-
