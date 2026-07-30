@@ -144,10 +144,6 @@
       border-bottom: 2px solid var(--gold);
       position: sticky; top: 0; z-index: 100;
     }
-    .hdr-top-row {
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    header h1 { font-size:20px; font-weight: 800; color: var(--gold); line-height: 1; }
     .hdr-tee-row { display: flex; align-items: center; gap: 8px; }
     .hdr-chcp    { font-size:24px; font-weight: 800; color: var(--cream); }
     .hdr-gender  { font-size:24px; font-weight: 800; color: var(--cream); }
@@ -399,8 +395,7 @@
     .sum-table  { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     #sumRows { display: flex; flex-direction: column; gap: 5px; }
     .sum-th, .sum-tr { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 56px 1fr 56px 1fr 1fr 1fr; font-size:24px; align-items: center; column-gap: 0; min-height: 47px; }
-    .sum-th { padding: 9px 8px; align-items: center; }
-    .sum-th { background: rgba(0,0,0,.25); color: var(--muted); font-size:13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
+    .sum-th { padding: 9px 8px; align-items: center; background: rgba(0,0,0,.25); color: var(--muted); font-size:13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
     .sum-th span, .sum-tr span { text-align: center; }
     .sum-th > span, .sum-tr > span:not(.sum-spacer) { display: flex; align-items: center; justify-content: center; }
     .sum-spacer { display: block; }
@@ -1074,9 +1069,11 @@ if (document.readyState === 'loading') {
 } else {
   MODAL_IDS.forEach(_registerModalObserver);
 }
-// shareModal wordt pas dynamisch aangemaakt op het moment dat 'ie nodig is — dan moet
-// de observer alsnog (opnieuw) geregistreerd worden, vandaar deze herbruikbare check
-// vanuit showShareFallback() zelf (zie die functie).
+// shareModal wordt aangemaakt-en-verwijderd i.p.v. verborgen/getoond (zie
+// showShareFallback()/closeShareModal()), en loopt daarom bewust NIET via
+// _registerModalObserver — dat mechanisme verwacht een blijvend element waarvan alleen
+// de 'hidden'-klasse wisselt. shareModal beheert zijn eigen plek op _modalStack en roept
+// _scheduleHistoryFlush() rechtstreeks aan.
 
 window.addEventListener('popstate', () => {
   _nativeBackPending = true;
@@ -3629,6 +3626,12 @@ function renderPlayerStats() {
     const labelY3 = tickBottom3 + labelYoff3;
     const h3 = labelY3 + 10;
     const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
+    // Let op: er zijn in dit bestand meerdere gelijksoortig genoemde fmt*-functies
+    // (fmtV3 hier, fmtV bij de weekdag-kaart, fmtAxis/fmtDev bij de par-kaart) — elk lokaal
+    // aan zijn eigen grafiek, met net een andere regel (compact voor assen, altijd 1
+    // decimaal voor kolommen). Hergebruik nooit een fmt*-functie uit een andere kaart:
+    // dat veroorzaakte al eens een bug (fmtDev werd per ongeluk zowel voor de as als de
+    // kolom gebruikt, met als gevolg dat de as ineens onnodig '+1.0' i.p.v. '+1' toonde).
     const fmtV3 = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
     const ticks3 = [];
     for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
@@ -5303,7 +5306,7 @@ function loadSaved() {
   }
 
   const makeCard = (r, i, short = false, expandedFromShort = false) => {
-    const club = escapeHtml(r.club || 'Onbekende club');
+    const clubSafe = escapeHtml(r.club || 'Onbekende club');
     const playerSafe = escapeHtml(r.player || '—');
     const trackSafe = escapeHtml(r.track || '');
     const playedCount = r.playedCount ?? r.holes.filter(h=>h.score!==null).length;
@@ -5412,7 +5415,7 @@ function loadSaved() {
         const hcpFrag = (oldVal != null && isFinite(oldVal)) ? ` · Hcp ${fmt1(oldVal)}` : '';
         return `<div class="saved-meta">${nameSpan}${hcpFrag}${playerNumLabel}</div>`;
       })()}
-      <div class="saved-meta">${club}</div>
+      <div class="saved-meta">${clubSafe}</div>
       <div class="saved-meta">${trackSafe}${par != null ? ` · Par ${par}` : ''} · ${holesCount}h</div>
       <div class="saved-meta">${(r.gender || '').charAt(0)} · ${r.tee || '—'} · Chcp ${chcp ?? '—'}</div>
       ${strLine}
