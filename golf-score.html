@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -986,6 +985,114 @@ function setRealVH() {
 }
 setRealVH();
 window.addEventListener('resize', setRealVH);
+
+// ══ ANDROID TERUG-KNOP VOOR MODALS ══════════════════════════════════════
+// In plaats van elke open/sluit-plek van elke modal los te moeten aanpassen (er zijn
+// tientallen sluit-plekken verspreid over de app), houdt dit een generieke stack bij
+// via een MutationObserver per modal: die reageert automatisch op élke wijziging van
+// de 'hidden'-klasse, ongeacht welke functie dat veroorzaakte. Bij een Android-terug
+// (systeemknop of swipe) sluit dit de bovenste modal op de stack — en gebruikt daarbij,
+// waar beschikbaar, de eigen sluitfunctie van die modal (zodat bijvoorbeeld de
+// onopgeslagen-wijzigingen-waarschuwing van de club/baan-editor gewoon blijft werken
+// i.p.v. straal te sluiten). Modals die zelf geen aparte sluitfunctie hebben (kort-
+// levende bevestigingsmodals zoals de gevaar-modal) vallen terug op direct verbergen.
+const MODAL_CLOSERS = {
+  valueEditModal: closeValueEditModal,
+  choiceEditModal: closeChoiceEditModal,
+  roundLimitModal: closeRoundLimitModal,
+  confirmModal: closeConfirmModal,
+  closeEditorWarningModal: closeEditorWarningModal,
+  clubSearchModalOverlay: closeClubSearchModal,
+  clubEditorOverlay: closeClubEditor,
+  courseEditorOverlay: closeCourseEditor,
+  roundInfoModal: closeRoundInfoModal,
+  roundResultModal: closeRoundResultModal,
+  player2SettingsModal: closePlayer2Modal,
+  exportModal: closeExportModal,
+  shareModal: closeShareModal,
+  // resetAllModal (gevaar-modal) en shareModal (dynamisch aangemaakt) hebben geen
+  // eigen benoemde sluitfunctie — vallen terug op direct verbergen, wat voor die twee
+  // ook precies correct is (geen onopgeslagen-wijzigingen-risico).
+};
+const MODAL_IDS = [
+  'valueEditModal', 'choiceEditModal', 'roundLimitModal', 'confirmModal', 'resetAllModal',
+  'closeEditorWarningModal', 'clubSearchModalOverlay', 'clubEditorOverlay', 'courseEditorOverlay',
+  'roundInfoModal', 'roundResultModal', 'player2SettingsModal', 'exportModal',
+];
+let _modalStack = [];              // welke modals staan nu open, in volgorde van openen
+let _historyDepth = 0;             // eigen boekhouding: hoeveel history-entries wij hebben gepusht
+let _nativeBackPending = false;    // de browser deed net al 1 stap terug (popstate), nog niet verrekend
+let _flushQueued = false;
+
+// Verzamelt alle open/sluit-reacties die in dezelfde synchrone cyclus plaatsvinden (bv.
+// 'sluit confirmModal, open meteen roundInfoModal erna') en berekent pas ná die cyclus
+// het NETTO aantal geschiedenis-stappen. Voorkomt zo een race: history.back() voert zijn
+// navigatie asynchroon uit, dus los history.back()+pushState() na elkaar aanroepen kan
+// de browser laten terugspringen naar een positie die inmiddels alweer is ingehaald.
+function _scheduleHistoryFlush() {
+  if (_flushQueued) return;
+  _flushQueued = true;
+  queueMicrotask(() => {
+    _flushQueued = false;
+    const nativeAdjustment = _nativeBackPending ? -1 : 0;
+    _nativeBackPending = false;
+    const effectiveCurrent = _historyDepth + nativeAdjustment;
+    const target = _modalStack.length;
+    const delta = target - effectiveCurrent;
+    if (delta > 0) {
+      for (let i = 0; i < delta; i++) history.pushState({}, '');
+    } else if (delta < 0) {
+      history.go(delta);
+    }
+    _historyDepth = target;
+  });
+}
+
+function _registerModalObserver(id) {
+  const el = document.getElementById(id);
+  if (!el || el._modalObserved) return;
+  el._modalObserved = true;
+  new MutationObserver(() => {
+    const isOpen = !el.classList.contains('hidden');
+    const idx = _modalStack.indexOf(id);
+    if (isOpen && idx === -1) {
+      _modalStack.push(id);
+      _scheduleHistoryFlush();
+    } else if (!isOpen && idx !== -1) {
+      _modalStack.splice(idx, 1);
+      _scheduleHistoryFlush();
+    }
+  }).observe(el, { attributes: true, attributeFilter: ['class'] });
+}
+// Belangrijk: de modal-HTML staat ná het einde van dit <script>-blok in het document,
+// dus bestaat nog niet op het moment dat dit script synchroon wordt uitgevoerd. Zonder
+// deze uitstel zou getElementById() voor elke modal null teruggeven en de registratie
+// stilletjes worden overgeslagen — precies waarom de terugknop aanvankelijk nergens
+// werkte, niet alleen bij de club-editor.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => MODAL_IDS.forEach(_registerModalObserver));
+} else {
+  MODAL_IDS.forEach(_registerModalObserver);
+}
+// shareModal wordt pas dynamisch aangemaakt op het moment dat 'ie nodig is — dan moet
+// de observer alsnog (opnieuw) geregistreerd worden, vandaar deze herbruikbare check
+// vanuit showShareFallback() zelf (zie die functie).
+
+window.addEventListener('popstate', () => {
+  _nativeBackPending = true;
+  if (_modalStack.length) {
+    const topId = _modalStack[_modalStack.length - 1];
+    const closer = MODAL_CLOSERS[topId];
+    if (closer) {
+      closer();
+    } else {
+      document.getElementById(topId)?.classList.add('hidden');
+    }
+  }
+  // Ook aanroepen als er geen modal open was of de closer niets deed (zeldzaam
+  // randgeval) — anders blijft _nativeBackPending onterecht op 'waar' staan.
+  _scheduleHistoryFlush();
+});
 
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
 const CLUBS = {};;
@@ -4194,15 +4301,28 @@ function showShareFallback(text) {
         <div class="share-modal-title">Overzicht</div>
         <textarea id="shareText" readonly></textarea>
         <div style="display:flex;gap:8px;margin-top:0">
-          <button class="btn-secondary" style="flex:0 0 auto;font-size:20px" onclick="document.getElementById('shareModal').remove()">Sluiten</button>
+          <button class="btn-secondary" style="flex:0 0 auto;font-size:20px" onclick="closeShareModal()">Sluiten</button>
           <button class="btn-primary" style="flex:1;margin-top:0" onclick="copyShareText(this)">Kopieer</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
+    // shareModal wordt aangemaakt-en-verwijderd i.p.v. verborgen/getoond, dus past niet
+    // in het generieke class-toggle-observer-patroon — hier expliciet op de modal-stack.
+    _modalStack.push('shareModal');
+    _scheduleHistoryFlush();
   }
   const ta = document.getElementById('shareText');
   ta.value = text;
   setTimeout(() => { ta.focus(); ta.select(); }, 50);
+}
+
+function closeShareModal() {
+  const modal = document.getElementById('shareModal');
+  if (!modal) return;
+  modal.remove();
+  const idx = _modalStack.indexOf('shareModal');
+  if (idx !== -1) _modalStack.splice(idx, 1);
+  _scheduleHistoryFlush();
 }
 
 function copyShareText(btn) {
@@ -5877,22 +5997,42 @@ function renderClubCourseList() {
   const data = CLUBS[editorClub];
   const list = document.getElementById('clubCourseList');
   if (!list) return;
-  const names = Object.keys(data.courses).sort((a, b) => {
-    const holesA = (data.courses[a].holes || []).length;
-    const holesB = (data.courses[b].holes || []).length;
-    if (holesA !== holesB) return holesA - holesB;
-    return a.localeCompare(b, 'nl');
+  const names = Object.keys(data.courses).sort((a, b) => a.localeCompare(b, 'nl'));
+  if (!names.length) {
+    list.innerHTML = `<div style="font-size:17px;color:var(--muted)">Nog geen banen</div>`;
+    return;
+  }
+  const groups = { 9: [], 18: [], overig: [] };
+  names.forEach(name => {
+    const n = (data.courses[name].holes || []).length;
+    (n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
   });
-  list.innerHTML = names.length
-    ? names.map(name => {
-        const n = (data.courses[name].holes || []).length;
-        return `<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px">
-          <span style="flex:1;min-width:0;overflow-wrap:break-word;font-size:17px;font-weight:700">${escapeHtml(name)}</span>
-          <span style="font-size:15px;color:var(--muted);flex:0 0 auto;white-space:nowrap">${n}h</span>
-          <button class="btn-secondary" style="padding:6px 12px;flex:0 0 auto;display:flex;align-items:center" onclick="openCourseEditor('${escapeJsString(name)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
-        </div>`;
-      }).join('')
-    : `<div style="font-size:17px;color:var(--muted)">Nog geen banen</div>`;
+  const rowHtml = name => {
+    const n = (data.courses[name].holes || []).length;
+    return `<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;margin-top:6px">
+      <span style="flex:1;min-width:0;overflow-wrap:break-word;font-size:17px;font-weight:700">${escapeHtml(name)}</span>
+      <span style="font-size:15px;color:var(--muted);flex:0 0 auto;white-space:nowrap">${n}h</span>
+      <button class="btn-secondary" style="padding:6px 12px;flex:0 0 auto;display:flex;align-items:center" onclick="openCourseEditor('${escapeJsString(name)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+    </div>`;
+  };
+  const groupHtml = (key, label) => {
+    if (!groups[key].length) return '';
+    return `<div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:10px" onclick="toggleClubCourseGroup('${key}')">
+      <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">${label}</span>
+      <span style="font-size:17px;font-weight:700;color:var(--green-light);margin-left:8px">${groups[key].length}</span>
+      <span class="club-course-group-arrow" data-group="${key}" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+    </div>
+    <div id="clubCourseGroup${key}" class="hidden">${groups[key].map(rowHtml).join('')}</div>`;
+  };
+  list.innerHTML = groupHtml(9, '9 holes') + groupHtml(18, '18 holes') + groupHtml('overig', 'Overig');
+}
+
+function toggleClubCourseGroup(key) {
+  const wrap = document.getElementById('clubCourseGroup' + key);
+  const arrow = document.querySelector(`.club-course-group-arrow[data-group="${key}"]`);
+  if (!wrap) return;
+  const isHidden = wrap.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = isHidden ? '' : 'rotate(90deg)';
 }
 
 function updateHeaderClubName() {
@@ -5992,6 +6132,25 @@ function hasUnsavedCourseChanges() {
 
 // Baan-modal openen: 'club' staat al vast (via de Club-modal waar dit uit geopend
 // wordt), hier gaat het uitsluitend om baannaam + tees + holes van één baan.
+// Inklapbare Tees/Holes-secties in de Baan-modal — zelfde patroon (aantal vóór het
+// pijltje) als de Banen-lijst in Clubs en de categorieën in Archief.
+function toggleEditorSection(section) {
+  const wrap = document.getElementById(section === 'tees' ? 'editorTeesWrap' : 'editorHolesWrap');
+  const arrow = document.querySelector(`.editor-section-arrow[data-section="${section}"]`);
+  if (!wrap) return;
+  const isHidden = wrap.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = isHidden ? '' : 'rotate(90deg)';
+}
+
+function updateEditorSectionCounts() {
+  const teesCount = document.querySelectorAll('.tee-editor-row').length;
+  const holesCount = document.querySelectorAll('.hole-editor-row').length;
+  const teesEl = document.getElementById('editorTeesCount');
+  const holesEl = document.getElementById('editorHolesCount');
+  if (teesEl) teesEl.textContent = teesCount;
+  if (holesEl) holesEl.textContent = holesCount;
+}
+
 function openCourseEditor(courseName) {
   const data = CLUBS[editorClub];
   document.getElementById('courseEditorClubName').value = data?.club || editorClub;
@@ -6009,6 +6168,11 @@ function openCourseEditor(courseName) {
   }
   document.getElementById('editorStatus').style.display = 'none';
   editorCourseSnapshot = snapshotCourseEditor();
+  // Secties altijd terug naar de standaardstand bij openen, ongeacht een eerdere toggle
+  document.getElementById('editorTeesWrap')?.classList.add('hidden');
+  document.getElementById('editorHolesWrap')?.classList.add('hidden');
+  document.querySelector('.editor-section-arrow[data-section="tees"]')?.style.removeProperty('transform');
+  document.querySelector('.editor-section-arrow[data-section="holes"]')?.style.removeProperty('transform');
   document.getElementById('courseEditorOverlay').classList.remove('hidden');
 }
 
@@ -6056,6 +6220,7 @@ function renderTeeEditor(tees) {
   });
   updateTeeMoveButtons();
   updateTeeRowMoveHint();
+  updateEditorSectionCounts();
 }
 
 // ══ TAP-TO-EDIT MODAL voor kleine invoervelden (tee/hole) ═══════════════
@@ -6440,6 +6605,7 @@ function addTeeRow() {
   document.getElementById('editorTeesBody').appendChild(makeTeeRow('Heren', 'Geel', defaultPar, defaultCR, defaultSR));
   updateTeeMoveButtons();
   updateTeeRowMoveHint();
+  updateEditorSectionCounts();
   setTimeout(() => {
     const el = document.getElementById('addTeeBtn');
     if (!el) return;
@@ -6480,6 +6646,7 @@ function removeLastTeeRow(btn) {
   if (rows.length) rows[rows.length - 1].remove();
   updateTeeMoveButtons();
   updateTeeRowMoveHint();
+  updateEditorSectionCounts();
   setTimeout(() => {
     const el = document.getElementById('addTeeBtn');
     if (!el) return;
@@ -6517,6 +6684,7 @@ function renderHoleEditor(holes) {
     const h = holes[i] || {id:`H${i+1}`, par:4, si:i+1};
     tbody.appendChild(makeHoleRow(h, i));
   });
+  updateEditorSectionCounts();
 }
 
 function makeHoleRow(h, i) {
@@ -7525,6 +7693,15 @@ function toggleCourseList(el) {
   if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
 }
 
+// Subgroepen (9/18 holes/Overig) binnen de Banen-lijst van een clubkaart.
+function toggleClubSubGroup(gid) {
+  const wrap = document.getElementById(gid);
+  const arrow = document.querySelector(`.club-sub-group-arrow[data-gid="${gid}"]`);
+  if (!wrap) return;
+  const isHidden = wrap.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = isHidden ? '' : 'rotate(90deg)';
+}
+
 function buildClubList() {
   const el = document.getElementById('clubList');
   if (!el) return;
@@ -7578,9 +7755,25 @@ function buildClubList() {
       return nameA.localeCompare(nameB, 'nl');
     });
     const shortName = CLUBS[club]?.shortName || '';
-    const courseList = sortedCourseEntries.map(([name, data]) =>
-      `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap">${(data.holes||[]).length}h</span></div>`
-    ).join('');
+    const clubKey = club.replace(/\W/g, '_');
+    const courseGroups = { 9: [], 18: [], overig: [] };
+    sortedCourseEntries.forEach(([name, data]) => {
+      const n = (data.holes || []).length;
+      (n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
+    });
+    const courseRowHtml = ([name, data]) =>
+      `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap">${(data.holes||[]).length}h</span></div>`;
+    const courseSubGroupHtml = (key, label) => {
+      if (!courseGroups[key].length) return '';
+      const gid = `courseSubGroup_${clubKey}_${key}`;
+      return `<div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:6px" onclick="event.stopPropagation();toggleClubSubGroup('${gid}')">
+        <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">${label}</span>
+        <span style="font-size:17px;font-weight:700;color:var(--green-light);margin-left:8px">${courseGroups[key].length}</span>
+        <span class="club-sub-group-arrow" data-gid="${gid}" style="font-size:12px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+      </div>
+      <div id="${gid}" class="hidden" style="display:flex;flex-direction:column;gap:2px">${courseGroups[key].map(courseRowHtml).join('')}</div>`;
+    };
+    const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig');
     return `
     <div class="card" style="margin-bottom:10px${isHome ? ';border-left:3px solid var(--gold);border-right:3px solid var(--gold)' : ''}">
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:${isHome ? 'var(--gold)' : 'var(--white)'};cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">${escapeHtml(club)}</div>
@@ -8863,18 +9056,30 @@ document.addEventListener('focusin', (e) => {
       <label>Baan</label>
       <input id="editorCourseName" placeholder="Naam van de baan" maxlength="60" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
-    <h3>Tees</h3>
-    <div id="editorTees" style="margin:4px 0 8px;display:flex;flex-direction:column;gap:6px"></div>
-    <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-      <button class="btn-secondary" id="addTeeBtn" style="padding:8px 14px" onclick="addTeeRow()" title="Voeg toe"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-      <button class="btn-secondary" id="removeTeeBtn" style="padding:8px 14px" onclick="removeLastTeeRow(this)" title="Verwijder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-      <span id="teeRowMoveMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700">Kan laatste tee niet verplaatsen</span>
-      <span id="teeRowDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700">Tik nogmaals om te bevestigen</span>
-      <span id="teeRowMoveHint" style="color:var(--muted);font-size:17px">H of D lang indrukken voor verplaatsen</span>
+    <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('tees')">
+      <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Tees</span>
+      <span id="editorTeesCount" style="font-size:20px;font-weight:700;color:var(--green-light);margin-left:8px"></span>
+      <span class="editor-section-arrow" data-section="tees" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+    </div>
+    <div id="editorTeesWrap" class="hidden">
+      <div id="editorTees" style="margin:4px 0 8px;display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+        <button class="btn-secondary" id="addTeeBtn" style="padding:8px 14px" onclick="addTeeRow()" title="Voeg toe"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button class="btn-secondary" id="removeTeeBtn" style="padding:8px 14px" onclick="removeLastTeeRow(this)" title="Verwijder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <span id="teeRowMoveMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700">Kan laatste tee niet verplaatsen</span>
+        <span id="teeRowDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700">Tik nogmaals om te bevestigen</span>
+        <span id="teeRowMoveHint" style="color:var(--muted);font-size:17px">H of D lang indrukken voor verplaatsen</span>
+      </div>
     </div>
 
-    <h3 style="margin-top:14px">Holes</h3>
-    <div id="editorHoles"></div>
+    <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('holes')">
+      <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Holes</span>
+      <span id="editorHolesCount" style="font-size:20px;font-weight:700;color:var(--green-light);margin-left:8px"></span>
+      <span class="editor-section-arrow" data-section="holes" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+    </div>
+    <div id="editorHolesWrap" class="hidden">
+      <div id="editorHoles"></div>
+    </div>
 
     <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
       <div id="editorStatus" style="font-size:20px;font-weight:700;display:none"></div>
