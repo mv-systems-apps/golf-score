@@ -885,6 +885,7 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-light)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg><span style="justify-self:start">Hcp gedaald</span>
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"/><line x1="12" y1="19" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg><span style="justify-self:start">Softcap toegepast</span>
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="4" x2="19" y2="4"/><line x1="5" y1="8" x2="19" y2="8"/><line x1="12" y1="19" x2="12" y2="12"/><polyline points="8 16 12 12 16 16"/></svg><span style="justify-self:start">Hardcap toegepast</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg><span style="justify-self:start">ESR toegepast</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--white)" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg><span style="justify-self:start">Thuisclub</span>
     </div>
   </div>
@@ -1232,6 +1233,23 @@ function agsFor(h) {
   return Math.min(h.score, h.par + h.phcp + 2);
 }
 
+// Of een ronde qualifying is maar nog geen geldig dagresultaat heeft — dezelfde
+// voorwaarde als het waarschuwingsdriehoekje op een individuele rondekaart. Globaal
+// (i.p.v. lokaal binnen één render-functie) zodat zowel Archief als Statistieken 'm
+// kunnen gebruiken om ook bij ingeklapte lijsten al te laten zien dat er iets binnenin
+// aandacht nodig heeft.
+function roundHasWarning(r) {
+  const activeId = storage.getItem('golf_active_id');
+  const isActiveR = (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id);
+  const isPlayer2ActiveR = game2Id && r.id === game2Id;
+  const isCurrentPlayerR = (isPlayer2ActiveR && activePlayer===2) || (!isPlayer2ActiveR && isActiveR && activePlayer===1);
+  const qualifying = isCurrentPlayerR ? (game.qualifying ?? r.qualifying) : r.qualifying;
+  const sd = isCurrentPlayerR ? (game.sdFinal ?? r.sdFinal) : r.sdFinal;
+  const hasValidSd = sd != null && sd !== '' && isFinite(parseFloat(sd));
+  return !!(qualifying && !hasValidSd);
+}
+const warningIconSmall = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
 // ══ DAGRESULTAAT (Score Differential) ═════════════════════════════════════
 // Verwachte 9-holes SD op basis van Handicap Index — de officiële WHS-formule
 // (sinds de 2024-herziening) voor het combineren van een losse 9-holes-ronde tot een
@@ -1328,28 +1346,48 @@ function applyHandicapCaps(rawValue, lowHi) {
 // Retourneert { value, rawValue, capped, usedIds:Set } of null.
 // Index vóór de nieuwste ronde (voor ESR): WHS over de set zonder de nieuwste ronde,
 // zonder ESR/caps. Retourneert getal of null.
-function priorHiFor(rounds, mode) {
-  if (!rounds || rounds.length < 2) return null;
-  const older = rounds.slice(1); // rounds is nieuwste-eerst
-  const withSd = older.map(r => {
-    let sd = null;
-    if (mode === 'fixed') {
-      if (r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal))) sd = parseFloat(r.sdFinal);
-    } else {
-      const e = effectiveSD(r);
-      if (e) sd = e.value;
+// Bouwt voor een speler, over de VOLLEDIGE chronologische geschiedenis (oudst eerst), de
+// cumulatieve Exceptional Score Reduction per ronde op — conform WHS-regel 5.9. Bij een
+// uitzonderlijke ronde (7,0-9,9 slagen beter dan de op dát moment geldende index -> -1,0;
+// 10,0+ beter -> -2,0) wordt die aanpassing toegepast op elk van de destijds recentste 20
+// dagresultaten (inclusief de uitzonderlijke ronde zelf zoals de regel voorschrijft), en
+// blijft gelden zolang die ronde binnen de recentste 20 valt — dooft daarna vanzelf uit.
+// Meerdere uitzonderlijke rondes stapelen cumulatief. Retourneert een Map: ronde-id ->
+// cumulatieve aanpassing (0 of negatief).
+function computeEsrAdjustments(chronoRounds) {
+  // chronoRounds: [{id, sd, t}], oudst eerst
+  const adj = new Map();
+  chronoRounds.forEach(r => adj.set(r.id, 0));
+  const n = chronoRounds.length;
+  for (let i = 0; i < n; i++) {
+    const priorWindow = chronoRounds.slice(Math.max(0, i - 20), i);
+    if (!priorWindow.length) continue;
+    const staffel = whsStaffel(priorWindow.length);
+    if (!staffel) continue;
+    // De index vlak vóór deze ronde, MET de esr-aanpassingen die op dát moment al golden
+    // (eerdere uitzonderlijke rondes kunnen deze voorgaande rondes al verlaagd hebben).
+    const adjustedPrior = priorWindow.map(x => x.sd + (adj.get(x.id) || 0));
+    const sorted = [...adjustedPrior].sort((a, b) => a - b);
+    const priorHi = whsIndexRound(sorted.slice(0, staffel.count).reduce((s, x) => s + x, 0) / staffel.count + staffel.adj);
+    const round = chronoRounds[i];
+    const diff = priorHi - round.sd;
+    let magnitude = 0;
+    if (diff >= 10.0) magnitude = 2.0;
+    else if (diff >= 7.0) magnitude = 1.0;
+    if (magnitude > 0) {
+      const affected = chronoRounds.slice(Math.max(0, i - 19), i + 1);
+      affected.forEach(x => adj.set(x.id, (adj.get(x.id) || 0) - magnitude));
     }
-    return sd == null ? null : { sd, t: new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() };
-  }).filter(v => v != null);
-  const staffel = whsStaffel(withSd.length);
-  if (!staffel) return null;
-  const sorted = [...withSd].sort((a, b) => (a.sd - b.sd) || (a.t - b.t)).slice(0, staffel.count);
-  const avg = sorted.reduce((s, x) => s + x.sd, 0) / sorted.length;
-  return whsIndexRound(avg + staffel.adj);
+  }
+  return adj;
 }
 
-function whsHandicap(rounds, mode, lowHi = null, priorHi = null) {
-  const withSd = rounds
+// Bouwt voor een speler de volledige chronologische (oudst-eerst) reeks dagresultaten op
+// en berekent daarmee de esrMap voor whsHandicap() — de vervanging van de oude priorHiFor().
+function esrMapFor(player, allRounds, mode) {
+  const isDoneR = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const chrono = allRounds
+    .filter(r => r.player === player && r.qualifying && isDoneR(r))
     .map(r => {
       let sd = null;
       if (mode === 'fixed') {
@@ -1360,6 +1398,28 @@ function whsHandicap(rounds, mode, lowHi = null, priorHi = null) {
       }
       return sd == null ? null : { id: r.id, sd, t: new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() };
     })
+    .filter(Boolean)
+    .sort((a, b) => a.t - b.t);
+  return computeEsrAdjustments(chrono);
+}
+
+function whsHandicap(rounds, mode, lowHi = null, esrMap = null) {
+  const withSd = rounds
+    .map(r => {
+      let sd = null;
+      if (mode === 'fixed') {
+        if (r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal))) sd = parseFloat(r.sdFinal);
+      } else {
+        const e = effectiveSD(r);
+        if (e) sd = e.value;
+      }
+      if (sd == null) return null;
+      // ESR-aanpassing (indien van toepassing) wordt hier al in de dagresultaten zelf
+      // verwerkt, vóór de beste-N-selectie — zoals WHS-regel 5.9 voorschrijft. Zie
+      // computeEsrAdjustments() voor de volledige, geschiedenis-brede berekening.
+      const esrAdj = esrMap ? (esrMap.get(r.id) || 0) : 0;
+      return { id: r.id, sd: sd + esrAdj, sdNoEsr: sd, esrAdj, t: new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() };
+    })
     .filter(Boolean);
   const staffel = whsStaffel(withSd.length);
   if (!staffel) return null;
@@ -1368,18 +1428,19 @@ function whsHandicap(rounds, mode, lowHi = null, priorHi = null) {
   const used = sorted.slice(0, staffel.count);
   const avg = used.reduce((s, x) => s + x.sd, 0) / used.length;
   let rawValue = whsIndexRound(avg + staffel.adj);
-  // Exceptional Score Reduction: vergelijk nieuwste dagresultaat met index vóór die ronde
-  let esr = 0;
-  if (priorHi != null && isFinite(priorHi) && withSd.length) {
-    const newestSd = withSd[0].sd; // rounds is nieuwste-eerst
-    const diff = priorHi - newestSd;
-    if (diff >= 10.0) esr = 2.0;
-    else if (diff >= 7.0) esr = 1.0;
-  }
-  rawValue = Math.round((rawValue - esr) * 10) / 10;
+  rawValue = Math.round(rawValue * 10) / 10;
+  // Of ESR daadwerkelijk invloed had op déze berekening: alleen relevant als een van de
+  // meetellende rondes zelf een esr-aanpassing draagt. Ter vergelijking ook de waarde
+  // zónder ESR (zelfde selectie/staffel, maar de onaangepaste dagresultaten) — dit is een
+  // benadering (bij een randgeval kan zonder ESR een andere ronde net wel/niet meetellen),
+  // puur illustratief zoals de softcap-vergelijking dat ook is.
+  const esrApplied = used.some(x => x.esrAdj !== 0);
+  const rawValueNoEsr = esrApplied
+    ? whsIndexRound(used.reduce((s, x) => s + x.sdNoEsr, 0) / used.length + staffel.adj)
+    : rawValue;
   const capResult = applyHandicapCaps(rawValue, lowHi);
   const value = capResult.value;
-  return { value, rawValue, esr, capped: value !== rawValue, capType: capResult.type, usedIds: new Set(used.map(x => x.id)) };
+  return { value, rawValue, capped: value !== rawValue, capType: capResult.type, usedIds: new Set(used.map(x => x.id)), esrApplied, rawValueNoEsr };
 }
 
 // Verzamelt de laatste 20 afgeronde qualifying rondes van een speler (nieuwste eerst).
@@ -1418,7 +1479,7 @@ function lowHiCheckStatus(player, allRounds) {
     // op, afkappen (floor) zou de teller op de overgangsdag met 1 laten missen.
     if (dates.length) daysSinceFirst = Math.round((Date.now() - Math.min(...dates)) / (24 * 60 * 60 * 1000));
   }
-  return { established: roundsCount >= 20 && daysSinceFirst >= 365, roundsCount, daysSinceFirst };
+  return { established: roundsCount >= 20, roundsCount, daysSinceFirst };
 }
 
 // Huidige officiële handicap (met ESR/caps, dezelfde berekening als de Hcp-KPI op
@@ -1427,7 +1488,7 @@ function lowHiCheckStatus(player, allRounds) {
 function currentOfficialHcp(player, allRounds) {
   if (!player) return null;
   const last20 = last20Qualifying(player, allRounds, null, null);
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, allRounds, 'effective'), priorHiFor(last20, 'effective'));
+  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, allRounds, 'effective'), esrMapFor(player, allRounds, 'effective'));
   return whs ? whs.value : null;
 }
 
@@ -1441,7 +1502,12 @@ function derivedLowHi(player, allRounds, mode) {
       return da - db; // oudste eerst
     });
   if (!qual.length) return null;
-  const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  // Officieel: 365 dagen vóórafgaand aan de datum van de MEEST RECENTE ronde — niet
+  // vandaag. Bij een tijdje niet spelen zou 'Date.now()' een verkeerd (te vroeg
+  // verlopen) venster geven t.o.v. de officiële definitie.
+  const lastRound = qual[qual.length - 1]; // qual is oudst-eerst gesorteerd
+  const lastRoundT = new Date(`${lastRound.date || '1970-01-01'}T${lastRound.time || '00:00'}`).getTime();
+  const cutoff = lastRoundT - 365 * 24 * 60 * 60 * 1000;
   let low = null;
   qual.forEach((r, idx) => {
     const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
@@ -3081,13 +3147,18 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
           .sort((a, b) => new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`) - new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`))
           .slice(0, 20);
         const mode = sdFixed ? 'fixed' : 'effective';
-        const whs = whsHandicap(pool, mode, effectiveLowHi(game.player, all, mode), priorHiFor(pool, mode));
+        const whs = whsHandicap(pool, mode, effectiveLowHi(game.player, all, mode), esrMapFor(game.player, all, mode));
         const label = sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp';
+        const hcpWarnPrefix = sdFixed ? '' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ';
         const capLabel = !whs || !whs.capped
           ? 'Cap'
           : `${whs.capType === 'hard' ? 'Hardcap' : 'Softcap'} (anders ${fmt1(whs.rawValue)})`;
+        const esrLabel = (whs && whs.esrApplied)
+          ? `ESR (anders ${fmt1(whs.rawValueNoEsr)})`
+          : 'ESR';
         return [
-          [label, whs ? fmt1(whs.value) : '—'],
+          [label, whs ? hcpWarnPrefix + fmt1(whs.value) : '—'],
+          [esrLabel, (whs && whs.esrApplied) ? 'Ja' : 'Nee'],
           [capLabel, (whs && whs.capped) ? 'Ja' : 'Nee'],
         ];
       })(),
@@ -3117,7 +3188,10 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
         const done = game.holes.length > 0 && played.length === game.holes.length;
         if (!done) return '—';
         const c = computeSD({ holes: game.holes, CR: game.CR, SR: game.SR, hcp: game.hcp, pcc: game.pcc });
-        return c ? `${fmt1(c.value)}` : '—';
+        if (!c) return '—';
+        const hasFixedSd = game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal));
+        const warnPrefix = hasFixedSd ? '' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ';
+        return `${warnPrefix}${fmt1(c.value)}`;
       })()],
       ['Vastgesteld (SD<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 3px"><polyline points="20 6 9 17 4 12"/></svg>)', (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? fmt1(parseFloat(game.sdFinal)) : '—'],
     ]],
@@ -3346,6 +3420,9 @@ function renderPlayerStats() {
   // Dagresultaten (effectief) per ronde, in chronologische volgorde
   const sdSeries = rounds.map(r => { const e = effectiveSD(r); return e ? e.value : null; });
   const validSd = sdSeries.filter(v => v != null);
+  // Parallel aan sdSeries (zelfde index per ronde) — voor het markeren van punten in de
+  // dagresultaat-grafiek waarvan de ronde nog niet is bevestigd.
+  const warnSeries = rounds.map(r => roundHasWarning(r));
 
   // Handicapverloop: index zoals die na elke ronde gold (staffel-gemiddelde, zonder ESR/caps)
   const hiSeries = rounds.map((r, idx) => {
@@ -3364,8 +3441,9 @@ function renderPlayerStats() {
   // Wordt in de grafiek als stippellijn naast de rauwe hiSeries getoond.
   const capSeries = [];
   const capTypeSeries = [];
+  const esrAppliedSeries = [];
   rounds.forEach((r, idx) => {
-    if (hiSeries[idx] == null) { capSeries.push(null); capTypeSeries.push(null); return; }
+    if (hiSeries[idx] == null) { capSeries.push(null); capTypeSeries.push(null); esrAppliedSeries.push(false); return; }
     const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
     const cutoff = isFinite(t) ? t - 365 * 24 * 60 * 60 * 1000 : -Infinity;
     let lowHi = null;
@@ -3376,16 +3454,15 @@ function renderPlayerStats() {
       if (lowHi == null || hiSeries[j] < lowHi) lowHi = hiSeries[j];
     }
     const priorCapped = idx > 0 ? capSeries[idx - 1] : null;
-    let esr = 0;
-    if (priorCapped != null) {
-      const sd = sdSeries[idx];
-      if (sd != null) {
-        const diff = priorCapped - sd;
-        if (diff >= 10.0) esr = 2.0;
-        else if (diff >= 7.0) esr = 1.0;
-      }
-    }
-    const rawAfterEsr = Math.round((hiSeries[idx] - esr) * 10) / 10;
+    // Correcte ESR: volledige geschiedenis t/m deze ronde, niet alleen de vorige ronde
+    // vergelijken — zelfde principe als computeEsrAdjustments()/esrMapFor() elders.
+    const esrChronoUpToHere = rounds.slice(0, idx + 1).map((rr, i) => {
+      const rsd = sdSeries[i];
+      return rsd == null ? null : { id: rr.id, sd: rsd, t: new Date(`${rr.date || '1970-01-01'}T${rr.time || '00:00'}`).getTime() };
+    }).filter(Boolean);
+    const esrAdjHere = computeEsrAdjustments(esrChronoUpToHere).get(r.id) || 0;
+    esrAppliedSeries.push(esrAdjHere !== 0);
+    const rawAfterEsr = Math.round((hiSeries[idx] + esrAdjHere) * 10) / 10;
     const capResult = applyHandicapCaps(rawAfterEsr, lowHi);
     capSeries.push(capResult.value);
     capTypeSeries.push(capResult.type);
@@ -3425,9 +3502,11 @@ function renderPlayerStats() {
   const periodRounds = rounds.slice(fromIdx);
   const roundIndexMap = new Map(rounds.map((r, i) => [r, i]));
   const sdView = sdSeries.slice(fromIdx);
+  const warnView = warnSeries.slice(fromIdx);
   const hiView = hiSeries.slice(fromIdx);
   const capView = capSeries.slice(fromIdx);
   const capTypeView = capTypeSeries.slice(fromIdx);
+  const esrAppliedView = esrAppliedSeries.slice(fromIdx);
 
   const periodBtn = (label, key) => {
     const disabled = pointsOf(key) < 2;
@@ -3440,15 +3519,24 @@ function renderPlayerStats() {
   const periodBar = `<div style="display:flex;gap:6px">`
     + periodBtn('Laatste 20', 'l20') + periodBtn('12 maanden', 'jaar') + periodBtn('Alles', 'alles')
     + `</div>`;
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, all, 'effective'), priorHiFor(last20, 'effective'));
+  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, all, 'effective'), esrMapFor(player, all, 'effective'));
   const bestSd = validSd.length ? Math.min(...validSd) : null;
   const avgSd  = validSd.length ? validSd.reduce((s, x) => s + x, 0) / validSd.length : null;
+  const sdKpiWarning = rounds.some(r => { const e = effectiveSD(r); return e && e.value != null && roundHasWarning(r); });
+  // Zelfde opmaak als hcpTriangle/loTriangle (vertical-align:middle + spatie erna) i.p.v.
+  // de kale warningIconSmall — anders staat dit driehoekje net iets anders uitgelijnd.
+  const sdKpiTriangle = sdKpiWarning
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
+    : '';
   const stbVals = rounds.map(r => r.totalStb).filter(v => v != null && isFinite(v));
   const avgStb = stbVals.length ? stbVals.reduce((s, x) => s + x, 0) / stbVals.length : null;
 
   // Periode-gefilterde Sd-reeks, voor Trend/Consistentie in Vorm & consistentie (deze
   // volgen — net als de rest van de kaarten onder de KPI-rij — de gekozen periode).
   const periodValidSd = sdView.filter(v => v != null);
+  // Zelfde filtering, maar dan de waarschuwing-status per punt — blijft zo op dezelfde
+  // index uitgelijnd met periodValidSd.
+  const periodValidWarn = sdView.map((v, i) => v != null ? warnView[i] : null).filter(w => w != null);
 
   // Trend: gemiddelde dagresultaat laatste 5 vs. de 5 daarvoor (binnen de gekozen periode)
   const trend = (() => {
@@ -3460,6 +3548,7 @@ function renderPlayerStats() {
     const b = prev5.reduce((s, x) => s + x, 0) / prev5.length;
     return { diff: a - b, last: a };
   })();
+  const trendWarn = periodValidWarn.slice(-10).some(w => w);
 
   // Spreiding (consistentie): standaarddeviatie van de dagresultaten (binnen de gekozen periode)
   const spread = (() => {
@@ -3468,6 +3557,7 @@ function renderPlayerStats() {
     const varc = periodValidSd.reduce((s, x) => s + (x - m) ** 2, 0) / periodValidSd.length;
     return Math.sqrt(varc);
   })();
+  const spreadWarn = periodValidWarn.some(w => w);
 
   // Scoregemiddelde t.o.v. par per 9 (heen = holes 1-9, terug = 10-18)
   const nine = (which) => {
@@ -3494,12 +3584,12 @@ function renderPlayerStats() {
   };
   const t1Avg = three(0), t2Avg = three(1), t3Avg = three(2);
 
-  const kpi = (label, val, opts = {}) => `<div style="flex:1;min-width:90px;text-align:center"><div style="font-size:26px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${val}${opts.suffix || ''}</div><div style="font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
+  const kpi = (label, val, opts = {}) => `<div style="flex:1;min-width:90px;text-align:center"><div style="font-size:26px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${opts.prefix || ''}${val}${opts.suffix || ''}</div><div style="font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
   // Verwachte hcp: oranje driehoekje bij onbevestigde meetellende SD
   const hcpColor = 'var(--green-light)';
-  const hcpTriangle = (whs && whs.usedIds && whs.usedIds.size
-    && last20.some(r => whs.usedIds.has(r.id) && !(r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal)))))
-    ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  const hcpUncertain = last20.some(roundHasWarning);
+  const hcpTriangle = hcpUncertain
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   // Laagste hcp: twee onafhankelijke redenen waarom de handmatige waarde niet meer klopt.
   // (1) Je HUIDIGE officiële handicap (hetzelfde getal als de Hcp-KPI) is al lager dan de
@@ -3514,8 +3604,13 @@ function renderPlayerStats() {
   const loStaleFromHistory = loManual != null && loDerived != null && isFinite(loDerived) && loDerived < loManual && loEstablished;
   const loStaleFromCurrent = loManual != null && whs && whs.value != null && isFinite(whs.value) && whs.value < loManual;
   const loStale = loStaleFromHistory || loStaleFromCurrent;
-  const loTriangle = loStale
-    ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  // Onzeker (los van 'verouderd'): alleen relevant als er geen handmatige waarde is (die is
+  // een vast, extern gegeven) en de getoonde afgeleide low samenvalt met de huidige WHS-hcp
+  // — dan is 'vandaag je beste dag', en die berekening is zelf nog niet definitief.
+  const loUncertain = loManual == null && loDerived != null && whs && whs.value != null
+    && Math.abs(loDerived - whs.value) < 0.05 && hcpUncertain;
+  const loTriangle = (loStale || loUncertain)
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   let newLowBanner = '';
   if (loDerived != null && isFinite(loDerived)) {
@@ -3529,11 +3624,11 @@ function renderPlayerStats() {
   }
   const kpiRow = `<div class="card"><h2>${escapeHtml(player)}</h2>`
     + `<div style="display:flex;flex-wrap:wrap;gap:12px 8px">`
-    + kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, suffix: hcpTriangle })
-    + (() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { suffix: loTriangle }); })()
+    + kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle })
+    + (() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle }); })()
     + kpi('Rondes', rounds.length)
-    + kpi('Beste Sd', bestSd != null ? fmt1(bestSd) : '—')
-    + kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—')
+    + kpi('Beste Sd', bestSd != null ? fmt1(bestSd) : '—', { prefix: sdKpiTriangle })
+    + kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle })
     + kpi('Gem. Stb', avgStb != null ? fmt1(avgStb) : '—')
     + `</div>`
     + newLowBanner
@@ -3574,36 +3669,26 @@ function renderPlayerStats() {
   // Gemiddelde per tee, gecorrigeerd voor baanmoeilijkheid (CR/SR) via Score Differential (WHS).
   // Ruwe "score t.o.v. par" wordt hier bewust niet gebruikt: die maakt tees met verschillende
   // CR/SR ten onrechte direct vergelijkbaar. SD = (113/SR) * (AGS - CR - PCC) normaliseert dat.
+  // Rondes zonder geldig dagresultaat (bv. ontbrekende CR/SR) worden overgeslagen — zelfde
+  // patroon als Gemiddelde per dag/Beste Sd/Gem. Sd, geen aparte benaderde-waarde-fallback.
   const teeBuckets = {};
-  const teeRawBuckets = {}; // fallback: ruwe score-par, voor rondes zonder geldige CR/SR
   periodRounds.forEach(r => {
     const tee = r.tee || 'Onbekend';
     const e = effectiveSD(r);
     if (e && e.value != null) {
-      (teeBuckets[tee] = teeBuckets[tee] || []).push({ value: e.value, approx: !!e.approx });
-    } else {
-      const scored = r.holes.filter(h => h.score != null);
-      if (scored.length) {
-        const diff = scored.reduce((s, h) => s + (h.score - h.par), 0);
-        (teeRawBuckets[tee] = teeRawBuckets[tee] || []).push({ diff, n: scored.length });
-      }
+      (teeBuckets[tee] = teeBuckets[tee] || []).push({ value: e.value, warn: roundHasWarning(r) });
     }
   });
-  const allTeeKeys = Array.from(new Set([...Object.keys(teeBuckets), ...Object.keys(teeRawBuckets)]));
   // Zelfde vaste kleuren als de tee-badges elders in de app (CLUBS/scorekaart) — hier als
   // hexwaarden, omdat een SVG-lijn geen CSS-klasse kan uitlezen.
   const teeColorHex = { Wit: '#ffffff', Geel: '#e8c800', Blauw: '#1e64c8', Rood: '#b41e1e', Oranje: '#dc7800', Paars: '#9127c8', Groen: '#2e7d32', Zwart: '#1a1a1a', Zilver: '#9e9e9e', Grijs: '#757575', Roze: '#e91e8c', Bruin: '#6d4c41' };
   const teeColorOf = (tee) => teeColorHex[tee] || 'var(--weekday-accent)';
-  const teeSortKey = (t) => (teeBuckets[t]?.length ?? 0) + (teeRawBuckets[t]?.length ?? 0);
-  const teeKeysSorted = allTeeKeys.sort((a, b) => teeSortKey(b) - teeSortKey(a));
-
-  let teeHasFallback = Object.keys(teeRawBuckets).some(t => !teeBuckets[t]?.length);
-  const teeSdKeys = teeKeysSorted.filter(t => teeBuckets[t]?.length);
+  const teeSdKeys = Object.keys(teeBuckets).sort((a, b) => teeBuckets[b].length - teeBuckets[a].length);
+  const teeKeysSorted = teeSdKeys;
   const teeAvgs = {};
   teeSdKeys.forEach(t => {
     const arr = teeBuckets[t];
-    const approxCount = arr.filter(x => x.approx).length;
-    teeAvgs[t] = { avg: arr.reduce((s, x) => s + x.value, 0) / arr.length, n: arr.length, warn: !!(approxCount || teeRawBuckets[t]?.length) };
+    teeAvgs[t] = { avg: arr.reduce((s, x) => s + x.value, 0) / arr.length, n: arr.length, warn: arr.some(x => x.warn) };
   });
 
   let teeChartSvg = '';
@@ -3660,27 +3745,12 @@ function renderPlayerStats() {
 
   const teeRow = (tee, i) => {
     const sdArr = teeBuckets[tee] || [];
-    const rawArr = teeRawBuckets[tee] || [];
-    if (!sdArr.length && !rawArr.length) return '';
-    let valueHtml, countHtml;
-    if (sdArr.length) {
-      const warn = teeAvgs[tee].warn
-        ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
-        : '';
-      valueHtml = `${fmt1(teeAvgs[tee].avg)}${warn}`;
-      countHtml = `${sdArr.length}×`;
-    } else {
-      // Geen enkele volledige ronde met CR/SR voor deze tee: terugval op ruwe score-t.o.v.-par
-      const totalDiff = rawArr.reduce((s, x) => s + x.diff, 0);
-      const totalN = rawArr.reduce((s, x) => s + x.n, 0);
-      const avg = totalDiff / totalN;
-      const sign = avg > 0 ? '+' : '';
-      valueHtml = `${sign}${avg.toFixed(2)} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-      countHtml = `${totalN}×`;
-    }
+    if (!sdArr.length) return '';
+    const valueHtml = `${teeAvgs[tee].warn ? warningIconSmall : ''}${fmt1(teeAvgs[tee].avg)}`;
+    const countHtml = `${sdArr.length}×`;
     const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
     return `<span style="${bg}display:flex;align-items:center;gap:6px;font-size:17px;color:var(--muted);padding:4px 0 4px 6px"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}</span>`
-      + `<span style="${bg}font-size:17px;font-weight:700;text-align:right;padding:4px 8px 4px 0">${valueHtml}</span>`
+      + `<span style="${bg}font-size:17px;font-weight:700;text-align:right;padding:4px 8px 4px 0;display:flex;align-items:center;justify-content:flex-end;gap:5px">${valueHtml}</span>`
       + `<span style="${bg}font-size:15px;color:var(--muted);text-align:right;padding:4px 6px 4px 0">${countHtml}</span>`;
   };
   const teeCardBody = teeKeysSorted.map((tee, i) => teeRow(tee, i)).join('');
@@ -3689,11 +3759,8 @@ function renderPlayerStats() {
       + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Gem. Sd</span>`
       + `<span></span>`
     : '';
-  const teeFallbackNote = teeHasFallback
-    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:15px;color:var(--muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Geen CR/SR</div>`
-    : '';
   const teeCard = teeCardBody
-    ? `<div class="card"><h2>Gemiddelde per tee</h2>${teeChartSvg}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px">${teeHeader}${teeCardBody}</div>${teeFallbackNote}</div>`
+    ? `<div class="card"><h2>Gemiddelde per tee</h2>${teeChartSvg}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px">${teeHeader}${teeCardBody}</div></div>`
     : '';
 
   // Gemiddelde score t.o.v. par per par-type (3/4/5)
@@ -3795,7 +3862,7 @@ function renderPlayerStats() {
       if (!e || e.value == null) return;
       const d = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`);
       if (!isFinite(d.getTime())) return;
-      dayBuckets[d.getDay()].push(e.value);
+      dayBuckets[d.getDay()].push({ value: e.value, warn: roundHasWarning(r) });
     });
     // Groepindeling hangt af van de weergavestand: 7 losse dagen, of doordeweeks (ma-vr)
     // samengevoegd tegenover weekend (za+zo) samengevoegd. Alle groepen delen nu dezelfde
@@ -3815,7 +3882,7 @@ function renderPlayerStats() {
     const groupAvgs = {};
     groupOrder.forEach(gk => {
       const arr = groupMembers[gk].flatMap(dn => dayBuckets[dn]);
-      groupAvgs[gk] = arr.length ? { avg: arr.reduce((s, x) => s + x, 0) / arr.length, n: arr.length } : { avg: null, n: 0 };
+      groupAvgs[gk] = arr.length ? { avg: arr.reduce((s, x) => s + x.value, 0) / arr.length, n: arr.length, warn: arr.some(x => x.warn) } : { avg: null, n: 0, warn: false };
     });
     const nGroups = groupOrder.length;
     const groupVals = Object.values(groupAvgs).filter(d => d.avg != null).map(d => d.avg);
@@ -3870,7 +3937,7 @@ function renderPlayerStats() {
       const legendRows2 = groupOrder.map((gk, i) => {
         const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
         return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${groupLabels[gk]}</span>`
-          + `<span style="${bg}font-weight:700${groupAvgs[gk].avg == null ? ';color:var(--muted);font-weight:400' : ''};text-align:right;padding:4px 8px 4px 0">${groupAvgs[gk].avg != null ? fmt1(groupAvgs[gk].avg) : '—'}</span>`
+          + `<span style="${bg}font-weight:700${groupAvgs[gk].avg == null ? ';color:var(--muted);font-weight:400' : ''};text-align:right;padding:4px 8px 4px 0;display:flex;align-items:center;justify-content:flex-end;gap:5px">${groupAvgs[gk].warn ? warningIconSmall : ''}${groupAvgs[gk].avg != null ? fmt1(groupAvgs[gk].avg) : '—'}</span>`
           + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${groupAvgs[gk].n}×</span>`;
       }).join('');
       weekdayDotsCard = `<div class="card"><h2>Gemiddelde per dag</h2>${toggleRow}`
@@ -3880,7 +3947,7 @@ function renderPlayerStats() {
   }
 
   // Verdeling rond je handicap: dagresultaat per ronde t.o.v. de index die vóór die ronde gold
-  const distBuckets = { onder: 0, gelijk: 0, boven1_3: 0, boven3_5: 0, boven5: 0 };
+  const distBuckets = { onder: [], gelijk: [], boven1_3: [], boven3_5: [], boven5: [] };
   let distTot = 0;
   periodRounds.forEach(r => {
     const idx = roundIndexMap.get(r);
@@ -3890,24 +3957,31 @@ function renderPlayerStats() {
     // geschiedenis, zonder ESR/caps — ook als deze kaart zelf maar een periode toont, moet
     // de lookback kloppen voor rondes die vroeg in die periode vallen.
     const prev = rounds.slice(0, idx);
-    const sds = prev.slice(-20).map(x => { const pe = effectiveSD(x); return pe ? pe.value : null; }).filter(v => v != null);
+    const lookback = prev.slice(-20);
+    const sds = lookback.map(x => { const pe = effectiveSD(x); return pe ? pe.value : null; }).filter(v => v != null);
     const staffel = whsStaffel(sds.length);
     if (!staffel) return;
     const idxHi = whsIndexRound([...sds].sort((a, b) => a - b).slice(0, staffel.count).reduce((s, x) => s + x, 0) / staffel.count + staffel.adj);
     const diff = e.value - idxHi;
     distTot++;
-    if (diff < -0.05) distBuckets.onder++;
-    else if (diff <= 0.05) distBuckets.gelijk++;
-    else if (diff <= 3) distBuckets.boven1_3++;
-    else if (diff <= 5) distBuckets.boven3_5++;
-    else distBuckets.boven5++;
+    // Onzeker als óf deze ronde zelf nog geen vastgesteld resultaat heeft, óf de
+    // referentie-handicap (uit de voorgaande 20) op een onbevestigde ronde steunt —
+    // in dat laatste geval kan de categorie-indeling later nog verschuiven.
+    const entry = { r, uncertain: roundHasWarning(r) || lookback.some(roundHasWarning) };
+    if (diff < -0.05) distBuckets.onder.push(entry);
+    else if (diff <= 0.05) distBuckets.gelijk.push(entry);
+    else if (diff <= 3) distBuckets.boven1_3.push(entry);
+    else if (diff <= 5) distBuckets.boven3_5.push(entry);
+    else distBuckets.boven5.push(entry);
   });
-  const hdRow = (label, n) => {
+  const hdRow = (label, arr) => {
+    const n = arr.length;
     const pct = distTot ? Math.round(n / distTot * 100) : 0;
+    const warn = arr.some(entry => entry.uncertain);
     return `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
       + `<span style="width:88px;flex:none;font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
       + `<div style="flex:1;min-width:0;background:var(--overlay-soft);border-radius:6px;overflow:hidden;height:18px"><div style="width:${pct}%;height:100%;background:var(--green-light)"></div></div>`
-      + `<span style="width:34px;flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
+      + `<span style="flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px">${warn ? warningIconSmall : ''}${n}</span>`
       + `<span style="width:10px;flex:none;text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
       + `<span style="width:38px;flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
   };
@@ -3922,10 +3996,10 @@ function renderPlayerStats() {
 
   // Inklapbare gouden kaartkoppen (standaard ingeklapt)
   window._statCardCollapsed = window._statCardCollapsed || {};
-  const cardHead = (title, key) => {
+  const cardHead = (title, key, hasWarning = false) => {
     const col = window._statCardCollapsed[key] !== false;
     return `<h2 onclick="window._statCardCollapsed['${key}']=window._statCardCollapsed['${key}']===false?true:false;renderPlayerStats()" style="cursor:pointer;display:flex;align-items:center;gap:8px">`
-      + `<span style="flex:1">${title}</span>`
+      + `<span style="flex:1;display:flex;align-items:center;gap:8px">${title}${hasWarning ? warningIconSmall : ''}</span>`
       + `<span style="display:inline-block;font-size:15px;transform:rotate(${col ? 0 : 90}deg);transition:transform .15s">▶</span></h2>`;
   };
 
@@ -3966,25 +4040,27 @@ function renderPlayerStats() {
         const tAvg = avgSdOf(trs);
         return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0 3px 24px">`
           + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:16px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}</span>`
-          + `<span style="width:64px;text-align:right;font-size:16px;font-weight:700">${tAvg != null ? 'Sd ' + tAvg.toFixed(1) : '—'}</span>`
+          + `<span style="min-width:64px;text-align:right;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:flex-end;gap:5px">${(tAvg != null && trs.some(roundHasWarning)) ? warningIconSmall : ''}${tAvg != null ? 'Sd ' + tAvg.toFixed(1) : '—'}</span>`
           + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${trs.length}×</span></div>`;
       }).join('');
       const trackHeader = `<div onclick="window._statTrackCollapsed['${tk}']=window._statTrackCollapsed['${tk}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 4px 12px">`
         + `<span style="flex:1;font-size:17px">${escapeHtml(track)}</span>`
-        + `<span style="width:64px;text-align:right;font-size:17px;font-weight:700">${avg != null ? 'Sd ' + avg.toFixed(1) : '—'}</span>`
+        + `<span style="min-width:64px;text-align:right;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:flex-end;gap:5px">${(avg != null && rs.some(roundHasWarning)) ? warningIconSmall : ''}${avg != null ? 'Sd ' + avg.toFixed(1) : '—'}</span>`
         + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${rs.length}×</span>`
         + `<span style="display:inline-block;font-size:13px;transform:rotate(${tCollapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
       return trackHeader + (tCollapsed ? '' : teeRows);
     }).join('');
+    const clubHasWarning = Object.values(tracks).some(arr => arr.some(roundHasWarning));
     const header = `<div onclick="window._statClubCollapsed['${ck}']=window._statClubCollapsed['${ck}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0">`
-      + `<span style="flex:1;font-size:17px;font-weight:700">${escapeHtml(club)}</span>`
+      + `<span style="flex:1;font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px">${escapeHtml(club)}${clubHasWarning ? warningIconSmall : ''}</span>`
       + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${total}×</span>`
       + `<span style="display:inline-block;transform:rotate(${collapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
     return header + (collapsed ? '' : `<div>${trackRows}</div>`);
   }).join('');
   const trackCollapsed = window._statCardCollapsed['card_club'] !== false;
+  const anyClubWarning = Object.values(byClub).some(tracks => Object.values(tracks).some(arr => arr.some(roundHasWarning)));
   const trackCard = clubBlocks
-    ? `<div class="card">${cardHead('Per club &amp; baan', 'card_club')}${trackCollapsed ? '' : clubBlocks}</div>`
+    ? `<div class="card">${cardHead('Per club &amp; baan', 'card_club', anyClubWarning)}${trackCollapsed ? '' : clubBlocks}</div>`
     : '';
 
   // Vorm & consistentie
@@ -3994,11 +4070,11 @@ function renderPlayerStats() {
         const better = trend.diff < 0; // lager dagresultaat = beter
         const arrow = Math.abs(trend.diff) < 0.05 ? '→' : (better ? '▼' : '▲');
         const col = Math.abs(trend.diff) < 0.05 ? 'var(--muted)' : (better ? 'var(--green-light)' : '#d9713c');
-        return `<div style="background:rgba(0,0,0,.04);display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Trend (laatste 5)</span><span style="font-size:17px;font-weight:700;color:${col}">${arrow} ${fmtSigned(trend.diff)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`;
+        return `<div style="background:rgba(0,0,0,.04);display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Trend (laatste 5)</span><span style="font-size:17px;font-weight:700;color:${col};display:flex;align-items:center;gap:5px">${trendWarn ? warningIconSmall : ''}${arrow} ${fmtSigned(trend.diff)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`;
       })()
     : '';
   const spreadRow = spread != null
-    ? `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Consistentie (spreiding)</span><span style="font-size:17px;font-weight:700">± ${spread.toFixed(1)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`
+    ? `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Consistentie (spreiding)</span><span style="font-size:17px;font-weight:700;display:flex;align-items:center;gap:5px">${spreadWarn ? warningIconSmall : ''}± ${spread.toFixed(1)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`
     : '';
   // Subkopje + datarijen, zodat de labels niet te lang worden. De waarde achter de kop
   // is het totaal over de volledige ronde (som van de deelgemiddeldes eronder, die al
@@ -4034,11 +4110,11 @@ function renderPlayerStats() {
   el.innerHTML = kpiRow + `<div style="margin-bottom:12px">${periodBar}</div>` + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView);
+  renderSdChart(sdView, hiView, capView, capTypeView, warnView, esrAppliedView);
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, warnSeries, esrAppliedSeries) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
@@ -4085,6 +4161,29 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries) {
       return `<g transform="translate(${x.toFixed(1)} ${(y - 10).toFixed(1)})" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${path}</g>`;
     }).join('');
   };
+  // Waarschuwingsdriehoekje: op dezelfde manier als de cap-iconen — vaste grootte, altijd
+  // getekend (ook bij veel punten, want in de praktijk zelden meer dan 1 punt tegelijk).
+  // Boven het punt, of nog wat hoger als er op diezelfde plek ook al een cap-icoon staat.
+  const warnIconsOf = (types) => {
+    if (!warnSeries) return '';
+    const size = 13;
+    return sdPts.filter(p => warnSeries[p.i]).map(p => {
+      const x = xOf(p.i), y = yOf(p.v);
+      const hasCap = !!(types && types[p.i]);
+      const yOff = hasCap ? 24 : 10;
+      return `<svg x="${(x - size / 2).toFixed(1)}" y="${(y - yOff - size / 2).toFixed(1)}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    }).join('');
+  };
+  // ESR-icoontje (Exceptional Score Reduction): klein pijltje-omlaag, ónder het punt —
+  // tegenovergesteld van cap-icoon/waarschuwingsdriehoekje (die boven staan) om overlap
+  // te vermijden. Altijd getekend, want ook dit is zeldzaam.
+  const esrIconsOf = () => {
+    if (!esrAppliedSeries) return '';
+    return capPts.filter(p => esrAppliedSeries[p.i]).map(p => {
+      const x = xOf(p.i), y = yOf(p.v);
+      return `<g transform="translate(${x.toFixed(1)} ${(y + 10).toFixed(1)})" stroke="var(--red)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="0" y1="-6" x2="0" y2="4"/><polyline points="-4 0 0 4 4 0"/></g>`;
+    }).join('');
+  };
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
     + yTicks
     + `<path d="${lineOf(sdPts)}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`
@@ -4092,6 +4191,8 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries) {
     + hiLine
     + capLine
     + capIconsOf(capTypeSeries)
+    + warnIconsOf(capTypeSeries)
+    + esrIconsOf()
     + `</svg>`;
 }
 
@@ -5143,19 +5244,14 @@ function updateComputedHcp() {
   if (!player1) { el.textContent = '—'; return; }
   const actId = storage.getItem('golf_active_id');
   const last20 = last20Qualifying(player1, loadSavedRounds(), actId, game2Id);
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player1, loadSavedRounds(), 'effective'), priorHiFor(last20, 'effective'));
-  let established = false;
-  if (whs && whs.usedIds && whs.usedIds.size) {
-    established = last20
-      .filter(r => whs.usedIds.has(r.id))
-      .every(r => r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal)));
-  }
+  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player1, loadSavedRounds(), 'effective'), esrMapFor(player1, loadSavedRounds(), 'effective'));
   // Driehoekje i.p.v. een apart tekstlabel ('Nieuwe hcp'/'Verwachte hcp') zodra de berekening
-  // nog niet vastgesteld is — consistent met dezelfde indicator op Statistieken.
-  const triangle = (whs && !established)
-    ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  // nog niet vastgesteld is — zelfde conditie als de WHS-hcp-KPI op Statistieken (hele
+  // laatste 20, niet alleen de meetellende usedIds-deelverzameling).
+  const triangle = (whs && last20.some(roundHasWarning))
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
-  el.innerHTML = (whs ? fmt1(whs.value) : '—') + triangle;
+  el.innerHTML = triangle + (whs ? fmt1(whs.value) : '—');
   const labelEl = document.getElementById('computedHcpLabel');
   if (labelEl) labelEl.textContent = 'WHS-hcp';
   // Afwijkingsmelding: zodra je zelf iets anders hebt ingevuld dan wat de app berekent. Grijs
@@ -5207,7 +5303,7 @@ function loadSaved() {
     const startPlayer = nameEl ? nameEl.value.trim() : '';
     if (startPlayer) {
       const last20 = last20Qualifying(startPlayer, saved, actId, game2Id);
-      const whs = whsHandicap(last20, 'effective', effectiveLowHi(startPlayer, saved, 'effective'), priorHiFor(last20, 'effective'));
+      const whs = whsHandicap(last20, 'effective', effectiveLowHi(startPlayer, saved, 'effective'), esrMapFor(startPlayer, saved, 'effective'));
       if (whs) whs.usedIds.forEach(id => window._whsUsedIds.add(id));
     }
   }
@@ -5289,17 +5385,30 @@ function loadSaved() {
         effective: effectiveLowHi(mainPlayer, saved, 'effective'),
       };
       qualAll.forEach((r, idx) => {
-        // Laatste 20 t/m deze ronde, nieuwste eerst — zoals whsHandicap/priorHiFor verwachten.
+        // Laatste 20 t/m deze ronde, nieuwste eerst — zoals whsHandicap verwacht.
         const pool = qualAll.slice(0, idx + 1).slice(-20).reverse();
         const sdFixed = r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal));
         const mode = sdFixed ? 'fixed' : 'effective';
         const lowHi = lowHiByMode[mode];
-        const whs = whsHandicap(pool, mode, lowHi, priorHiFor(pool, mode));
+        // ESR mag hier alleen rondes t/m dit punt in de tijd meenemen (niet de rondes die
+        // ná deze ronde zijn gespeeld) — dit reconstrueert immers de hcp zoals die toén gold.
+        const esrChrono = qualAll.slice(0, idx + 1).map(x => {
+          let sd = null;
+          if (mode === 'fixed') {
+            if (x.sdFinal != null && x.sdFinal !== '' && isFinite(parseFloat(x.sdFinal))) sd = parseFloat(x.sdFinal);
+          } else {
+            const e = effectiveSD(x);
+            if (e) sd = e.value;
+          }
+          return sd == null ? null : { id: x.id, sd, t: new Date(`${x.date || '1970-01-01'}T${x.time || '00:00'}`).getTime() };
+        }).filter(Boolean);
+        const whs = whsHandicap(pool, mode, lowHi, computeEsrAdjustments(esrChrono));
         const oldHcpVal = parseFloat(r.hcp);
         hcpTrendMap[r.id] = {
           oldHcp: isFinite(oldHcpVal) ? oldHcpVal : null,
           newHcp: whs ? whs.value : null,
           capType: whs ? whs.capType : null,
+          esrApplied: whs ? whs.esrApplied : false,
         };
       });
     }
@@ -5345,8 +5454,8 @@ function loadSaved() {
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span>${formatRoundDate(r.date)}${r.time ? ' · ' + r.time : ''}${bezigLabel}</span>
         <span style="display:flex;align-items:center;gap:6px">
-          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
+          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q">Q</span>' : ''}
         </span>
       </div>`;
@@ -5374,7 +5483,10 @@ function loadSaved() {
         } else if (t.capType === 'hard') {
           capFrag = ' <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle" title="Hardcap toegepast"><line x1="5" y1="4" x2="19" y2="4"/><line x1="5" y1="8" x2="19" y2="8"/><line x1="12" y1="19" x2="12" y2="12"/><polyline points="8 16 12 12 16 16"/></svg>';
         }
-        hcpPart = `Hcp ${t.oldHcp != null ? fmt1(t.oldHcp) : '—'}${hcpArrowSvg(t.oldHcp, t.newHcp, 16)}${fmt1(t.newHcp)}${capFrag}${diffFrag}`;
+        const esrFrag = t.esrApplied
+          ? ' <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle" title="ESR toegepast"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg>'
+          : '';
+        hcpPart = `Hcp ${t.oldHcp != null ? fmt1(t.oldHcp) : '—'}${hcpArrowSvg(t.oldHcp, t.newHcp, 16)}${fmt1(t.newHcp)}${capFrag}${esrFrag}${diffFrag}`;
       }
       const stbPart = totalStb != null ? `Stb ${totalStb}` : '';
       const line = [stbPart, hcpPart].filter(Boolean).join(' · ');
@@ -5433,11 +5545,10 @@ function loadSaved() {
   const groupHeader = (title) =>
     `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">${title}</div>`;
 
-  const playerGroupHeader = (player, count) => {
+  const playerGroupHeader = (player, count, hasWarning = false) => {
     const key = 'pg_' + player.replace(/\W/g, '_');
     const collapsed = window._pgCollapsed && window._pgCollapsed[key];
-    const tri = collapsed ? '▶' : '▶';
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=!window._pgCollapsed?.['${key}'];loadSaved()"><span style="flex:1">${escapeHtml(player)}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=!window._pgCollapsed?.['${key}'];loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
   };
 
   const actives    = filtered.filter(r => (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id));
@@ -5453,9 +5564,9 @@ function loadSaved() {
   const finished   = filtered.filter(r => isDone(r)  && !r._justImported && !actives.includes(r)).sort(sortDesc);
   const sortedActives = actives.sort((a,b) => { const aIsCurrent = (activePlayer===2 && game2Id && a.id===game2Id) || (activePlayer===1 && activeId && String(a.id)===activeId); const bIsCurrent = (activePlayer===2 && game2Id && b.id===game2Id) || (activePlayer===1 && activeId && String(b.id)===activeId); return aIsCurrent ? -1 : bIsCurrent ? 1 : 0; });
 
-  const collapsibleHeader = (title, count, key, stateObj) => {
+  const collapsibleHeader = (title, count, key, stateObj, hasWarning = false) => {
     const collapsed = window[stateObj]?.[key] !== false;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1">${escapeHtml(title)}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
   };
   // Bouwt de kaarten van een sectie alleen op als die sectie daadwerkelijk is
   // uitgeklapt (zelfde key/stateObj als de bijbehorende collapsibleHeader). Bij een
@@ -5471,9 +5582,9 @@ function loadSaved() {
   // vaste categorie), maar het pijltje schakelt wel tussen verkorte en uitgebreide
   // kaarten (long-press op de knop zelf gaat direct naar verkort, zie toggleWhsShort/
   // setWhsShort).
-  const staticHeader = (title, count) => {
+  const staticHeader = (title, count, hasWarning = false) => {
     const short = !!window._whsShort;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1">${escapeHtml(title)}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${short?0:90}deg)">▶</span></div><div>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${short?0:90}deg)">▶</span></div><div>`;
   };
 
   let html = '';
@@ -5487,23 +5598,23 @@ function loadSaved() {
         .filter(r => r.player === player1 && r.qualifying && isDoneForWhs(r))
         .sort(sortDesc)
         .slice(0, 20);
-      html += staticHeader(player1, last20.length) + last20.map(r => {
+      html += staticHeader(player1, last20.length, last20.some(roundHasWarning)) + last20.map(r => {
         const isExpandedFromShort = !!(window._whsShort && window._whsExpandedIds && window._whsExpandedIds.has(r.id));
         return makeCard(r, null, !!window._whsShort && !isExpandedFromShort, isExpandedFromShort);
       }).join('') + '</div>';
     }
   } else if (window._groupByCategory) {
-    if (actives.length)    html += collapsibleHeader('Actief', actives.length, 'actief', '_catCollapsed') + cardsIfExpanded(sortedActives, 'actief', '_catCollapsed') + '</div>';
-    if (imported.length)   html += collapsibleHeader('Geïmporteerd', imported.length, 'import', '_catCollapsed') + cardsIfExpanded(imported, 'import', '_catCollapsed') + '</div>';
+    if (actives.length)    html += collapsibleHeader('Actief', actives.length, 'actief', '_catCollapsed', actives.some(roundHasWarning)) + cardsIfExpanded(sortedActives, 'actief', '_catCollapsed') + '</div>';
+    if (imported.length)   html += collapsibleHeader('Geïmporteerd', imported.length, 'import', '_catCollapsed', imported.some(roundHasWarning)) + cardsIfExpanded(imported, 'import', '_catCollapsed') + '</div>';
     if (planned.length) {
-      html += collapsibleHeader('Gepland', planned.length, 'gepland', '_catCollapsed') + cardsIfExpanded(planned, 'gepland', '_catCollapsed') + '</div>';
+      html += collapsibleHeader('Gepland', planned.length, 'gepland', '_catCollapsed', planned.some(roundHasWarning)) + cardsIfExpanded(planned, 'gepland', '_catCollapsed') + '</div>';
     } else if (window._forceShowPlanned) {
       html += collapsibleHeader('Gepland', 0, 'gepland', '_catCollapsed')
         + `<div class="saved-item" style="font-size:20px;color:var(--info-grey);font-weight:700">Er zijn geen geplande rondes</div></div>`;
     }
-    if (inProgress.length) html += collapsibleHeader('Gepauzeerd', inProgress.length, 'gepauzeerd', '_catCollapsed') + cardsIfExpanded(inProgress, 'gepauzeerd', '_catCollapsed') + '</div>';
+    if (inProgress.length) html += collapsibleHeader('Gepauzeerd', inProgress.length, 'gepauzeerd', '_catCollapsed', inProgress.some(roundHasWarning)) + cardsIfExpanded(inProgress, 'gepauzeerd', '_catCollapsed') + '</div>';
     if (finished.length) {
-      html += collapsibleHeader('Afgerond', finished.length, 'afgerond', '_catCollapsed');
+      html += collapsibleHeader('Afgerond', finished.length, 'afgerond', '_catCollapsed', finished.some(roundHasWarning));
       // 'Laatste 12 maanden' en 'Overig' i.p.v. per jaar
       const cutoff12 = Date.now() - 365 * 24 * 60 * 60 * 1000;
       const last12 = [];
@@ -5514,12 +5625,12 @@ function loadSaved() {
       });
       if (last12.length) {
         html += `<div style="padding-left:12px">`
-          + collapsibleHeader('Laatste 12 maanden', last12.length, 'fin_last12', '_finYearCollapsed').replace('color:var(--gold)', 'color:var(--green-light)')
+          + collapsibleHeader('Laatste 12 maanden', last12.length, 'fin_last12', '_finYearCollapsed', last12.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
           + cardsIfExpanded(last12, 'fin_last12', '_finYearCollapsed') + '</div></div>';
       }
       if (rest.length) {
         html += `<div style="padding-left:12px">`
-          + collapsibleHeader('Overig', rest.length, 'fin_overig', '_finYearCollapsed').replace('color:var(--gold)', 'color:var(--green-light)')
+          + collapsibleHeader('Overig', rest.length, 'fin_overig', '_finYearCollapsed', rest.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
           + cardsIfExpanded(rest, 'fin_overig', '_finYearCollapsed') + '</div></div>';
       }
       html += '</div>';
@@ -5545,11 +5656,12 @@ function loadSaved() {
       : clubKeysAll;
     clubKeys.forEach(club => {
       const clubTotal = Object.values(byClub[club]).reduce((s, arr) => s + arr.length, 0);
-      html += collapsibleHeader(club, clubTotal, 'club_' + club.replace(/\W/g,'_'), '_clubTrkCollapsed');
+      const clubHasWarning = Object.values(byClub[club]).some(arr => arr.some(roundHasWarning));
+      html += collapsibleHeader(club, clubTotal, 'club_' + club.replace(/\W/g,'_'), '_clubTrkCollapsed', clubHasWarning);
       Object.keys(byClub[club]).sort().forEach(track => {
         const tCount = byClub[club][track].length;
         const trkKey = 'trk_' + club.replace(/\W/g,'_') + '_' + track.replace(/\W/g,'_');
-        html += `<div style="padding-left:12px">` + collapsibleHeader(track, tCount, trkKey, '_clubTrkCollapsed').replace('color:var(--gold)', 'color:var(--green-light)') + cardsIfExpanded(byClub[club][track], trkKey, '_clubTrkCollapsed') + '</div></div>';
+        html += `<div style="padding-left:12px">` + collapsibleHeader(track, tCount, trkKey, '_clubTrkCollapsed', byClub[club][track].some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)') + cardsIfExpanded(byClub[club][track], trkKey, '_clubTrkCollapsed') + '</div></div>';
       });
       html += '</div>';
     });
@@ -5569,7 +5681,7 @@ function loadSaved() {
     }).forEach(player => {
       const rounds = byPlayer[player];
       const key = player.replace(/\W/g,'_');
-      html += playerGroupHeader(player, rounds.length);
+      html += playerGroupHeader(player, rounds.length, rounds.some(roundHasWarning));
       {
         const cutoff12 = Date.now() - 365 * 24 * 60 * 60 * 1000;
         const last12 = [];
@@ -5581,12 +5693,12 @@ function loadSaved() {
         last12.sort(sortDesc);
         if (last12.length) {
           html += `<div style="padding-left:12px">`
-            + collapsibleHeader('Laatste 12 maanden', last12.length, 'pgy_' + key + '_last12', '_pgYearCollapsed').replace('color:var(--gold)', 'color:var(--green-light)')
+            + collapsibleHeader('Laatste 12 maanden', last12.length, 'pgy_' + key + '_last12', '_pgYearCollapsed', last12.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
             + cardsIfExpanded(last12, 'pgy_' + key + '_last12', '_pgYearCollapsed') + '</div></div>';
         }
         if (rest.length) {
           html += `<div style="padding-left:12px">`
-            + collapsibleHeader('Overig', rest.length, 'pgy_' + key + '_overig', '_pgYearCollapsed').replace('color:var(--gold)', 'color:var(--green-light)')
+            + collapsibleHeader('Overig', rest.length, 'pgy_' + key + '_overig', '_pgYearCollapsed', rest.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
             + cardsIfExpanded(rest, 'pgy_' + key + '_overig', '_pgYearCollapsed') + '</div></div>';
         }
       }
