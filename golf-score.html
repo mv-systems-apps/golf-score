@@ -7568,6 +7568,10 @@ function confirmRoundResult() {
   }
   closeRoundResultModal();
   loadSaved();
+  // Ronde is (mogelijk) net vastgesteld/aangepast: de 'uit historie afgeleide' waarde en
+  // de eventuele waarschuwing in Instellingen direct verversen, ongeacht wanneer je er
+  // weer naartoe navigeert.
+  updateLowHiInput();
 }
 
 function getFavClubs() {
