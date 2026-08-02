@@ -2162,9 +2162,6 @@ function buildTrackList() {
   });
 
   // Zet knoppen aan/uit op basis van beschikbare categorieën voor deze club
-  const btn9    = document.getElementById('cat-9');
-  const btn18   = document.getElementById('cat-18');
-  const btnPar3 = document.getElementById('cat-par3');
   const has9    = availableCats.has('9');
   const has18   = availableCats.has('18');
   const hasPar3 = availableCats.has('par3');
@@ -3465,7 +3462,6 @@ function renderPlayerStats() {
       if (!isFinite(tj) || tj < cutoff) continue;
       if (lowHi == null || hiSeries[j] < lowHi) lowHi = hiSeries[j];
     }
-    const priorCapped = idx > 0 ? capSeries[idx - 1] : null;
     // Correcte ESR: volledige geschiedenis t/m deze ronde, niet alleen de vorige ronde
     // vergelijken — zelfde principe als computeEsrAdjustments()/esrMapFor() elders.
     const esrChronoUpToHere = rounds.slice(0, idx + 1).map((rr, i) => {
@@ -4119,14 +4115,15 @@ function renderPlayerStats() {
   const formBody = trendRow + spreadRow + hdSubHead + hdBody + threeRow + nineRow;
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
-  el.innerHTML = kpiRow + `<div style="margin-bottom:12px">${periodBar}</div>` + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
+  const stickyPeriodBar = `<div style="position:sticky;top:var(--header-h, 60px);z-index:90;background:var(--green-deep);margin:0 -12px 12px;padding:12px 12px 12px">${periodBar}</div>`;
+  el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView, warnView, esrAppliedView);
+  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView);
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, warnSeries, esrAppliedSeries) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
@@ -4173,22 +4170,9 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, warnSeries,
       return `<g transform="translate(${x.toFixed(1)} ${(y - 10).toFixed(1)})" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${path}</g>`;
     }).join('');
   };
-  // Waarschuwingsdriehoekje: op dezelfde manier als de cap-iconen — vaste grootte, altijd
-  // getekend (ook bij veel punten, want in de praktijk zelden meer dan 1 punt tegelijk).
-  // Boven het punt, of nog wat hoger als er op diezelfde plek ook al een cap-icoon staat.
-  const warnIconsOf = (types) => {
-    if (!warnSeries) return '';
-    const size = 13;
-    return sdPts.filter(p => warnSeries[p.i]).map(p => {
-      const x = xOf(p.i), y = yOf(p.v);
-      const hasCap = !!(types && types[p.i]);
-      const yOff = hasCap ? 24 : 10;
-      return `<svg x="${(x - size / 2).toFixed(1)}" y="${(y - yOff - size / 2).toFixed(1)}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-    }).join('');
-  };
   // ESR-icoontje (Exceptional Score Reduction): klein pijltje-omlaag, ónder het punt —
-  // tegenovergesteld van cap-icoon/waarschuwingsdriehoekje (die boven staan) om overlap
-  // te vermijden. Altijd getekend, want ook dit is zeldzaam.
+  // tegenovergesteld van cap-icoon (die boven staat) om overlap te vermijden. Altijd
+  // getekend, want ook dit is zeldzaam.
   const esrIconsOf = () => {
     if (!esrAppliedSeries) return '';
     return capPts.filter(p => esrAppliedSeries[p.i]).map(p => {
@@ -4203,7 +4187,6 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, warnSeries,
     + hiLine
     + capLine
     + capIconsOf(capTypeSeries)
-    + warnIconsOf(capTypeSeries)
     + esrIconsOf()
     + `</svg>`;
 }
@@ -4278,12 +4261,6 @@ function buildScoreText(round) {
   const total    = played.reduce((s, h) => s + h.score, 0);
   const totalAgs = round.holes.reduce((s, h) => s + agsFor(h), 0);
   const totalStb = round.holes.reduce((s, h) => s + stbFor(h), 0);
-  const rawFmt   = n => (n === 0 ? 'E' : (n > 0 ? '+' : '') + n);
-  const rparPlayed = played.reduce((s, h) => s + h.par,  0);
-  const phcpPlayed = played.reduce((s, h) => s + h.phcp, 0);
-  const dRaw   = total - rparPlayed;
-  const netto  = total - phcpPlayed;
-  const dNetto = netto - rparPlayed;
   const clubName = round.club || COURSE_CLUBS[round.track] || 'Onbekende club';
   const clubShort = round.clubShort || CLUBS[clubName]?.shortName || clubName;
 
@@ -7867,9 +7844,6 @@ function buildClubList() {
   if (emptyMsgEl) emptyMsgEl.classList.add('hidden');
   if (cardEl) cardEl.classList.remove('hidden');
   setClubBtns(false);
-
-  const groupHeader = (title) =>
-    `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">${title}</div>`;
 
   const renderClub = (club) => {
     const isFav = favs.includes(club);
