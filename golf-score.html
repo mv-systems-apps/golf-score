@@ -821,7 +821,8 @@
         <div class="more-full">Met minder dan 20 rondes wordt niet zomaar het gemiddelde van al je scores genomen: WHS gebruikt steeds een vaste, kleinere selectie van je beste dagresultaten, soms met een extra aftrek erbovenop.
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:8px;row-gap:4px;margin-top:10px;font-size:15px;color:var(--muted)">
             <span style="font-weight:700;color:var(--white)">Rondes</span><span style="font-weight:700;color:var(--white)">Beste scores</span><span style="font-weight:700;color:var(--white)">Aftrek</span>
-            <span>1&ndash;2</span><span>1</span><span>&mdash;</span>
+            <span>1</span><span>1 (je enige)</span><span>2,0</span>
+            <span>2</span><span>1</span><span>2,0</span>
             <span>3</span><span>1</span><span>2,0</span>
             <span>4</span><span>1</span><span>1,0</span>
             <span>5</span><span>1</span><span>&mdash;</span>
@@ -1318,8 +1319,11 @@ function whsIndexRound(v) {
 }
 
 function whsStaffel(n) {
+  // Officiële WHS-staffeltabel, inclusief 1-2 rondes — bevestigd tegen de officiële
+  // NGF-tabel (rule 5.2a). Bij 1 ronde telt je enige dagresultaat zelf mee (-2,0); bij
+  // 2 rondes de laagste van de twee (ook -2,0).
   const t = [
-    [1, 1, 0], [2, 1, 0], [3, 1, -2.0], [4, 1, -1.0], [5, 1, 0], [6, 2, -1.0],
+    [1, 1, -2.0], [2, 1, -2.0], [3, 1, -2.0], [4, 1, -1.0], [5, 1, 0], [6, 2, -1.0],
     [7, 2, 0], [8, 2, 0], [9, 3, 0], [10, 3, 0], [11, 3, 0],
     [12, 4, 0], [13, 4, 0], [14, 4, 0], [15, 5, 0], [16, 5, 0],
     [17, 6, 0], [18, 6, 0], [19, 7, 0], [20, 8, 0],
@@ -1352,12 +1356,6 @@ function applyHandicapCaps(rawValue, lowHi) {
   return { value: whsIndexRound(capped), type };
 }
 
-// Bepaalt WHS-handicap uit een set qualifying rondes.
-// mode 'fixed' = alleen vastgestelde SD's; 'effective' = alle (voorlopig meegerekend).
-// lowHi (optioneel) past soft/hard cap toe.
-// Retourneert { value, rawValue, capped, usedIds:Set } of null.
-// Index vóór de nieuwste ronde (voor ESR): WHS over de set zonder de nieuwste ronde,
-// zonder ESR/caps. Retourneert getal of null.
 // Bouwt voor een speler, over de VOLLEDIGE chronologische geschiedenis (oudst eerst), de
 // cumulatieve Exceptional Score Reduction per ronde op — conform WHS-regel 5.9. Bij een
 // uitzonderlijke ronde (7,0-9,9 slagen beter dan de op dát moment geldende index -> -1,0;
@@ -1415,6 +1413,12 @@ function esrMapFor(player, allRounds, mode) {
   return computeEsrAdjustments(chrono);
 }
 
+// Bepaalt WHS-handicap uit een set qualifying rondes.
+// mode 'fixed' = alleen vastgestelde SD's; 'effective' = alle (voorlopig meegerekend).
+// lowHi (optioneel) past soft/hard cap toe. esrMap (optioneel, zie computeEsrAdjustments)
+// past Exceptional Score Reduction toe, al vóór de beste-N-selectie.
+// Retourneert { value, rawValue, capped, capType, usedIds:Set, esrApplied, rawValueNoEsr }
+// of null.
 function whsHandicap(rounds, mode, lowHi = null, esrMap = null) {
   const withSd = rounds
     .map(r => {
