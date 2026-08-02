@@ -873,6 +873,18 @@
     </div>
   </div>
   <div class="card">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg>
+      <div>
+        <div style="font-size:17px;color:var(--muted)">ESR (Exceptional Score Reduction): speel je een <b>uitzonderlijk goede ronde</b>? Dan telt die extra zwaar mee, en trekt WHS je index automatisch verder omlaag.</div>
+        <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+        <div class="more-full">Speel je een dagresultaat dat 7,0 tot 9,9 slagen beter is dan je handicap op dat moment, dan gaat er 1,0 extra van je index af. Is het 10,0 slagen of beter, dan gaat er 2,0 extra af. Die aftrek geldt niet alleen voor die ene ronde, maar voor <b>elk van je op dát moment recentste 20 dagresultaten</b> — en blijft gelden zolang een ronde binnen die recentste 20 valt. Speel je meerdere uitzonderlijke rondes, dan stapelen de aftrekken op.
+          <div style="margin-top:10px">De gedachte erachter: een uitzonderlijk goede ronde is vaak een teken dat je handicap eigenlijk al lager had moeten zijn, dus WHS laat 'm meteen extra meewegen in plaats van pas na een paar rondes.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:10px">Symbolen</div>
     <div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
       <span class="tee-badge badge-q" style="justify-self:center">Q</span><span style="justify-self:start">Qualifying-ronde</span>
@@ -4069,7 +4081,7 @@ function renderPlayerStats() {
     ? (() => {
         const better = trend.diff < 0; // lager dagresultaat = beter
         const arrow = Math.abs(trend.diff) < 0.05 ? '→' : (better ? '▼' : '▲');
-        const col = Math.abs(trend.diff) < 0.05 ? 'var(--muted)' : (better ? 'var(--green-light)' : '#d9713c');
+        const col = Math.abs(trend.diff) < 0.05 ? 'var(--muted)' : (better ? 'var(--green-light)' : 'var(--red)');
         return `<div style="background:rgba(0,0,0,.04);display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Trend (laatste 5)</span><span style="font-size:17px;font-weight:700;color:${col};display:flex;align-items:center;gap:5px">${trendWarn ? warningIconSmall : ''}${arrow} ${fmtSigned(trend.diff)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`;
       })()
     : '';
