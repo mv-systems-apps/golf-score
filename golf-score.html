@@ -5490,7 +5490,7 @@ function loadSaved() {
       <div class="saved-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
         <button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundInfoModal(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
-        <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundResultModal(${saved.indexOf(r)})" title="Ronde resultaat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></button>
+        <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundResultModal(${saved.indexOf(r)})" title="Ronde resultaat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></button>
         ${isActive
           ? isPlayer2Active
             ? `<button class="btn-secondary" style="padding:8px 14px" data-round-id="${r.id}" onclick="saveAndClearPlayer2Round(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
@@ -8752,7 +8752,9 @@ function refreshLowHiWarning(previewVal) {
   const dEl = document.getElementById('derivedLowHiVal');
   const player = startPlayerName();
   const rounds = loadSavedRounds();
-  const d = player ? derivedLowHi(player, rounds, 'effective') : null;
+  // Alleen vastgestelde dagresultaten — dit getal dient als betrouwbare referentie om je
+  // handmatige Low HI tegen te controleren, dus geen voorlopige schattingen hierin.
+  const d = player ? derivedLowHi(player, rounds, 'fixed') : null;
   if (dEl) dEl.textContent = (d != null && isFinite(d)) ? fmt1(d) : '—';
   const v = previewVal !== undefined ? previewVal : getManualLowHi();
   const warnEl = document.getElementById('lowHiStaleWarning');
@@ -8761,13 +8763,18 @@ function refreshLowHiWarning(previewVal) {
 
   const triangle = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
-  // Check 1: HUIDIGE officiële handicap (hard feit, geldt altijd, ook zonder opgebouwde
-  // historie — precies zoals bij het vaststellen van een ronde direct zichtbaar zou moeten zijn).
+  // Check 1: HUIDIGE officiële handicap — blijft 'effective' (dus inclusief je nieuwste
+  // ronde), want dat is precies waar je nieuwsgierig naar bent na een goede ronde. Als die
+  // berekening zelf nog op een niet-vastgestelde ronde steunt, is het geen hard feit meer —
+  // dan heet het 'Verwachte handicap' i.p.v. 'Huidige handicap', net als elders in de app.
   const curr = player ? currentOfficialHcp(player, rounds) : null;
   const currStale = curr != null && isFinite(curr) && curr < v;
   if (currStale) {
+    const last20 = player ? last20Qualifying(player, rounds, null, null) : [];
+    const currUncertain = last20.some(roundHasWarning);
+    const label = currUncertain ? 'Verwachte' : 'Je huidige';
     warnEl.style.color = 'var(--orange)';
-    warnEl.innerHTML = `${triangle} Je huidige handicap ligt lager (${fmt1(curr)}) — controleer je Low HI.`;
+    warnEl.innerHTML = `${triangle} ${label} handicap ligt lager (${fmt1(curr)}) — controleer je Low HI.`;
     warnEl.classList.remove('hidden');
     return;
   }
@@ -8789,7 +8796,7 @@ function refreshLowHiWarning(previewVal) {
   const stale = d != null && isFinite(d) && d < v;
   warnEl.style.color = 'var(--orange)';
   if (stale) {
-    warnEl.innerHTML = `${triangle} Uit je rondes blijkt een lagere waarde (${fmt1(d)}) — controleer je Low HI.`;
+    warnEl.innerHTML = `${triangle} Uit je vastgestelde rondes blijkt een lagere waarde (${fmt1(d)}) — controleer je Low HI.`;
     warnEl.classList.remove('hidden');
   } else {
     warnEl.classList.add('hidden');
