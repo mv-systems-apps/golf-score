@@ -5275,6 +5275,10 @@ function resetHcpToComputed() {
 
 function loadSaved() {
   const saved = loadSavedRounds();
+  // Rondedata kan op veel manieren wijzigen (import, koppelen, bewerken, vaststellen) —
+  // door dit hier centraal te doen i.p.v. per wijzigingspad, blijft de 'uit historie
+  // afgeleide' Low HI-waarde in Instellingen altijd actueel, ongeacht de oorzaak.
+  updateLowHiInput();
   const el = document.getElementById('savedList');
   const searchInput = document.getElementById('archiveSearch');
   const query = (searchInput?.value || '').trim().toLowerCase();
@@ -7568,10 +7572,6 @@ function confirmRoundResult() {
   }
   closeRoundResultModal();
   loadSaved();
-  // Ronde is (mogelijk) net vastgesteld/aangepast: de 'uit historie afgeleide' waarde en
-  // de eventuele waarschuwing in Instellingen direct verversen, ongeacht wanneer je er
-  // weer naartoe navigeert.
-  updateLowHiInput();
 }
 
 function getFavClubs() {
