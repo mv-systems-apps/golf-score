@@ -995,42 +995,6 @@ function setRealVH() {
 setRealVH();
 window.addEventListener('resize', setRealVH);
 
-// ══ ANDROID TERUG-KNOP: ALLEEN 'APP AFSLUITEN?'-BEVESTIGING ═════════════════
-// Na meerdere pogingen om de terugknop per open modal een niveau terug te laten gaan
-// (telkens een nieuwe, platform-specifieke eigenaardigheid in de interactie tussen de
-// History API en de native Android-rug-stack) is gekozen voor de eenvoudigste, meest
-// robuuste opzet: de terugknop doet niets modal-specifieks meer. Modals sluiten
-// uitsluitend via hun eigen knoppen (X, Annuleren, enz.) — dat werkte, en werkt, altijd
-// al correct. De terugknop vraagt in plaats daarvan alleen een bevestiging om de hele
-// app te verlaten, zodat je 'm nooit per ongeluk afsluit. Het enige wat je hiermee kwijt
-// zou kunnen raken, zijn niet-opgeslagen aanpassingen in de club- of baan-editor (scores
-// worden altijd al direct opgeslagen) — een bewust geaccepteerd, klein restrisico.
-history.pushState({ appGuard: true }, '');
-window.addEventListener('popstate', () => {
-  showDangerModal(
-    'Golf Score beëindigen',
-    'Weet je zeker dat je de app wilt afsluiten?',
-    'Afsluiten',
-    () => {
-      // We staan op dit moment al op de positie vóór de guard-entry (die is net door
-      // deze terug-actie 'verbruikt') — nóg een history.back() heeft dus geen effect
-      // meer als er niets ouder in de geschiedenis van dit tabblad staat. window.close()
-      // sluit in een geïnstalleerde Android-PWA/TWA doorgaans wél de app; lukt dat niet
-      // (bv. gewone browsertab), dan blijft de app openstaan en kan de gebruiker de
-      // fysieke terugknop nog eenmaal indrukken om de OS het zelf te laten afhandelen.
-      window.close();
-    },
-    'Annuleren'
-  );
-  // showDangerModal's eigen Annuleren-knop verbergt alleen de modal; wij moeten er zelf
-  // voor zorgen dat de guard-entry na annuleren wordt hersteld — anders sluit de
-  // eerstvolgende terugknop-druk de app direct af, zonder nogmaals te vragen.
-  document.getElementById('dangerModalCancelBtn').onclick = () => {
-    document.getElementById('resetAllModal').classList.add('hidden');
-    history.pushState({ appGuard: true }, '');
-  };
-});
-
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
 const CLUBS = {};;
 
