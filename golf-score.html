@@ -995,130 +995,40 @@ function setRealVH() {
 setRealVH();
 window.addEventListener('resize', setRealVH);
 
-// ══ ANDROID TERUG-KNOP VOOR MODALS ══════════════════════════════════════
-// In plaats van elke open/sluit-plek van elke modal los te moeten aanpassen (er zijn
-// tientallen sluit-plekken verspreid over de app), houdt dit een generieke stack bij
-// via een MutationObserver per modal: die reageert automatisch op élke wijziging van
-// de 'hidden'-klasse, ongeacht welke functie dat veroorzaakte. Bij een Android-terug
-// (systeemknop of swipe) sluit dit de bovenste modal op de stack — en gebruikt daarbij,
-// waar beschikbaar, de eigen sluitfunctie van die modal (zodat bijvoorbeeld de
-// onopgeslagen-wijzigingen-waarschuwing van de club/baan-editor gewoon blijft werken
-// i.p.v. straal te sluiten). Modals die zelf geen aparte sluitfunctie hebben (kort-
-// levende bevestigingsmodals zoals de gevaar-modal) vallen terug op direct verbergen.
-const MODAL_CLOSERS = {
-  valueEditModal: closeValueEditModal,
-  choiceEditModal: closeChoiceEditModal,
-  roundLimitModal: closeRoundLimitModal,
-  confirmModal: closeConfirmModal,
-  closeEditorWarningModal: closeEditorWarningModal,
-  clubSearchModalOverlay: closeClubSearchModal,
-  clubEditorOverlay: closeClubEditor,
-  courseEditorOverlay: closeCourseEditor,
-  roundInfoModal: closeRoundInfoModal,
-  roundResultModal: closeRoundResultModal,
-  player2SettingsModal: closePlayer2Modal,
-  exportModal: closeExportModal,
-  shareModal: closeShareModal,
-  // resetAllModal (gevaar-modal) en shareModal (dynamisch aangemaakt) hebben geen
-  // eigen benoemde sluitfunctie — vallen terug op direct verbergen, wat voor die twee
-  // ook precies correct is (geen onopgeslagen-wijzigingen-risico).
-};
-const MODAL_IDS = [
-  'valueEditModal', 'choiceEditModal', 'roundLimitModal', 'confirmModal', 'resetAllModal',
-  'closeEditorWarningModal', 'clubSearchModalOverlay', 'clubEditorOverlay', 'courseEditorOverlay',
-  'roundInfoModal', 'roundResultModal', 'player2SettingsModal', 'exportModal',
-];
-let _modalStack = [];              // welke modals staan nu open, in volgorde van openen
-let _historyDepth = 0;             // eigen boekhouding: hoeveel history-entries wij hebben gepusht
-let _flushQueued = false;
-
-// Verzamelt alle open/sluit-reacties die in dezelfde synchrone cyclus plaatsvinden (bv.
-// 'sluit confirmModal, open meteen roundInfoModal erna') en berekent pas ná die cyclus
-// het NETTO aantal geschiedenis-stappen. Voorkomt zo een race: history.back() voert zijn
-// navigatie asynchroon uit, dus los history.back()+pushState() na elkaar aanroepen kan
-// de browser laten terugspringen naar een positie die inmiddels alweer is ingehaald.
-//
-// Elke pushState krijgt een eigen 'modalDepth' in de state mee (i.p.v. dat de
-// popstate-listener bijhoudt HOEVEEL events er onderweg zijn — dat bleek te fragiel: bij
-// drie of meer geneste modals veroorzaakte de eigen inhaalslag-navigatie (history.go())
-// zelf weer een popstate-event, dat soms alsnog als een echte terug-actie werd gezien en
-// dan per ongeluk ook de modal ÓNDER de zojuist gesloten modal sloot). Nu vergelijkt de
-// listener gewoon de diepte die de browser meldt met de huidige stack-lengte: is die
-// diepte gelijk aan of groter dan wat wij al bijhouden, dan kan dit geen echte
-// terug-actie zijn (die kan de diepte alleen maar verkleinen) en doen we niets.
-function _scheduleHistoryFlush() {
-  if (_flushQueued) return;
-  _flushQueued = true;
-  queueMicrotask(() => {
-    _flushQueued = false;
-    const target = _modalStack.length;
-    if (target > _historyDepth) {
-      for (let i = _historyDepth; i < target; i++) {
-        history.pushState({ modalDepth: i + 1 }, '');
-      }
-    } else if (target < _historyDepth) {
-      history.go(target - _historyDepth);
-    }
-    _historyDepth = target;
-  });
-}
-
-function _registerModalObserver(id) {
-  const el = document.getElementById(id);
-  if (!el || el._modalObserved) return;
-  el._modalObserved = true;
-  new MutationObserver(() => {
-    const isOpen = !el.classList.contains('hidden');
-    const idx = _modalStack.indexOf(id);
-    if (isOpen && idx === -1) {
-      _modalStack.push(id);
-      _scheduleHistoryFlush();
-    } else if (!isOpen && idx !== -1) {
-      _modalStack.splice(idx, 1);
-      _scheduleHistoryFlush();
-    }
-  }).observe(el, { attributes: true, attributeFilter: ['class'] });
-}
-// Belangrijk: de modal-HTML staat ná het einde van dit <script>-blok in het document,
-// dus bestaat nog niet op het moment dat dit script synchroon wordt uitgevoerd. Zonder
-// deze uitstel zou getElementById() voor elke modal null teruggeven en de registratie
-// stilletjes worden overgeslagen — precies waarom de terugknop aanvankelijk nergens
-// werkte, niet alleen bij de club-editor.
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => MODAL_IDS.forEach(_registerModalObserver));
-} else {
-  MODAL_IDS.forEach(_registerModalObserver);
-}
-// shareModal wordt aangemaakt-en-verwijderd i.p.v. verborgen/getoond (zie
-// showShareFallback()/closeShareModal()), en loopt daarom bewust NIET via
-// _registerModalObserver — dat mechanisme verwacht een blijvend element waarvan alleen
-// de 'hidden'-klasse wisselt. shareModal beheert zijn eigen plek op _modalStack en roept
-// _scheduleHistoryFlush() rechtstreeks aan.
-
-window.addEventListener('popstate', (event) => {
-  const targetDepth = event.state?.modalDepth ?? 0;
-  // Altijd direct overnemen: dit ís de daadwerkelijke positie van de browser na deze
-  // navigatie. Belangrijk om dit NIET pas later af te leiden uit _modalStack.length — de
-  // MutationObserver die een gesloten modal van de stack haalt werkt namelijk asynchroon
-  // (microtask), dus _modalStack zou op dit punt nog de oude, niet-bijgewerkte lengte
-  // tonen. Zou je die stale lengte hier gebruiken, dan denkt de eerstvolgende
-  // geschiedenis-flush ten onrechte dat er nóg een stap ingehaald moet worden, en sluit
-  // die daardoor per ongeluk ook de modal die eronder zat.
-  _historyDepth = targetDepth;
-  // Diepte gelijk aan of groter dan onze huidige stack: dit kan geen echte terug-actie
-  // zijn (die verkleint de diepte altijd) — waarschijnlijk onze eigen inhaalslag-navigatie
-  // die zelf een popstate-event triggerde, of een dubbel/vooruit-event. Niets sluiten.
-  if (targetDepth >= _modalStack.length) return;
-  // Alleen de bovenste modal sluiten. Bij een meerstaps-terugbeweging (bv. swipe-back
-  // over meerdere modals in één keer) zorgt de eerstvolgende, door het sluiten van déze
-  // modal getriggerde _scheduleHistoryFlush() er vanzelf voor dat ook de rest volgt.
-  const topId = _modalStack[_modalStack.length - 1];
-  const closer = MODAL_CLOSERS[topId];
-  if (closer) {
-    closer();
-  } else {
-    document.getElementById(topId)?.classList.add('hidden');
-  }
+// ══ ANDROID TERUG-KNOP: ALLEEN 'APP AFSLUITEN?'-BEVESTIGING ═════════════════
+// Na meerdere pogingen om de terugknop per open modal een niveau terug te laten gaan
+// (telkens een nieuwe, platform-specifieke eigenaardigheid in de interactie tussen de
+// History API en de native Android-rug-stack) is gekozen voor de eenvoudigste, meest
+// robuuste opzet: de terugknop doet niets modal-specifieks meer. Modals sluiten
+// uitsluitend via hun eigen knoppen (X, Annuleren, enz.) — dat werkte, en werkt, altijd
+// al correct. De terugknop vraagt in plaats daarvan alleen een bevestiging om de hele
+// app te verlaten, zodat je 'm nooit per ongeluk afsluit. Het enige wat je hiermee kwijt
+// zou kunnen raken, zijn niet-opgeslagen aanpassingen in de club- of baan-editor (scores
+// worden altijd al direct opgeslagen) — een bewust geaccepteerd, klein restrisico.
+history.pushState({ appGuard: true }, '');
+window.addEventListener('popstate', () => {
+  showDangerModal(
+    'Golf Score beëindigen',
+    'Weet je zeker dat je de app wilt afsluiten?',
+    'Afsluiten',
+    () => {
+      // We staan op dit moment al op de positie vóór de guard-entry (die is net door
+      // deze terug-actie 'verbruikt') — nóg een history.back() heeft dus geen effect
+      // meer als er niets ouder in de geschiedenis van dit tabblad staat. window.close()
+      // sluit in een geïnstalleerde Android-PWA/TWA doorgaans wél de app; lukt dat niet
+      // (bv. gewone browsertab), dan blijft de app openstaan en kan de gebruiker de
+      // fysieke terugknop nog eenmaal indrukken om de OS het zelf te laten afhandelen.
+      window.close();
+    },
+    'Annuleren'
+  );
+  // showDangerModal's eigen Annuleren-knop verbergt alleen de modal; wij moeten er zelf
+  // voor zorgen dat de guard-entry na annuleren wordt hersteld — anders sluit de
+  // eerstvolgende terugknop-druk de app direct af, zonder nogmaals te vragen.
+  document.getElementById('dangerModalCancelBtn').onclick = () => {
+    document.getElementById('resetAllModal').classList.add('hidden');
+    history.pushState({ appGuard: true }, '');
+  };
 });
 
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
@@ -4417,10 +4327,6 @@ function showShareFallback(text) {
         </div>
       </div>`;
     document.body.appendChild(modal);
-    // shareModal wordt aangemaakt-en-verwijderd i.p.v. verborgen/getoond, dus past niet
-    // in het generieke class-toggle-observer-patroon — hier expliciet op de modal-stack.
-    _modalStack.push('shareModal');
-    _scheduleHistoryFlush();
   }
   const ta = document.getElementById('shareText');
   ta.value = text;
@@ -4431,9 +4337,6 @@ function closeShareModal() {
   const modal = document.getElementById('shareModal');
   if (!modal) return;
   modal.remove();
-  const idx = _modalStack.indexOf('shareModal');
-  if (idx !== -1) _modalStack.splice(idx, 1);
-  _scheduleHistoryFlush();
 }
 
 function copyShareText(btn) {
