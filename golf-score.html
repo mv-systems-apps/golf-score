@@ -954,8 +954,10 @@
     <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderName" style="color:var(--white);font-weight:700">Downloads (standaard)</span></div>
     <div id="exportFolderUnsupported" class="hidden" style="font-size:15px;color:var(--muted);margin-bottom:8px">Mapkeuze wordt niet ondersteund op dit toestel/deze browser — exports gaan naar Downloads.</div>
     <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <button id="pickExportFolderBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
-    <button id="clearExportFolderBtn" class="btn-secondary hidden" style="width:100%;padding:8px 14px;font-size:17px;margin-top:12px" onclick="clearExportFolder()">Standaard map</button>
+    <div style="display:flex;gap:10px">
+      <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
+      <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
+    </div>
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren (backup)</div>
@@ -964,22 +966,18 @@
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <button class="btn-primary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:12px" onclick="exportBackupAll()">Backup maken (clubs + rondes)</button>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Los exporteren<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-    <div class="more-full">
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-        <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Alleen clubs</b></button>
-        <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Alleen rondes</b></button>
-      </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
+      <button class="btn-primary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren (herstel)</div>
     <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
     <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
+      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
   </div>
 
@@ -7992,10 +7990,10 @@ async function updateExportFolderUI() {
   const handle = await getStoredExportFolderHandle();
   if (handle) {
     if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = 'var(--green-light)'; }
-    if (clearBtn) clearBtn.classList.remove('hidden');
+    if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = false; }
   } else {
     if (nameEl) { nameEl.textContent = 'Downloads (standaard)'; nameEl.style.color = ''; }
-    if (clearBtn) clearBtn.classList.add('hidden');
+    if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = true; }
   }
 }
 
@@ -8077,14 +8075,6 @@ async function exportAllRounds() {
   } catch(e) { console.error('Backup rondes mislukt:', e); }
 }
 
-// Combineert exportAllClubs()/exportAllRounds() tot één tik — de meeste mensen willen
-// gewoon 'een backup maken', niet twee losse exports na elkaar uitvoeren.
-async function exportBackupAll() {
-  await exportAllClubs();
-  await exportAllRounds();
-  updateLastBackupDisplay();
-}
-
 // Toont een herinnering als er lang niet of veel wijzigingen sinds de laatste back-up zijn
 function updateBackupReminder() {
   const el = document.getElementById('backupReminder');
@@ -8128,12 +8118,13 @@ function updateBackupReminder() {
 function updateLastBackupDisplay() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
+  const label = '<span style="color:var(--gold);font-weight:700">Rondes</span>';
   const lastDate = storage.getItem('golf_last_backup_date');
-  if (!lastDate) { el.textContent = 'Nog nooit geëxporteerd'; return; }
+  if (!lastDate) { el.innerHTML = `Nog nooit een backup gemaakt van ${label}`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  if (daysSince <= 0) el.textContent = 'Laatste backup: vandaag';
-  else if (daysSince === 1) el.textContent = 'Laatste backup: gisteren';
-  else el.textContent = `Laatste backup: ${daysSince} dagen geleden`;
+  if (daysSince <= 0) el.innerHTML = `Laatste backup van ${label} is: vandaag`;
+  else if (daysSince === 1) el.innerHTML = `Laatste backup van ${label} is: gisteren`;
+  else el.innerHTML = `Laatste backup van ${label} is: ${daysSince} dagen geleden`;
 }
 
 async function exportAllClubs() {
