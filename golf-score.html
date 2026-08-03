@@ -214,6 +214,13 @@
     .card h3 { font-size:17px; color: var(--green-light); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; margin: 16px 0 8px; }
     .card h3:first-of-type { margin-top: 0; }
 
+    /* Geneste sub-panelen binnen een kaart (bv. Instellingen → Gegevens → 'Toon opties').
+       Moet duidelijk MEER contrast hebben dan de omsluitende .card (rgba(...,.07) donker /
+       .05 licht) om zich er zichtbaar van te onderscheiden — vandaar een merkbaar sterkere
+       waarde, met dezelfde donker/licht-conventie als de rest van de app hieronder. */
+    .subpanel { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18); border-radius: var(--radius); padding: 14px; }
+    html.light-mode .subpanel { background: rgba(0,0,0,.09); border-color: rgba(0,0,0,.18); }
+
     .fg { margin-bottom: 12px; }
     .fg label { font-size:17px; color: var(--green-light); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 6px; font-weight: 700; }
     #roundInfoModal .fg > label:not([style*="green-light"]), #roundInfoModal > div > label { color: var(--gold); }
@@ -311,6 +318,7 @@
     }
     .btn-primary:active { transform: scale(.97); }
     .btn-secondary { padding: 12px 18px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 8px; color: var(--white); font-size:17px; font-weight: 700; cursor: pointer; transition: transform .1s ease; }
+    .btn-secondary:disabled, .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
     .active-bg { background: rgba(255,255,255,.28) !important; border-color: rgba(255,255,255,.45) !important; }
     .delete-icon { color: var(--white); }
     .btn-secondary:active { transform: scale(.95); }
@@ -950,51 +958,53 @@
   <div id="settingsTabData" class="hidden">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white)">Standaard exportmap</div>
-    <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderName" style="color:var(--white);font-weight:700">Downloads (standaard)</span></div>
-    <div id="exportFolderUnsupported" class="hidden" style="font-size:15px;color:var(--muted);margin-bottom:8px">Mapkeuze wordt niet ondersteund op dit toestel/deze browser — exports gaan naar Downloads.</div>
-    <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px">
-      <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
-      <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
-    </div>
-  </div>
-  <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren (backup)</div>
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName">Downloads</span></div>
     <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:8px">Nog nooit geëxporteerd</div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;margin-bottom:12px">
       <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
       <button class="btn-primary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
-  </div>
-  <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren (herstel)</div>
-    <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
-    <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">
+      <div class="subpanel" style="margin-top:8px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exportmap</div>
+        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderNameInBlock" style="color:var(--white);font-weight:700">Downloads</span></div>
+        <div id="exportFolderUnsupported" class="hidden" style="font-size:15px;color:var(--muted);margin-bottom:8px">Mapkeuze wordt niet ondersteund op dit toestel/deze browser — exports gaan naar Downloads.</div>
+        <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
+        <div style="display:flex;gap:10px">
+          <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
+          <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
+        </div>
+      </div>
+      <div class="subpanel" style="margin-top:12px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
+        <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
+        <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes opschonen</div>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opschoon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
-      <div style="margin-top:8px">
+      <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
           <input type="range" id="roundLimitSlider" min="20" max="500" step="20" value="300" style="flex:1" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)">
           <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
         </div>
-        <div style="font-size:17px;color:var(--muted)">Je hebt nu <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
+        <div style="font-size:17px;color:var(--muted)">Je hebt <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
       </div>
-      <div id="otherPlayerCleanupCard" style="margin-top:16px">
+      <div id="otherPlayerCleanupCard" class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes van andere spelers dan <span id="otherPlayerMainNameLabel" style="color:var(--gold)">hoofdspeler</span> verwijderen</div>
         <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
         <div id="otherPlayerCleanupBody" class="hidden">
@@ -1003,13 +1013,13 @@
           <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
         </div>
       </div>
-      <div style="margin-top:16px">
+      <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Niet-qualifying rondes verwijderen</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="nonQCount" style="color:var(--white);font-weight:700">0</span> niet-qualifying rondes.</div>
         <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
-      <div style="margin-top:16px">
+      <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Oudste rondes verwijderen</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
           <span style="font-size:17px;color:var(--muted)">Aantal:</span>
@@ -1025,10 +1035,10 @@
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Resetten</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon reset-opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
-      <div style="margin-top:8px">
+      <div class="subpanel" style="margin-top:8px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
@@ -7977,6 +7987,7 @@ function showExportFolderMsg(text) {
 }
 async function updateExportFolderUI() {
   const nameEl = document.getElementById('exportFolderName');
+  const nameElInBlock = document.getElementById('exportFolderNameInBlock');
   const unsupportedEl = document.getElementById('exportFolderUnsupported');
   const pickBtn = document.getElementById('pickExportFolderBtn');
   const clearBtn = document.getElementById('clearExportFolderBtn');
@@ -7984,15 +7995,18 @@ async function updateExportFolderUI() {
     if (unsupportedEl) unsupportedEl.classList.remove('hidden');
     if (pickBtn) pickBtn.classList.add('hidden');
     if (clearBtn) clearBtn.classList.add('hidden');
-    if (nameEl) { nameEl.textContent = 'Downloads (standaard)'; nameEl.style.color = ''; }
+    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = ''; }
+    if (nameElInBlock) { nameElInBlock.textContent = 'Downloads'; nameElInBlock.style.color = ''; }
     return;
   }
   const handle = await getStoredExportFolderHandle();
   if (handle) {
     if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = 'var(--green-light)'; }
+    if (nameElInBlock) { nameElInBlock.textContent = handle.name; nameElInBlock.style.color = 'var(--green-light)'; }
     if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = false; }
   } else {
-    if (nameEl) { nameEl.textContent = 'Downloads (standaard)'; nameEl.style.color = ''; }
+    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = ''; }
+    if (nameElInBlock) { nameElInBlock.textContent = 'Downloads'; nameElInBlock.style.color = ''; }
     if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = true; }
   }
 }
@@ -8118,13 +8132,13 @@ function updateBackupReminder() {
 function updateLastBackupDisplay() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
-  const label = '<span style="color:var(--gold);font-weight:700">Rondes</span>';
+  const label = '<span style="color:var(--gold);font-weight:700">Backup Rondes</span>';
   const lastDate = storage.getItem('golf_last_backup_date');
-  if (!lastDate) { el.innerHTML = `Nog nooit een backup gemaakt van ${label}`; return; }
+  if (!lastDate) { el.innerHTML = `Nog nooit een ${label} gemaakt`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  if (daysSince <= 0) el.innerHTML = `Laatste backup van ${label} is: vandaag`;
-  else if (daysSince === 1) el.innerHTML = `Laatste backup van ${label} is: gisteren`;
-  else el.innerHTML = `Laatste backup van ${label} is: ${daysSince} dagen geleden`;
+  if (daysSince <= 0) el.innerHTML = `${label}: vandaag`;
+  else if (daysSince === 1) el.innerHTML = `${label}: gisteren`;
+  else el.innerHTML = `${label}: ${daysSince} dagen geleden`;
 }
 
 async function exportAllClubs() {
