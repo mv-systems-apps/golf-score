@@ -191,6 +191,11 @@
     .switch .slider::before { content: ''; position: absolute; height: 24px; width: 24px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; }
     .switch input:checked + .slider { background: var(--gold); }
     .switch input:checked + .slider::before { transform: translateX(22px); }
+    input[type="range"] { -webkit-appearance: none; appearance: none; height: 30px; background: transparent; cursor: pointer; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); }
+    input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); margin-top: -10px; border: none; }
+    input[type="range"]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); border: none; }
     /* SLECHTWEER-MODUS (START, verwijderbaar) — alleen scorescherm */
     body.bad-weather #screen-score .score-btn { width: 52px; height: 52px; font-size: 32px; }
     /* SLECHTWEER-MODUS (EINDE) */
@@ -735,7 +740,8 @@
 <div id="screen-settings" class="screen">
   <div style="display:flex;gap:8px;margin-bottom:16px">
     <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')">Instellingen</button>
-    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">Uitleg WHS</button>
+    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">WHS</button>
+    <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')">Gegevens</button>
   </div>
   <div id="settingsTabMain">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Weergave</div>
@@ -802,6 +808,22 @@
 
   </div>
   <div id="settingsTabWhs" class="hidden">
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Handicap <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>)</span></div>
+  <div class="card">
+    <div style="margin-bottom:8px">
+      <div style="font-size:20px;font-weight:700;color:var(--white)">Low HI (365 dagen)</div>
+      <div style="font-size:17px;color:var(--muted)">Begrenst hoe snel je handicap mag stijgen (WHS-caps). Leeg = automatisch afgeleid.</div>
+      <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+      <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de afgelopen 365 dagen. Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
+    </div>
+    <div class="fg" style="margin-bottom:0">
+      <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
+      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit historie afgeleid: <span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Uitleg</div>
   <div class="card">
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -904,21 +926,6 @@
   </div>
   </div>
   <div id="settingsTabMain2">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Handicap <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>)</span></div>
-  <div class="card">
-    <div style="margin-bottom:8px">
-      <div style="font-size:20px;font-weight:700;color:var(--white)">Low HI (365 dagen)</div>
-      <div style="font-size:17px;color:var(--muted)">Begrenst hoe snel je handicap mag stijgen (WHS-caps). Leeg = automatisch afgeleid.</div>
-      <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-      <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de afgelopen 365 dagen. Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
-    </div>
-    <div class="fg" style="margin-bottom:0">
-      <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
-      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit historie afgeleid: <span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
-      <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
-    </div>
-  </div>
-
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Clubs &amp; Rondes <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg> &amp; <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -939,7 +946,9 @@
     </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Data &amp; app</div>
+  </div>
+  <div id="settingsTabData" class="hidden">
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white)">Standaard exportmap</div>
     <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderName" style="color:var(--white);font-weight:700">Downloads (standaard)</span></div>
@@ -949,29 +958,83 @@
     <button id="clearExportFolderBtn" class="btn-secondary hidden" style="width:100%;padding:8px 14px;font-size:17px;margin-top:12px" onclick="clearExportFolder()">Standaard map</button>
   </div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Exporteren (backup)</div>
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren (backup)</div>
+    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:8px">Nog nooit geëxporteerd</div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    <button class="btn-primary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:12px" onclick="exportBackupAll()">Backup maken (clubs + rondes)</button>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Los exporteren<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Alleen clubs</b></button>
+        <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Alleen rondes</b></button>
+      </div>
     </div>
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren (herstel)</div>
     <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
     <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
+      <button class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
   </div>
+
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Alles wissen</div>
-    <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-    <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <input type="range" id="roundLimitSlider" min="20" max="500" step="20" style="flex:1" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)">
+      <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
+    </div>
+    <div style="font-size:17px;color:var(--muted)">Je hebt nu <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
+  </div>
+  <div class="card">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes opschonen</div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opschoon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">
+      <div id="otherPlayerCleanupCard" style="margin-top:8px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes van andere spelers dan <span id="otherPlayerMainNameLabel" style="color:var(--gold)">hoofdspeler</span> verwijderen</div>
+        <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
+        <div id="otherPlayerCleanupBody" class="hidden">
+          <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="otherPlayerCount" style="color:var(--white);font-weight:700">0</span> rondes van andere spelers: <span id="otherPlayerNames" style="color:var(--white);font-weight:700">—</span>.</div>
+          <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+          <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Niet-qualifying rondes verwijderen</div>
+        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="nonQCount" style="color:var(--white);font-weight:700">0</span> niet-qualifying rondes.</div>
+        <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Oudste rondes verwijderen</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <span style="font-size:17px;color:var(--muted)">Aantal:</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(-5)">−</button>
+          <span id="oldestDeleteCount" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">25</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(5)">+</button>
+        </div>
+        <div id="deleteOldestMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <button id="deleteOldestBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOldest(this)">Verwijder de oudste rondes</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Resetten</div>
+  <div class="card">
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon reset-opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">
+      <div style="margin-top:8px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Alles wissen</div>
+        <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
+      </div>
+    </div>
   </div>
   </div>
 </div>
@@ -1929,7 +1992,7 @@ function switchToPlayer(n) {
     const p2Entry = buildRoundEntry();
     const idx = saved.findIndex(r => r.id === game2Id);
     if (idx >= 0) saved[idx] = p2Entry;
-    storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, ROUND_STORAGE_LIMIT)));
+    storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
     activePlayer = 1;
     // Herstel speler 1 uit storage
     const active = saved.find(r => String(r.id) === storage.getItem('golf_active_id'));
@@ -2481,7 +2544,17 @@ function savePlayerProfile() {
   updateComputedHcp();
 }
 
-const ROUND_STORAGE_LIMIT = 300;
+// Instelbaar maximum aantal opgeslagen rondes (20-500, standaard 300) — zie het
+// schuifje bij Instellingen → Rondes → Opslag.
+function getRoundStorageLimit() {
+  const raw = parseInt(storage.getItem('golf_round_limit'), 10);
+  return (isFinite(raw) && raw >= 20 && raw <= 500) ? raw : 300;
+}
+function setRoundStorageLimit(v) {
+  const clamped = Math.max(20, Math.min(500, Math.round(v / 20) * 20));
+  storage.setItem('golf_round_limit', String(clamped));
+  return clamped;
+}
 
 function showStartError(msg) {
   const el = document.getElementById('startRoundError');
@@ -2529,9 +2602,9 @@ function startRound() {
   }
 
   const roundsToAdd = player2Visible ? 2 : 1;
-  if (saved.length + roundsToAdd > ROUND_STORAGE_LIMIT) {
+  if (saved.length + roundsToAdd > getRoundStorageLimit()) {
     document.getElementById('roundLimitMessage').textContent =
-      `Je hebt het maximum van ${ROUND_STORAGE_LIMIT} opgeslagen rondes bereikt. Als je doorgaat, wordt${roundsToAdd > 1 ? 'en de oudste rondes' : ' de oudste ronde'} automatisch verwijderd. Je kunt ook eerst rondes verwijderen in het archief.`;
+      `Je hebt het maximum van ${getRoundStorageLimit()} opgeslagen rondes bereikt. Als je doorgaat, wordt${roundsToAdd > 1 ? 'en de oudste rondes' : ' de oudste ronde'} automatisch verwijderd. Je kunt ook eerst rondes verwijderen in het archief.`;
     document.getElementById('roundLimitModal').classList.remove('hidden');
     return;
   }
@@ -2734,7 +2807,7 @@ function startRoundConfirmed() {
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
       saved2.unshift(round2);
-      storage.setItem('golf_rounds', JSON.stringify(saved2.slice(0, ROUND_STORAGE_LIMIT)));
+      storage.setItem('golf_rounds', JSON.stringify(saved2.slice(0, getRoundStorageLimit())));
       activePlayer = 1;
       storage.setItem('golf_game2_id', String(game2Id));
     }
@@ -4536,7 +4609,7 @@ function doImportRound(r, saved, skipImportFlag = false) {
   const activeIdx = saved.findIndex(s => String(s.id) === activeId);
   const insertAt = activeIdx >= 0 ? activeIdx + 1 : 0;
   saved.splice(insertAt, 0, entry);
-  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, ROUND_STORAGE_LIMIT)));
+  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
   loadSaved();
 }
 
@@ -4569,7 +4642,7 @@ function doAdditiveImport(parsed) {
 function doFullRestoreImport(parsed) {
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
-  storage.setItem('golf_rounds', JSON.stringify(entries.slice(0, ROUND_STORAGE_LIMIT)));
+  storage.setItem('golf_rounds', JSON.stringify(entries.slice(0, getRoundStorageLimit())));
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
   game = { started: false, holes: [] };
@@ -4745,7 +4818,7 @@ function saveActiveRound(skipLoadSaved = false) {
   const saved = loadSavedRounds();
   const idx = saved.findIndex(r => r.id === game.id);
   if (idx >= 0) saved[idx] = entry; else saved.unshift(entry);
-  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, ROUND_STORAGE_LIMIT)));
+  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
 
   // Alleen golf_active_id zetten voor speler 1
   if (activePlayer !== 2) {
@@ -5160,6 +5233,7 @@ function loadSaved() {
   // door dit hier centraal te doen i.p.v. per wijzigingspad, blijft de 'uit historie
   // afgeleide' Low HI-waarde in Instellingen altijd actueel, ongeacht de oorzaak.
   updateLowHiInput();
+  updateStorageSettingsUI();
   const el = document.getElementById('savedList');
   const searchInput = document.getElementById('archiveSearch');
   const query = (searchInput?.value || '').trim().toLowerCase();
@@ -8000,6 +8074,14 @@ async function exportAllRounds() {
   } catch(e) { console.error('Backup rondes mislukt:', e); }
 }
 
+// Combineert exportAllClubs()/exportAllRounds() tot één tik — de meeste mensen willen
+// gewoon 'een backup maken', niet twee losse exports na elkaar uitvoeren.
+async function exportBackupAll() {
+  await exportAllClubs();
+  await exportAllRounds();
+  updateLastBackupDisplay();
+}
+
 // Toont een herinnering als er lang niet of veel wijzigingen sinds de laatste back-up zijn
 function updateBackupReminder() {
   const el = document.getElementById('backupReminder');
@@ -8035,6 +8117,20 @@ function updateBackupReminder() {
   } else {
     el.classList.add('hidden');
   }
+}
+
+// Toont 'Laatste backup: X dagen geleden' bovenaan Instellingen → Gegevens → Backup,
+// op basis van dezelfde golf_last_backup_date/-count die updateBackupReminder() ook
+// gebruikt voor de losse herinnering in Archief.
+function updateLastBackupDisplay() {
+  const el = document.getElementById('lastBackupInfo');
+  if (!el) return;
+  const lastDate = storage.getItem('golf_last_backup_date');
+  if (!lastDate) { el.textContent = 'Nog nooit geëxporteerd'; return; }
+  const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
+  if (daysSince <= 0) el.textContent = 'Laatste backup: vandaag';
+  else if (daysSince === 1) el.textContent = 'Laatste backup: gisteren';
+  else el.textContent = `Laatste backup: ${daysSince} dagen geleden`;
 }
 
 async function exportAllClubs() {
@@ -8378,6 +8474,8 @@ function nav(id) {
     updateProgressToggleBtn();
     updateBadWeatherToggle();
     updateQuickGroupingToggle();
+    updateStorageSettingsUI();
+    updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
@@ -8512,26 +8610,243 @@ function toggleBadWeather() {
 function quickGroupingEnabled() {
   return storage.getItem('golf_quick_grouping') !== 'off'; // afwezig = aan
 }
-// Instellingen-scherm: twee tabs (Instellingen / Uitleg WHS). 'Instellingen' bestaat uit
-// twee losse containers in de HTML (vóór en ná de WHS-uitleg), die samen als één tab
+// Instellingen-scherm: drie tabs (Instellingen / WHS / Gegevens). 'Instellingen' bestaat
+// uit twee losse containers in de HTML (settingsTabMain en settingsTabMain2, een
+// restant van toen de WHS-uitleg daar nog fysiek tussenin stond), die samen als één tab
 // getoond/verborgen worden.
 function switchSettingsTab(tab) {
   const main1 = document.getElementById('settingsTabMain');
   const main2 = document.getElementById('settingsTabMain2');
   const whs = document.getElementById('settingsTabWhs');
+  const data = document.getElementById('settingsTabData');
   const btnMain = document.getElementById('settingsTabBtnMain');
   const btnWhs = document.getElementById('settingsTabBtnWhs');
-  const showMain = tab !== 'whs';
-  main1?.classList.toggle('hidden', !showMain);
-  main2?.classList.toggle('hidden', !showMain);
-  whs?.classList.toggle('hidden', showMain);
-  if (btnMain) { btnMain.style.background = showMain ? 'var(--gold)' : ''; btnMain.style.color = showMain ? 'var(--green-deep)' : ''; btnMain.style.borderColor = showMain ? 'var(--gold)' : ''; }
-  if (btnWhs) { btnWhs.style.background = showMain ? '' : 'var(--gold)'; btnWhs.style.color = showMain ? '' : 'var(--green-deep)'; btnWhs.style.borderColor = showMain ? '' : 'var(--gold)'; }
+  const btnData = document.getElementById('settingsTabBtnData');
+  main1?.classList.toggle('hidden', tab !== 'main');
+  main2?.classList.toggle('hidden', tab !== 'main');
+  whs?.classList.toggle('hidden', tab !== 'whs');
+  data?.classList.toggle('hidden', tab !== 'data');
+  [[btnMain, 'main'], [btnWhs, 'whs'], [btnData, 'data']].forEach(([btn, id]) => {
+    if (!btn) return;
+    const active = tab === id;
+    btn.style.background = active ? 'var(--gold)' : '';
+    btn.style.color = active ? 'var(--green-deep)' : '';
+    btn.style.borderColor = active ? 'var(--gold)' : '';
+  });
 }
 
 function updateQuickGroupingToggle() {
   const cb = document.getElementById('quickGroupingToggle');
   if (cb) cb.checked = quickGroupingEnabled();
+}
+
+// ══ OPSLAG (Instellingen → Rondes) ═══════════════════════════════════════
+function updateStorageSettingsUI() {
+  const slider = document.getElementById('roundLimitSlider');
+  const val = document.getElementById('roundLimitVal');
+  const limit = getRoundStorageLimit();
+  if (slider) slider.value = limit;
+  if (val) val.textContent = limit;
+  const saved = loadSavedRounds();
+  const countEl = document.getElementById('roundLimitCurrentCount');
+  if (countEl) countEl.textContent = saved.length;
+  const nonQEl = document.getElementById('nonQCount');
+  if (nonQEl) nonQEl.textContent = saved.filter(r => !r.qualifying).length;
+  const oldestEl = document.getElementById('oldestDeleteCount');
+  const oldestBtn = document.getElementById('deleteOldestBtn');
+  if (saved.length === 0) {
+    if (oldestEl) oldestEl.textContent = 0;
+    if (oldestBtn) oldestBtn.disabled = true;
+  } else {
+    const floor = Math.min(5, saved.length);
+    _oldestDeleteCount = Math.max(floor, Math.min(saved.length, _oldestDeleteCount));
+    if (oldestEl) oldestEl.textContent = _oldestDeleteCount;
+    if (oldestBtn) oldestBtn.disabled = false;
+  }
+  updateOtherPlayerCleanupUI();
+}
+
+// Alleen het label live bijwerken tijdens het slepen — nog niet opslaan (dat gebeurt
+// pas bij loslaten, via onRoundLimitChange/'change').
+function onRoundLimitSlide(v) {
+  const val = document.getElementById('roundLimitVal');
+  if (val) val.textContent = v;
+}
+
+function onRoundLimitChange(v) {
+  const requested = parseInt(v, 10);
+  const saved = loadSavedRounds();
+  if (saved.length <= requested) {
+    // Geen rondes zouden verloren gaan — gewoon opslaan, geen aparte bevestiging nodig.
+    const newLimit = setRoundStorageLimit(requested);
+    const val = document.getElementById('roundLimitVal');
+    if (val) val.textContent = newLimit;
+    updateStorageSettingsUI();
+    return;
+  }
+  const toRemove = saved.length - requested;
+  showDangerModal(
+    'Rondes verwijderen',
+    `Dit maximum verwijdert direct de oudste ${toRemove} ${toRemove === 1 ? 'ronde' : 'rondes'}. Dit kan niet ongedaan worden gemaakt.`,
+    'Verwijderen',
+    () => {
+      const newLimit = setRoundStorageLimit(requested);
+      storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, newLimit)));
+      loadSaved();
+      updateStorageSettingsUI();
+    }
+  );
+  // showDangerModal's eigen Annuleren-knop verbergt alleen de modal; wij moeten zelf de
+  // schuifpositie terugzetten naar de nog steeds geldende, oude limiet — anders blijft
+  // die op de net aangeraakte (maar nooit opgeslagen) positie staan.
+  const cancelBtn = document.getElementById('dangerModalCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      document.getElementById('resetAllModal').classList.add('hidden');
+      updateStorageSettingsUI();
+    };
+  }
+}
+
+function confirmPurgeNonQ(btn) {
+  const msg = document.getElementById('purgeNonQMsg');
+  if (btn.dataset.confirm !== '1') {
+    const n = loadSavedRounds().filter(r => !r.qualifying).length;
+    if (n === 0) return;
+    btn.dataset.confirm = '1';
+    msg?.classList.remove('hidden');
+    clearTimeout(btn._confirmTimeout);
+    btn._confirmTimeout = setTimeout(() => {
+      btn.dataset.confirm = '0';
+      msg?.classList.add('hidden');
+    }, 2000);
+    return;
+  }
+  clearTimeout(btn._confirmTimeout);
+  btn.dataset.confirm = '0';
+  msg?.classList.add('hidden');
+  const n = loadSavedRounds().filter(r => !r.qualifying).length;
+  showDangerModal(
+    'Niet-qualifying rondes verwijderen',
+    `Alle ${n} niet-qualifying ${n === 1 ? 'ronde wordt' : 'rondes worden'} definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+    'Verwijderen',
+    () => {
+      const saved = loadSavedRounds().filter(r => r.qualifying);
+      storage.setItem('golf_rounds', JSON.stringify(saved));
+      loadSaved();
+      updateStorageSettingsUI();
+    }
+  );
+}
+
+let _oldestDeleteCount = 25;
+function adjustOldestDeleteCount(delta) {
+  const total = loadSavedRounds().length;
+  if (total === 0) return;
+  const floor = Math.min(5, total);
+  _oldestDeleteCount = Math.max(floor, Math.min(total, _oldestDeleteCount + delta));
+  const el = document.getElementById('oldestDeleteCount');
+  if (el) el.textContent = _oldestDeleteCount;
+}
+
+function confirmDeleteOldest(btn) {
+  const msg = document.getElementById('deleteOldestMsg');
+  if (btn.dataset.confirm !== '1') {
+    if (loadSavedRounds().length === 0) return;
+    btn.dataset.confirm = '1';
+    msg?.classList.remove('hidden');
+    clearTimeout(btn._confirmTimeout);
+    btn._confirmTimeout = setTimeout(() => {
+      btn.dataset.confirm = '0';
+      msg?.classList.add('hidden');
+    }, 2000);
+    return;
+  }
+  clearTimeout(btn._confirmTimeout);
+  btn.dataset.confirm = '0';
+  msg?.classList.add('hidden');
+  const n = Math.min(_oldestDeleteCount, loadSavedRounds().length);
+  showDangerModal(
+    'Oudste rondes verwijderen',
+    `De oudste ${n} ${n === 1 ? 'ronde wordt' : 'rondes worden'} definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+    'Verwijderen',
+    () => {
+      const saved = loadSavedRounds();
+      // Nieuwste eerst in de opslag, dus de oudste staan aan het eind — de laatste n
+      // rondes zijn dus precies de oudste n.
+      storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, Math.max(0, saved.length - n))));
+      loadSaved();
+      updateStorageSettingsUI();
+    }
+  );
+}
+
+// Rondes van elke andere speler dan de hoofdspeler (Start-scherm) verwijderen. Toont de
+// betrokken naam/namen expliciet in de bevestiging — juist om te voorkomen dat per
+// ongeluk de verkeerde speler wordt opgeschoond.
+function otherPlayerRounds() {
+  const main = startPlayerName();
+  if (!main) return [];
+  return loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() !== main.toLowerCase());
+}
+
+function updateOtherPlayerCleanupUI() {
+  const main = startPlayerName();
+  const card = document.getElementById('otherPlayerCleanupCard');
+  const noMain = document.getElementById('otherPlayerCleanupNoMain');
+  const body = document.getElementById('otherPlayerCleanupBody');
+  const nameLabel = document.getElementById('otherPlayerMainNameLabel');
+  if (!card) return;
+  if (nameLabel) nameLabel.textContent = main || 'hoofdspeler';
+  if (!main) {
+    noMain?.classList.remove('hidden');
+    body?.classList.add('hidden');
+    return;
+  }
+  noMain?.classList.add('hidden');
+  body?.classList.remove('hidden');
+  const rounds = otherPlayerRounds();
+  const names = [...new Set(rounds.map(r => (r.player || '').trim()).filter(Boolean))];
+  const countEl = document.getElementById('otherPlayerCount');
+  const namesEl = document.getElementById('otherPlayerNames');
+  if (countEl) countEl.textContent = rounds.length;
+  if (namesEl) namesEl.textContent = names.length ? names.join(', ') : '—';
+  const btn = document.getElementById('deleteOtherPlayersBtn');
+  if (btn) btn.disabled = rounds.length === 0;
+}
+
+function confirmDeleteOtherPlayers(btn) {
+  const main = startPlayerName();
+  if (!main) return;
+  const msg = document.getElementById('deleteOtherPlayersMsg');
+  if (btn.dataset.confirm !== '1') {
+    if (otherPlayerRounds().length === 0) return;
+    btn.dataset.confirm = '1';
+    msg?.classList.remove('hidden');
+    clearTimeout(btn._confirmTimeout);
+    btn._confirmTimeout = setTimeout(() => {
+      btn.dataset.confirm = '0';
+      msg?.classList.add('hidden');
+    }, 2000);
+    return;
+  }
+  clearTimeout(btn._confirmTimeout);
+  btn.dataset.confirm = '0';
+  msg?.classList.add('hidden');
+  const rounds = otherPlayerRounds();
+  const names = [...new Set(rounds.map(r => (r.player || '').trim()).filter(Boolean))];
+  showDangerModal(
+    'Rondes van andere spelers verwijderen',
+    `Rondes van ${names.join(', ')} (${rounds.length} in totaal) worden definitief verwijderd. Rondes van ${main} blijven behouden. Dit kan niet ongedaan worden gemaakt.`,
+    'Verwijderen',
+    () => {
+      const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase());
+      storage.setItem('golf_rounds', JSON.stringify(saved));
+      loadSaved();
+      updateStorageSettingsUI();
+      updateOtherPlayerCleanupUI();
+    }
+  );
 }
 function toggleQuickGrouping() {
   const cb = document.getElementById('quickGroupingToggle');
