@@ -1030,7 +1030,6 @@ const MODAL_IDS = [
 ];
 let _modalStack = [];              // welke modals staan nu open, in volgorde van openen
 let _historyDepth = 0;             // eigen boekhouding: hoeveel history-entries wij hebben gepusht
-let _nativeBackPending = false;    // de browser deed net al 1 stap terug (popstate), nog niet verrekend
 let _flushQueued = false;
 
 // Verzamelt alle open/sluit-reacties die in dezelfde synchrone cyclus plaatsvinden (bv.
@@ -1038,20 +1037,27 @@ let _flushQueued = false;
 // het NETTO aantal geschiedenis-stappen. Voorkomt zo een race: history.back() voert zijn
 // navigatie asynchroon uit, dus los history.back()+pushState() na elkaar aanroepen kan
 // de browser laten terugspringen naar een positie die inmiddels alweer is ingehaald.
+//
+// Elke pushState krijgt een eigen 'modalDepth' in de state mee (i.p.v. dat de
+// popstate-listener bijhoudt HOEVEEL events er onderweg zijn — dat bleek te fragiel: bij
+// drie of meer geneste modals veroorzaakte de eigen inhaalslag-navigatie (history.go())
+// zelf weer een popstate-event, dat soms alsnog als een echte terug-actie werd gezien en
+// dan per ongeluk ook de modal ÓNDER de zojuist gesloten modal sloot). Nu vergelijkt de
+// listener gewoon de diepte die de browser meldt met de huidige stack-lengte: is die
+// diepte gelijk aan of groter dan wat wij al bijhouden, dan kan dit geen echte
+// terug-actie zijn (die kan de diepte alleen maar verkleinen) en doen we niets.
 function _scheduleHistoryFlush() {
   if (_flushQueued) return;
   _flushQueued = true;
   queueMicrotask(() => {
     _flushQueued = false;
-    const nativeAdjustment = _nativeBackPending ? -1 : 0;
-    _nativeBackPending = false;
-    const effectiveCurrent = _historyDepth + nativeAdjustment;
     const target = _modalStack.length;
-    const delta = target - effectiveCurrent;
-    if (delta > 0) {
-      for (let i = 0; i < delta; i++) history.pushState({}, '');
-    } else if (delta < 0) {
-      history.go(delta);
+    if (target > _historyDepth) {
+      for (let i = _historyDepth; i < target; i++) {
+        history.pushState({ modalDepth: i + 1 }, '');
+      }
+    } else if (target < _historyDepth) {
+      history.go(target - _historyDepth);
     }
     _historyDepth = target;
   });
@@ -1089,9 +1095,18 @@ if (document.readyState === 'loading') {
 // de 'hidden'-klasse wisselt. shareModal beheert zijn eigen plek op _modalStack en roept
 // _scheduleHistoryFlush() rechtstreeks aan.
 
-window.addEventListener('popstate', () => {
-  _nativeBackPending = true;
-  if (_modalStack.length) {
+window.addEventListener('popstate', (event) => {
+  const targetDepth = event.state?.modalDepth ?? 0;
+  // Diepte gelijk aan of groter dan onze huidige stack: dit kan geen echte terug-actie
+  // zijn (die verkleint de diepte altijd) — waarschijnlijk onze eigen inhaalslag-navigatie
+  // die zelf een popstate-event triggerde, of een dubbel/vooruit-event. Niets sluiten.
+  if (targetDepth >= _modalStack.length) {
+    _historyDepth = targetDepth;
+    return;
+  }
+  // Sluit modals van boven af tot de stack-diepte overeenkomt met wat de browser nu
+  // aangeeft (kan meer dan 1 modal zijn bij een meerstaps-terugbeweging, bv. swipe-back).
+  while (_modalStack.length > targetDepth) {
     const topId = _modalStack[_modalStack.length - 1];
     const closer = MODAL_CLOSERS[topId];
     if (closer) {
@@ -1099,10 +1114,12 @@ window.addEventListener('popstate', () => {
     } else {
       document.getElementById(topId)?.classList.add('hidden');
     }
+    // Als de closer niet synchroon sluit (bv. eerst een 'niet opgeslagen
+    // wijzigingen'-waarschuwing toont), stopt de lus hier — de gebruiker maakt eerst
+    // die keuze, en de stack-diepte wordt dan via die vervolgactie opnieuw verrekend.
+    if (_modalStack.length && _modalStack[_modalStack.length - 1] === topId) break;
   }
-  // Ook aanroepen als er geen modal open was of de closer niets deed (zeldzaam
-  // randgeval) — anders blijft _nativeBackPending onterecht op 'waar' staan.
-  _scheduleHistoryFlush();
+  _historyDepth = _modalStack.length;
 });
 
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
