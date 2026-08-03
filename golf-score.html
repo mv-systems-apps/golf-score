@@ -8132,9 +8132,9 @@ function updateBackupReminder() {
 function updateLastBackupDisplay() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
-  const label = '<span style="color:var(--gold);font-weight:700">Backup Rondes</span>';
+  const label = 'Backup <span style="color:var(--gold);font-weight:700">Rondes</span>';
   const lastDate = storage.getItem('golf_last_backup_date');
-  if (!lastDate) { el.innerHTML = `Nog nooit een ${label} gemaakt`; return; }
+  if (!lastDate) { el.innerHTML = `${label}: geen`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
   if (daysSince <= 0) el.innerHTML = `${label}: vandaag`;
   else if (daysSince === 1) el.innerHTML = `${label}: gisteren`;
