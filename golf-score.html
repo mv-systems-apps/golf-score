@@ -985,18 +985,18 @@
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-      <input type="range" id="roundLimitSlider" min="20" max="500" step="20" style="flex:1" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)">
-      <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
-    </div>
-    <div style="font-size:17px;color:var(--muted)">Je hebt nu <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
-  </div>
-  <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes opschonen</div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opschoon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
-      <div id="otherPlayerCleanupCard" style="margin-top:8px">
+      <div style="margin-top:8px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <input type="range" id="roundLimitSlider" min="20" max="500" step="20" value="300" style="flex:1" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)">
+          <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
+        </div>
+        <div style="font-size:17px;color:var(--muted)">Je hebt nu <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
+      </div>
+      <div id="otherPlayerCleanupCard" style="margin-top:16px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes van andere spelers dan <span id="otherPlayerMainNameLabel" style="color:var(--gold)">hoofdspeler</span> verwijderen</div>
         <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
         <div id="otherPlayerCleanupBody" class="hidden">
@@ -1027,10 +1027,10 @@
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Resetten</div>
   <div class="card">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon reset-opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
       <div style="margin-top:8px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Alles wissen</div>
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
@@ -7686,16 +7686,19 @@ function confirmResetAll(btn) {
   if (btn.dataset.confirm !== '1') {
     btn.dataset.confirm = '1';
     msg?.classList.remove('hidden');
+    _reflowMoreFull(btn);
     clearTimeout(btn._confirmTimeout);
     btn._confirmTimeout = setTimeout(() => {
       btn.dataset.confirm = '0';
       msg?.classList.add('hidden');
+      _reflowMoreFull(btn);
     }, 2000);
     return;
   }
   clearTimeout(btn._confirmTimeout);
   btn.dataset.confirm = '0';
   msg?.classList.add('hidden');
+  _reflowMoreFull(btn);
   showDangerModal(
     'Alles wissen',
     'Alle clubs, rondes en instellingen worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.',
@@ -8715,16 +8718,19 @@ function confirmPurgeNonQ(btn) {
     if (n === 0) return;
     btn.dataset.confirm = '1';
     msg?.classList.remove('hidden');
+    _reflowMoreFull(btn);
     clearTimeout(btn._confirmTimeout);
     btn._confirmTimeout = setTimeout(() => {
       btn.dataset.confirm = '0';
       msg?.classList.add('hidden');
+      _reflowMoreFull(btn);
     }, 2000);
     return;
   }
   clearTimeout(btn._confirmTimeout);
   btn.dataset.confirm = '0';
   msg?.classList.add('hidden');
+  _reflowMoreFull(btn);
   const n = loadSavedRounds().filter(r => !r.qualifying).length;
   showDangerModal(
     'Niet-qualifying rondes verwijderen',
@@ -8755,16 +8761,19 @@ function confirmDeleteOldest(btn) {
     if (loadSavedRounds().length === 0) return;
     btn.dataset.confirm = '1';
     msg?.classList.remove('hidden');
+    _reflowMoreFull(btn);
     clearTimeout(btn._confirmTimeout);
     btn._confirmTimeout = setTimeout(() => {
       btn.dataset.confirm = '0';
       msg?.classList.add('hidden');
+      _reflowMoreFull(btn);
     }, 2000);
     return;
   }
   clearTimeout(btn._confirmTimeout);
   btn.dataset.confirm = '0';
   msg?.classList.add('hidden');
+  _reflowMoreFull(btn);
   const n = Math.min(_oldestDeleteCount, loadSavedRounds().length);
   showDangerModal(
     'Oudste rondes verwijderen',
@@ -8823,16 +8832,19 @@ function confirmDeleteOtherPlayers(btn) {
     if (otherPlayerRounds().length === 0) return;
     btn.dataset.confirm = '1';
     msg?.classList.remove('hidden');
+    _reflowMoreFull(btn);
     clearTimeout(btn._confirmTimeout);
     btn._confirmTimeout = setTimeout(() => {
       btn.dataset.confirm = '0';
       msg?.classList.add('hidden');
+      _reflowMoreFull(btn);
     }, 2000);
     return;
   }
   clearTimeout(btn._confirmTimeout);
   btn.dataset.confirm = '0';
   msg?.classList.add('hidden');
+  _reflowMoreFull(btn);
   const rounds = otherPlayerRounds();
   const names = [...new Set(rounds.map(r => (r.player || '').trim()).filter(Boolean))];
   showDangerModal(
@@ -8925,6 +8937,17 @@ function toggleMoreInfo(el) {
   if (!full) return;
   const opening = full.classList.toggle('open');
   full.style.maxHeight = opening ? full.scrollHeight + 'px' : '';
+}
+
+// Herberekent de hoogte van de omsluitende 'Meer opties'-container (indien open) — nodig
+// wanneer content daarbinnen verandert (bv. een 'tik nogmaals'-bevestiging verschijnt of
+// verdwijnt) ná het openen zelf, want toggleMoreInfo() hierboven meet de hoogte alleen op
+// het moment van openen — zonder dit zou zulke content buiten de vaste max-height vallen.
+function _reflowMoreFull(el) {
+  const full = el.closest('.more-full');
+  if (full && full.classList.contains('open')) {
+    full.style.maxHeight = full.scrollHeight + 'px';
+  }
 }
 
 // Laagste handicap-index van de afgelopen 365 dagen (WHS soft/hard cap).
