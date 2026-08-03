@@ -1097,29 +1097,28 @@ if (document.readyState === 'loading') {
 
 window.addEventListener('popstate', (event) => {
   const targetDepth = event.state?.modalDepth ?? 0;
+  // Altijd direct overnemen: dit ís de daadwerkelijke positie van de browser na deze
+  // navigatie. Belangrijk om dit NIET pas later af te leiden uit _modalStack.length — de
+  // MutationObserver die een gesloten modal van de stack haalt werkt namelijk asynchroon
+  // (microtask), dus _modalStack zou op dit punt nog de oude, niet-bijgewerkte lengte
+  // tonen. Zou je die stale lengte hier gebruiken, dan denkt de eerstvolgende
+  // geschiedenis-flush ten onrechte dat er nóg een stap ingehaald moet worden, en sluit
+  // die daardoor per ongeluk ook de modal die eronder zat.
+  _historyDepth = targetDepth;
   // Diepte gelijk aan of groter dan onze huidige stack: dit kan geen echte terug-actie
   // zijn (die verkleint de diepte altijd) — waarschijnlijk onze eigen inhaalslag-navigatie
   // die zelf een popstate-event triggerde, of een dubbel/vooruit-event. Niets sluiten.
-  if (targetDepth >= _modalStack.length) {
-    _historyDepth = targetDepth;
-    return;
+  if (targetDepth >= _modalStack.length) return;
+  // Alleen de bovenste modal sluiten. Bij een meerstaps-terugbeweging (bv. swipe-back
+  // over meerdere modals in één keer) zorgt de eerstvolgende, door het sluiten van déze
+  // modal getriggerde _scheduleHistoryFlush() er vanzelf voor dat ook de rest volgt.
+  const topId = _modalStack[_modalStack.length - 1];
+  const closer = MODAL_CLOSERS[topId];
+  if (closer) {
+    closer();
+  } else {
+    document.getElementById(topId)?.classList.add('hidden');
   }
-  // Sluit modals van boven af tot de stack-diepte overeenkomt met wat de browser nu
-  // aangeeft (kan meer dan 1 modal zijn bij een meerstaps-terugbeweging, bv. swipe-back).
-  while (_modalStack.length > targetDepth) {
-    const topId = _modalStack[_modalStack.length - 1];
-    const closer = MODAL_CLOSERS[topId];
-    if (closer) {
-      closer();
-    } else {
-      document.getElementById(topId)?.classList.add('hidden');
-    }
-    // Als de closer niet synchroon sluit (bv. eerst een 'niet opgeslagen
-    // wijzigingen'-waarschuwing toont), stopt de lus hier — de gebruiker maakt eerst
-    // die keuze, en de stack-diepte wordt dan via die vervolgactie opnieuw verrekend.
-    if (_modalStack.length && _modalStack[_modalStack.length - 1] === topId) break;
-  }
-  _historyDepth = _modalStack.length;
 });
 
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
