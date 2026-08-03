@@ -692,13 +692,13 @@
   <div id="backupReminder" class="hidden orange-msg" style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:20px;font-weight:700;color:var(--orange);margin-bottom:10px"></div>
   <div id="exportRoundsMsg" class="export-rounds-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;justify-content:flex-end">
-    <button id="groupByCategoryBtn" class="btn-secondary" style="padding:8px 14px" onclick="toggleGroupByCategory()" title="Groepeer op categorie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
-    <button id="groupByTrackBtn" class="btn-secondary" style="padding:8px 14px" onclick="toggleGroupByTrack()" title="Groepeer op club"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12h18"/><path d="M3 6l9-3 9 3"/><path d="M3 18l9 3 9-3"/></svg></button>
-    <button class="btn-secondary" id="groupByPlayerBtn" style="padding:8px 14px" 
+    <button id="groupByCategoryBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByCategory()" title="Groepeer op categorie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+    <button id="groupByTrackBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByTrack()" title="Groepeer op club"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12h18"/><path d="M3 6l9-3 9 3"/><path d="M3 18l9 3 9-3"/></svg></button>
+    <button class="btn-secondary" id="groupByPlayerBtn" style="padding:10px 14px" 
       onclick="toggleGroupByPlayer()"
       title="Groepeer op speler"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="7" r="2"/><path d="M23 21v-1a3 3 0 0 0-3-3h-1"/></svg></button>
-    <button id="groupByWhsBtn" class="btn-secondary" style="padding:8px 14px" onclick="toggleGroupByWhs()" title="Groepeer op WHS (laatste 20 qualifying)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></button>
-    <button id="archiveSearchBtn" class="btn-secondary" style="padding:8px 14px" onclick="var w=document.getElementById('archiveSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('archiveSearch').focus();else{document.getElementById('archiveSearch').value='';loadSaved();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button id="groupByWhsBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByWhs()" title="Groepeer op WHS (laatste 20 qualifying)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></button>
+    <button id="archiveSearchBtn" class="btn-secondary" style="padding:10px 14px" onclick="var w=document.getElementById('archiveSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('archiveSearch').focus();else{document.getElementById('archiveSearch').value='';loadSaved();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
     <input id="archiveSearch" type="text" placeholder="Zoek op club, baan of speler" oninput="loadSaved()">
@@ -965,8 +965,8 @@
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-primary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+      <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
+      <button class="btn-primary" style="flex:1;padding:10px 14px;font-size:17px;margin-top:0;border:1px solid transparent;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
@@ -985,8 +985,8 @@
         <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
         <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
         <div style="display:flex;gap:10px">
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
         </div>
       </div>
     </div>
@@ -1010,14 +1010,14 @@
         <div id="otherPlayerCleanupBody" class="hidden">
           <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="otherPlayerCount" style="color:var(--white);font-weight:700">0</span> rondes van andere spelers: <span id="otherPlayerNames" style="color:var(--white);font-weight:700">—</span>.</div>
           <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-          <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
+          <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Niet-qualifying rondes verwijderen</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="nonQCount" style="color:var(--white);font-weight:700">0</span> niet-qualifying rondes.</div>
         <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
+        <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Oudste rondes verwijderen</div>
@@ -1028,7 +1028,7 @@
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(5)">+</button>
         </div>
         <div id="deleteOldestMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="deleteOldestBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOldest(this)">Verwijder de oudste rondes</button>
+        <button id="deleteOldestBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOldest(this)">Verwijder de oudste rondes</button>
       </div>
     </div>
   </div>
@@ -1040,7 +1040,7 @@
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:8px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
+        <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
     </div>
   </div>
@@ -8001,7 +8001,7 @@ async function updateExportFolderUI() {
   }
   const handle = await getStoredExportFolderHandle();
   if (handle) {
-    if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = 'var(--green-light)'; }
+    if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = ''; }
     if (nameElInBlock) { nameElInBlock.textContent = handle.name; nameElInBlock.style.color = 'var(--green-light)'; }
     if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = false; }
   } else {
