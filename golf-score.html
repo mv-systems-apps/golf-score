@@ -3161,8 +3161,8 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
           .slice(0, 20);
         const mode = sdFixed ? 'fixed' : 'effective';
         const whs = whsHandicap(pool, mode, effectiveLowHi(game.player, all, mode), esrMapFor(game.player, all, mode));
-        const label = sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp';
-        const hcpWarnPrefix = sdFixed ? '' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ';
+        const hcpWarnSuffix = sdFixed ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        const label = (sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp') + hcpWarnSuffix;
         const capLabel = !whs || !whs.capped
           ? 'Cap'
           : `${whs.capType === 'hard' ? 'Hardcap' : 'Softcap'} (anders ${fmt1(whs.rawValue)})`;
@@ -3170,7 +3170,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
           ? `ESR (anders ${fmt1(whs.rawValueNoEsr)})`
           : 'ESR';
         return [
-          [label, whs ? hcpWarnPrefix + fmt1(whs.value) : '—'],
+          [label, whs ? fmt1(whs.value) : '—'],
           [esrLabel, (whs && whs.esrApplied) ? 'Ja' : 'Nee'],
           [capLabel, (whs && whs.capped) ? 'Ja' : 'Nee'],
         ];
@@ -3197,14 +3197,12 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       ['Aangepast (AGS)',     played.length ? totalAgs : '—'],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
-      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)', (() => {
+      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
         const done = game.holes.length > 0 && played.length === game.holes.length;
         if (!done) return '—';
         const c = computeSD({ holes: game.holes, CR: game.CR, SR: game.SR, hcp: game.hcp, pcc: game.pcc });
         if (!c) return '—';
-        const hasFixedSd = game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal));
-        const warnPrefix = hasFixedSd ? '' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ';
-        return `${warnPrefix}${fmt1(c.value)}`;
+        return fmt1(c.value);
       })()],
       ['Vastgesteld (SD<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 3px"><polyline points="20 6 9 17 4 12"/></svg>)', (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? fmt1(parseFloat(game.sdFinal)) : '—'],
     ]],
@@ -7422,7 +7420,18 @@ function openPccChoice() {
     _editPccVal = Math.max(lo, Math.min(hi, isFinite(v) ? v : 0));
     document.getElementById('editPccBtn').textContent = formatPcc(_editPccVal);
     const r = loadSavedRounds()[_roundInfoIdx];
-    if (r) updateEditSdHint(r);
+    if (r) {
+      // Als het SD-veld nog exact de vorige berekende waarde bevat (dus de gebruiker
+      // heeft 'm niet handmatig overschreven), meteen meesynchroniseren met de nieuwe,
+      // PCC-gecorrigeerde berekening — anders zou bij vaststellen per ongeluk een
+      // verouderde (pre-PCC-wijziging) waarde worden opgeslagen.
+      const sdEl = document.getElementById('editSdInput');
+      const oldCalc = _editCalcSd;
+      const wasInSync = sdEl && oldCalc != null && sdEl.value.trim() !== '' &&
+        Math.abs(parseFloat(sdEl.value.replace(',', '.')) - oldCalc) < 0.05;
+      updateEditSdHint(r);
+      if (wasInSync && sdEl) sdEl.value = _editCalcSd == null ? '' : _editCalcSd.toFixed(1);
+    }
   });
 }
 
