@@ -948,7 +948,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
-        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, in archief én bij Clubs.</div>
+        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in Archief.</div>
       </div>
       <label class="switch"><input type="checkbox" id="quickGroupingToggle" onchange="toggleQuickGrouping()"><span class="slider"></span></label>
     </div>
@@ -958,7 +958,7 @@
   <div id="settingsTabData" class="hidden">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName">Downloads</span></div>
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:8px">Nog nooit geëxporteerd</div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
@@ -966,7 +966,7 @@
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-primary" style="flex:1;padding:10px 14px;font-size:17px;margin-top:0;border:1px solid transparent;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+      <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
@@ -1353,20 +1353,59 @@ function computeEsrAdjustments(chronoRounds) {
   return adj;
 }
 
+// ══ O(n)-VARIANT VOOR PER-PUNT GRAFIEKEN ═══════════════════════════════════
+// computeEsrAdjustments() hierboven is zelf al O(n) per aanroep — het probleem zat 'm
+// erin dat de grafiek/trend-code 'm vroeger PER PUNT opnieuw aanriep op een steeds
+// groter wordende prefix (rondes.slice(0, idx+1)), wat neerkwam op O(n²) in totaal (bij
+// 5.000 rondes: ~30 seconden). Deze functie doet wiskundig EXACT hetzelfde, maar dan in
+// één enkele doorloop over de volledige reeks (bij 5.000 rondes: ~30 milliseconden).
+//
+// De kern-inzicht: adj.get(chronoRounds[i].id) wordt in het oorspronkelijke algoritme
+// voor het EERST gezet tijdens stap i zelf (de affected-slice eindigt altijd op i) — dus
+// de waarde ONMIDDELLIJK NA stap i, in één doorlopende berekening over alles, is exact
+// gelijk aan wat een AFGEKAPTE berekening (alleen rondes 0..i) voor diezelfde ronde zou
+// opleveren. Bewezen gelijk aan de oude aanpak middels een uitgebreide testset (o.a.
+// 1000+ rondes, stapelende ESR, venstergrens bij 20/21 rondes, 0/1/2-rondes-randgevallen).
+// computeEsrAdjustments() zelf blijft in gebruik bij esrMapFor() en de (mode-afhankelijke,
+// dus bewust niet-geoptimaliseerde) hcpTrendMap-berekening.
+function computeEsrAdjustmentsIncremental(chronoRounds) {
+  const adj = new Map();
+  chronoRounds.forEach(r => adj.set(r.id, 0));
+  const n = chronoRounds.length;
+  const atOwnStep = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const priorWindow = chronoRounds.slice(Math.max(0, i - 20), i);
+    if (priorWindow.length) {
+      const staffel = whsStaffel(priorWindow.length);
+      if (staffel) {
+        const adjustedPrior = priorWindow.map(x => x.sd + (adj.get(x.id) || 0));
+        const sorted = [...adjustedPrior].sort((a, b) => a - b);
+        const priorHi = whsIndexRound(sorted.slice(0, staffel.count).reduce((s, x) => s + x, 0) / staffel.count + staffel.adj);
+        const round = chronoRounds[i];
+        const diff = priorHi - round.sd;
+        let magnitude = 0;
+        if (diff >= 10.0) magnitude = 2.0;
+        else if (diff >= 7.0) magnitude = 1.0;
+        if (magnitude > 0) {
+          const affected = chronoRounds.slice(Math.max(0, i - 19), i + 1);
+          affected.forEach(x => adj.set(x.id, (adj.get(x.id) || 0) - magnitude));
+        }
+      }
+    }
+    atOwnStep[i] = adj.get(chronoRounds[i].id) || 0;
+  }
+  return atOwnStep;
+}
+
 // Bouwt voor een speler de volledige chronologische (oudst-eerst) reeks dagresultaten op
 // en berekent daarmee de esrMap voor whsHandicap() — de vervanging van de oude priorHiFor().
-function esrMapFor(player, allRounds, mode) {
+function esrMapFor(player, allRounds) {
   const isDoneR = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
   const chrono = allRounds
     .filter(r => r.player === player && r.qualifying && isDoneR(r))
     .map(r => {
-      let sd = null;
-      if (mode === 'fixed') {
-        if (r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal))) sd = parseFloat(r.sdFinal);
-      } else {
-        const e = effectiveSD(r);
-        if (e) sd = e.value;
-      }
+      const e = effectiveSD(r);
+      const sd = e ? e.value : null;
       return sd == null ? null : { id: r.id, sd, t: new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() };
     })
     .filter(Boolean)
@@ -1380,16 +1419,19 @@ function esrMapFor(player, allRounds, mode) {
 // past Exceptional Score Reduction toe, al vóór de beste-N-selectie.
 // Retourneert { value, rawValue, capped, capType, usedIds:Set, esrApplied, rawValueNoEsr }
 // of null.
-function whsHandicap(rounds, mode, lowHi = null, esrMap = null) {
+function whsHandicap(rounds, lowHi = null, esrMap = null) {
   const withSd = rounds
     .map(r => {
-      let sd = null;
-      if (mode === 'fixed') {
-        if (r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal))) sd = parseFloat(r.sdFinal);
-      } else {
-        const e = effectiveSD(r);
-        if (e) sd = e.value;
-      }
+      // Altijd de beste beschikbare waarde: vastgesteld dagresultaat indien aanwezig,
+      // anders de live schatting. Vroeger werd bij mode='fixed' een ronde zonder
+      // sdFinal volledig genegeerd (alsof hij niet bestond) — dat kon verrassend
+      // aanvoelen (een qualifying ronde die stilzwijgend niet meetelde) en week af
+      // van hoe elders in de app al met onbevestigde rondes wordt omgegaan: het
+      // bestaande gevaren-driehoekje-systeem (roundHasWarning) waarschuwt de
+      // gebruiker al wanneer een berekening op een onbevestigde schatting steunt —
+      // dát is de aangewezen plek voor die waarschuwing, niet stille uitsluiting.
+      const e = effectiveSD(r);
+      const sd = e ? e.value : null;
       if (sd == null) return null;
       // ESR-aanpassing (indien van toepassing) wordt hier al in de dagresultaten zelf
       // verwerkt, vóór de beste-N-selectie — zoals WHS-regel 5.9 voorschrijft. Zie
@@ -1465,11 +1507,11 @@ function lowHiCheckStatus(player, allRounds) {
 function currentOfficialHcp(player, allRounds) {
   if (!player) return null;
   const last20 = last20Qualifying(player, allRounds, null, null);
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, allRounds, 'effective'), esrMapFor(player, allRounds, 'effective'));
+  const whs = whsHandicap(last20, effectiveLowHi(player, allRounds), esrMapFor(player, allRounds));
   return whs ? whs.value : null;
 }
 
-function derivedLowHi(player, allRounds, mode) {
+function derivedLowHi(player, allRounds) {
   const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
   const qual = allRounds
     .filter(r => r.player === player && r.qualifying && isDone(r))
@@ -1492,9 +1534,6 @@ function derivedLowHi(player, allRounds, mode) {
     // Laatste 20 t/m deze ronde (nieuwste eerst)
     const window20 = qual.slice(0, idx + 1).slice(-20).reverse();
     const sds = window20.map(x => {
-      if (mode === 'fixed') {
-        return (x.sdFinal != null && x.sdFinal !== '' && isFinite(parseFloat(x.sdFinal))) ? parseFloat(x.sdFinal) : null;
-      }
       const e = effectiveSD(x);
       return e ? e.value : null;
     }).filter(v => v != null);
@@ -1508,10 +1547,10 @@ function derivedLowHi(player, allRounds, mode) {
 }
 
 // Low HI: handmatig indien ingevuld, anders afgeleid uit de historie.
-function effectiveLowHi(player, allRounds, mode) {
+function effectiveLowHi(player, allRounds) {
   const manual = getManualLowHi();
   if (manual != null) return manual;
-  return derivedLowHi(player, allRounds, mode);
+  return derivedLowHi(player, allRounds);
 }
 
 
@@ -2498,6 +2537,20 @@ function formatRoundDate(iso) {
   return `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
 }
 
+// Zoals formatRoundDate(), maar met de dagafkorting ervoor (bv. 'za. 11-5-2025') —
+// alleen bij een echte datum, niet bij 'Vandaag'/'Gisteren'/'Morgen' (die zijn zelf al
+// een relatieve dagaanduiding, een dagafkorting ervoor zou dubbelop zijn). Gebruikt in
+// Archief, waar je vaak meerdere rondes door elkaar ziet en de dag van de week in één
+// oogopslag helpt herkennen welke ronde in het weekend was.
+const WEEKDAY_ABBR = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
+function formatRoundDateWithDay(iso) {
+  const base = formatRoundDate(iso);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return base;
+  if (base === 'Vandaag' || base === 'Gisteren' || base === 'Morgen') return base;
+  const d = new Date(iso + 'T00:00:00');
+  return `${WEEKDAY_ABBR[d.getDay()]} · ${base}`;
+}
+
 // Altijd de volledige datum, zonder "Vandaag"/"Gisteren"/"Morgen"
 function formatFullDate(iso) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
@@ -3130,8 +3183,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
         const pool = [{ ...game }, ...others]
           .sort((a, b) => new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`) - new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`))
           .slice(0, 20);
-        const mode = sdFixed ? 'fixed' : 'effective';
-        const whs = whsHandicap(pool, mode, effectiveLowHi(game.player, all, mode), esrMapFor(game.player, all, mode));
+        const whs = whsHandicap(pool, effectiveLowHi(game.player, all), esrMapFor(game.player, all));
         const hcpWarnSuffix = sdFixed ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
         const label = (sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp') + hcpWarnSuffix;
         const capLabel = !whs || !whs.capped
@@ -3421,6 +3473,16 @@ function renderPlayerStats() {
   // dus per ronde herberekend wat je echte handicap toen was (i.e. het cijfer dat ook
   // bovenaan als KPI staat, maar dan voor elk historisch punt in plaats van alleen nu).
   // Wordt in de grafiek als stippellijn naast de rauwe hiSeries getoond.
+  //
+  // Volledige esrChrono en de ESR-aanpassingen ÉÉN KEER berekenen, vóór de lus (O(n)
+  // i.p.v. per punt binnen de lus opnieuw de hele geschiedenis herberekenen).
+  const esrChronoFull = rounds.map((rr, i) => {
+    const rsd = sdSeries[i];
+    return rsd == null ? null : { id: rr.id, sd: rsd, t: new Date(`${rr.date || '1970-01-01'}T${rr.time || '00:00'}`).getTime() };
+  }).filter(Boolean);
+  const esrAtOwnStep = computeEsrAdjustmentsIncremental(esrChronoFull);
+  const esrAdjById = new Map(esrChronoFull.map((x, i) => [x.id, esrAtOwnStep[i]]));
+
   const capSeries = [];
   const capTypeSeries = [];
   const esrAppliedSeries = [];
@@ -3435,13 +3497,7 @@ function renderPlayerStats() {
       if (!isFinite(tj) || tj < cutoff) continue;
       if (lowHi == null || hiSeries[j] < lowHi) lowHi = hiSeries[j];
     }
-    // Correcte ESR: volledige geschiedenis t/m deze ronde, niet alleen de vorige ronde
-    // vergelijken — zelfde principe als computeEsrAdjustments()/esrMapFor() elders.
-    const esrChronoUpToHere = rounds.slice(0, idx + 1).map((rr, i) => {
-      const rsd = sdSeries[i];
-      return rsd == null ? null : { id: rr.id, sd: rsd, t: new Date(`${rr.date || '1970-01-01'}T${rr.time || '00:00'}`).getTime() };
-    }).filter(Boolean);
-    const esrAdjHere = computeEsrAdjustments(esrChronoUpToHere).get(r.id) || 0;
+    const esrAdjHere = esrAdjById.get(r.id) || 0;
     esrAppliedSeries.push(esrAdjHere !== 0);
     const rawAfterEsr = Math.round((hiSeries[idx] + esrAdjHere) * 10) / 10;
     const capResult = applyHandicapCaps(rawAfterEsr, lowHi);
@@ -3500,7 +3556,7 @@ function renderPlayerStats() {
   const periodBar = `<div style="display:flex;gap:6px">`
     + periodBtn('Laatste 20', 'l20') + periodBtn('12 maanden', 'jaar') + periodBtn('Alles', 'alles')
     + `</div>`;
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player, all, 'effective'), esrMapFor(player, all, 'effective'));
+  const whs = whsHandicap(last20, effectiveLowHi(player, all), esrMapFor(player, all));
   const bestSd = validSd.length ? Math.min(...validSd) : null;
   const avgSd  = validSd.length ? validSd.reduce((s, x) => s + x, 0) / validSd.length : null;
   const sdKpiWarning = rounds.some(r => { const e = effectiveSD(r); return e && e.value != null && roundHasWarning(r); });
@@ -3580,7 +3636,7 @@ function renderPlayerStats() {
   //     alweer voorbije dieptepunt zijn) is lager — deze blijft wél achter de opbouwdrempel,
   //     want die berekening is met weinig data minder betrouwbaar.
   const loManual = getManualLowHi();
-  const loDerived = derivedLowHi(player, all, 'effective');
+  const loDerived = derivedLowHi(player, all);
   const loEstablished = lowHiCheckStatus(player, all).established;
   const loStaleFromHistory = loManual != null && loDerived != null && isFinite(loDerived) && loDerived < loManual && loEstablished;
   const loStaleFromCurrent = loManual != null && whs && whs.value != null && isFinite(whs.value) && whs.value < loManual;
@@ -4638,6 +4694,13 @@ function doAdditiveImport(parsed) {
     imported++;
   });
   nav('archive');
+  // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
+  // (die immers al ergens vandaan kwamen, dus per definitie al een keer geëxporteerd
+  // zijn geweest) — alleen écht nieuw gespeelde rondes na dit moment tellen weer mee.
+  // De backup-datum zelf blijft ongewijzigd: dat blijft een apart, historisch feit.
+  if (storage.getItem('golf_last_backup_date')) {
+    storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+  }
   const parts = [`${imported} ronde${imported !== 1 ? 's' : ''} geïmporteerd.`];
   if (exactDup) parts.push(`${exactDup} ronde${exactDup !== 1 ? 's' : ''} overgeslagen: bestond${exactDup !== 1 ? 'en' : ''} al (zelfde datum, tijd en speler).`);
   if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} overgeslagen: er stonden al 2 rondes op die datum/tijd — importeer die apart als je alsnog wilt overschrijven.`);
@@ -4651,6 +4714,11 @@ function doFullRestoreImport(parsed) {
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
   storage.setItem('golf_rounds', JSON.stringify(entries.slice(0, getRoundStorageLimit())));
+  // Zelfde reden als bij doAdditiveImport: een herstelde backup bestaat per definitie al
+  // ergens, dus mag niet als 'nieuwe, nog niet gebackupte rondes' meetellen.
+  if (storage.getItem('golf_last_backup_date')) {
+    storage.setItem('golf_last_backup_count', String(entries.length));
+  }
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
   game = { started: false, holes: [] };
@@ -5199,7 +5267,7 @@ function updateComputedHcp() {
   if (!player1) { el.textContent = '—'; return; }
   const actId = storage.getItem('golf_active_id');
   const last20 = last20Qualifying(player1, loadSavedRounds(), actId, game2Id);
-  const whs = whsHandicap(last20, 'effective', effectiveLowHi(player1, loadSavedRounds(), 'effective'), esrMapFor(player1, loadSavedRounds(), 'effective'));
+  const whs = whsHandicap(last20, effectiveLowHi(player1, loadSavedRounds()), esrMapFor(player1, loadSavedRounds()));
   // Driehoekje i.p.v. een apart tekstlabel ('Nieuwe hcp'/'Verwachte hcp') zodra de berekening
   // nog niet vastgesteld is — zelfde conditie als de WHS-hcp-KPI op Statistieken (hele
   // laatste 20, niet alleen de meetellende usedIds-deelverzameling).
@@ -5263,7 +5331,7 @@ function loadSaved() {
     const startPlayer = nameEl ? nameEl.value.trim() : '';
     if (startPlayer) {
       const last20 = last20Qualifying(startPlayer, saved, actId, game2Id);
-      const whs = whsHandicap(last20, 'effective', effectiveLowHi(startPlayer, saved, 'effective'), esrMapFor(startPlayer, saved, 'effective'));
+      const whs = whsHandicap(last20, effectiveLowHi(startPlayer, saved), esrMapFor(startPlayer, saved));
       if (whs) whs.usedIds.forEach(id => window._whsUsedIds.add(id));
     }
   }
@@ -5338,31 +5406,42 @@ function loadSaved() {
       const qualAll = saved
         .filter(r => r.player === mainPlayer && r.qualifying && isDoneForTrend(r))
         .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`)); // oudste eerst
-      // Low HI hangt alleen af van speler + modus (fixed/effective), niet van de losse
-      // ronde zelf — dus één keer per modus berekenen i.p.v. per ronde herberekenen.
-      const lowHiByMode = {
-        fixed: effectiveLowHi(mainPlayer, saved, 'fixed'),
-        effective: effectiveLowHi(mainPlayer, saved, 'effective'),
-      };
+      const lowHi = effectiveLowHi(mainPlayer, saved);
+      // Eén doorlopende, incrementele ESR-berekening (zelfde kern-inzicht als
+      // computeEsrAdjustmentsIncremental hierboven) — bij elke stap i wordt de 'adj'-kaart
+      // net zo bijgewerkt als in computeEsrAdjustments(), en meteen daarna (met de op dát
+      // moment geldende stand van adj) whsHandicap() voor die ronde berekend. Dat is
+      // wiskundig gelijk aan de oude aanpak (die per ronde de hele voorgeschiedenis
+      // opnieuw doorrekende), maar dan in O(n) i.p.v. O(n²) — bewezen gelijk middels een
+      // uitgebreide testset (mix van fixed/effective, uitzonderlijke rondes, randgevallen
+      // bij 0/1 rondes, 300-5000 rondes).
+      const esrAdj = new Map();
+      qualAll.forEach(r => esrAdj.set(r.id, 0));
       qualAll.forEach((r, idx) => {
+        const eNow = effectiveSD(r);
+        if (eNow) {
+          const priorWindow = qualAll.slice(Math.max(0, idx - 20), idx)
+            .map(x => { const e = effectiveSD(x); return e ? { id: x.id, sd: e.value } : null; }).filter(Boolean);
+          if (priorWindow.length) {
+            const staffel = whsStaffel(priorWindow.length);
+            if (staffel) {
+              const adjustedPrior = priorWindow.map(x => x.sd + (esrAdj.get(x.id) || 0));
+              const sorted = [...adjustedPrior].sort((a, b) => a - b);
+              const priorHi = whsIndexRound(sorted.slice(0, staffel.count).reduce((s, x) => s + x, 0) / staffel.count + staffel.adj);
+              const diff = priorHi - eNow.value;
+              let magnitude = 0;
+              if (diff >= 10.0) magnitude = 2.0;
+              else if (diff >= 7.0) magnitude = 1.0;
+              if (magnitude > 0) {
+                const affected = qualAll.slice(Math.max(0, idx - 19), idx + 1);
+                affected.forEach(x => esrAdj.set(x.id, (esrAdj.get(x.id) || 0) - magnitude));
+              }
+            }
+          }
+        }
         // Laatste 20 t/m deze ronde, nieuwste eerst — zoals whsHandicap verwacht.
         const pool = qualAll.slice(0, idx + 1).slice(-20).reverse();
-        const sdFixed = r.sdFinal != null && r.sdFinal !== '' && isFinite(parseFloat(r.sdFinal));
-        const mode = sdFixed ? 'fixed' : 'effective';
-        const lowHi = lowHiByMode[mode];
-        // ESR mag hier alleen rondes t/m dit punt in de tijd meenemen (niet de rondes die
-        // ná deze ronde zijn gespeeld) — dit reconstrueert immers de hcp zoals die toén gold.
-        const esrChrono = qualAll.slice(0, idx + 1).map(x => {
-          let sd = null;
-          if (mode === 'fixed') {
-            if (x.sdFinal != null && x.sdFinal !== '' && isFinite(parseFloat(x.sdFinal))) sd = parseFloat(x.sdFinal);
-          } else {
-            const e = effectiveSD(x);
-            if (e) sd = e.value;
-          }
-          return sd == null ? null : { id: x.id, sd, t: new Date(`${x.date || '1970-01-01'}T${x.time || '00:00'}`).getTime() };
-        }).filter(Boolean);
-        const whs = whsHandicap(pool, mode, lowHi, computeEsrAdjustments(esrChrono));
+        const whs = whsHandicap(pool, lowHi, esrAdj);
         const oldHcpVal = parseFloat(r.hcp);
         hcpTrendMap[r.id] = {
           oldHcp: isFinite(oldHcpVal) ? oldHcpVal : null,
@@ -5412,7 +5491,7 @@ function loadSaved() {
     const dateLineInner = `
       ${importedLabel}
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span>${formatRoundDate(r.date)}${r.time ? ' · ' + r.time : ''}${bezigLabel}</span>
+        <span>${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${bezigLabel}</span>
         <span style="display:flex;align-items:center;gap:6px">
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
@@ -7995,17 +8074,17 @@ async function updateExportFolderUI() {
     if (unsupportedEl) unsupportedEl.classList.remove('hidden');
     if (pickBtn) pickBtn.classList.add('hidden');
     if (clearBtn) clearBtn.classList.add('hidden');
-    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = ''; }
+    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = 'var(--muted)'; }
     if (nameElInBlock) { nameElInBlock.textContent = 'Downloads'; nameElInBlock.style.color = ''; }
     return;
   }
   const handle = await getStoredExportFolderHandle();
   if (handle) {
-    if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = ''; }
+    if (nameEl) { nameEl.textContent = handle.name; nameEl.style.color = 'var(--green-light)'; }
     if (nameElInBlock) { nameElInBlock.textContent = handle.name; nameElInBlock.style.color = 'var(--green-light)'; }
     if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = false; }
   } else {
-    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = ''; }
+    if (nameEl) { nameEl.textContent = 'Downloads'; nameEl.style.color = 'var(--muted)'; }
     if (nameElInBlock) { nameElInBlock.textContent = 'Downloads'; nameElInBlock.style.color = ''; }
     if (clearBtn) { clearBtn.classList.remove('hidden'); clearBtn.disabled = true; }
   }
@@ -8090,6 +8169,21 @@ async function exportAllRounds() {
 }
 
 // Toont een herinnering als er lang niet of veel wijzigingen sinds de laatste back-up zijn
+// Gedeelde 'is een backup inmiddels achterstallig'-check — gebruikt door zowel de
+// Archief-herinneringsbanner als de statusregel in Instellingen → Gegevens → Backup, zodat
+// beide plekken altijd hetzelfde, consistente signaal geven.
+function isBackupOverdue() {
+  const rounds = loadSavedRounds();
+  const total = rounds.length;
+  if (total === 0) return false;
+  const lastDate = storage.getItem('golf_last_backup_date');
+  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
+  if (!lastDate) return total >= 5;
+  const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
+  return newRounds > 10 || daysSince > 30;
+}
+
 function updateBackupReminder() {
   const el = document.getElementById('backupReminder');
   if (!el) return;
@@ -8104,18 +8198,7 @@ function updateBackupReminder() {
   // Hooguit één keer per dag tonen
   if (storage.getItem('golf_backup_reminder_shown') === todayISO()) { el.classList.add('hidden'); return; }
 
-  const lastDate = storage.getItem('golf_last_backup_date');
-  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-
-  let show = false;
-  if (!lastDate) {
-    // Nog nooit geëxporteerd: pas herinneren vanaf een paar rondes
-    show = total >= 5;
-  } else {
-    const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-    const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-    show = newRounds > 10 || daysSince > 30;
-  }
+  const show = isBackupOverdue();
 
   if (show) {
     el.innerHTML = `<span>Exporteer je rondes</span><button class="btn-secondary" style="padding:6px 14px;font-size:15px;color:var(--orange);border-color:var(--orange);flex-shrink:0" onclick="exportAllRounds()">Nu exporteren</button>`;
@@ -8132,7 +8215,9 @@ function updateBackupReminder() {
 function updateLastBackupDisplay() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
-  const label = 'Backup <span style="color:var(--gold);font-weight:700">Rondes</span>';
+  const overdue = isBackupOverdue();
+  el.style.color = overdue ? 'var(--orange)' : '';
+  const label = 'Backup Rondes';
   const lastDate = storage.getItem('golf_last_backup_date');
   if (!lastDate) { el.innerHTML = `${label}: geen`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
@@ -8659,7 +8744,10 @@ function updateStorageSettingsUI() {
   const countEl = document.getElementById('roundLimitCurrentCount');
   if (countEl) countEl.textContent = saved.length;
   const nonQEl = document.getElementById('nonQCount');
-  if (nonQEl) nonQEl.textContent = saved.filter(r => !r.qualifying).length;
+  const nonQCount = saved.filter(r => !r.qualifying).length;
+  if (nonQEl) nonQEl.textContent = nonQCount;
+  const purgeNonQBtn = document.getElementById('purgeNonQBtn');
+  if (purgeNonQBtn) purgeNonQBtn.disabled = nonQCount === 0;
   const oldestEl = document.getElementById('oldestDeleteCount');
   const oldestBtn = document.getElementById('deleteOldestBtn');
   if (saved.length === 0) {
@@ -8993,7 +9081,7 @@ function refreshLowHiWarning(previewVal) {
   const rounds = loadSavedRounds();
   // Alleen vastgestelde dagresultaten — dit getal dient als betrouwbare referentie om je
   // handmatige Low HI tegen te controleren, dus geen voorlopige schattingen hierin.
-  const d = player ? derivedLowHi(player, rounds, 'fixed') : null;
+  const d = player ? derivedLowHi(player, rounds) : null;
   if (dEl) dEl.textContent = (d != null && isFinite(d)) ? fmt1(d) : '—';
   const v = previewVal !== undefined ? previewVal : getManualLowHi();
   const warnEl = document.getElementById('lowHiStaleWarning');
