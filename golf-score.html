@@ -5982,7 +5982,7 @@ function deleteRoundFromInfoModal(btn) {
   const idx = _roundInfoIdx;
   showDangerModal(
     'Ronde verwijderen',
-    `De ronde van "${formatRoundDate(round.date)}${round.time ? ' · ' + round.time : ''}" wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+    `De ronde van ${round.player} op ${formatRoundDate(round.date)}${round.time ? ' om ' + round.time : ''} wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
     'Verwijderen',
     () => {
       performDeleteRound(idx);
@@ -9333,7 +9333,7 @@ document.addEventListener('focusin', (e) => {
 <div id="resetAllModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
     <div class="error-msg" id="dangerModalTitle" style="font-size:20px;color:var(--red);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Alles wissen</div>
-    <div id="dangerModalMessage" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Alle clubs, rondes en instellingen worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</div>
+    <div id="dangerModalMessage" style="font-size:20px;font-weight:400;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Alle clubs, rondes en instellingen worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</div>
     <div style="display:flex;gap:8px">
       <button class="btn-secondary" id="dangerModalCancelBtn" style="flex:1;padding:12px;font-size:20px" onclick="document.getElementById('resetAllModal').classList.add('hidden')">Annuleren</button>
       <button class="btn-secondary confirm-armed" id="dangerModalConfirmBtn" style="flex:1;padding:12px;font-size:20px;background:var(--red);border-color:var(--red);color:#fff">Wissen</button>
