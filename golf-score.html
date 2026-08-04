@@ -2548,7 +2548,7 @@ function formatRoundDateWithDay(iso) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return base;
   if (base === 'Vandaag' || base === 'Gisteren' || base === 'Morgen') return base;
   const d = new Date(iso + 'T00:00:00');
-  return `${WEEKDAY_ABBR[d.getDay()]} · ${base}`;
+  return `${WEEKDAY_ABBR[d.getDay()]} ${base}`;
 }
 
 // Altijd de volledige datum, zonder "Vandaag"/"Gisteren"/"Morgen"
@@ -5467,7 +5467,7 @@ function loadSaved() {
     const totalAgs = r.holes.reduce((s, h) => s + agsFor(h), 0);
     const par = r.PAR ?? (r.holes?.length ? r.holes.reduce((s,h)=>s+h.par,0) : null);
     const chcp = r.chcp;
-    const bezigLabel = !done ? ` · <span style="color:var(--gold)">bezig</span>` : '';
+    const bezigLabel = !done ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="var(--gold)" stroke="none" style="vertical-align:-2px" title="Bezig"><polygon points="6 3 20 12 6 21 6 3"/></svg> ` : '';
     const importedLabel = r._justImported ? `<div class="saved-meta" style="color:var(--gold)">Geïmporteerd</div>` : '';
     const player2Label = (game2Id && isActive) ? ` · <span style="color:var(--gold)">${isPlayer2Active ? 'speler 2' : 'speler 1'}</span>` : '';
     const isCurrentPlayer = (isPlayer2Active && activePlayer===2) || (!isPlayer2Active && isActive && activePlayer===1);
@@ -5491,7 +5491,7 @@ function loadSaved() {
     const dateLineInner = `
       ${importedLabel}
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span>${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${bezigLabel}</span>
+        <span>${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
