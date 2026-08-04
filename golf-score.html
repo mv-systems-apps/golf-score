@@ -535,6 +535,7 @@
     <div class="fg" id="hcpField">
       <label>Handicap</label>
       <div id="computedHcpRow" style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="iHcp" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayerProfile(); this.blur();}" />
@@ -562,6 +563,7 @@
     </div>
     <div class="fg">
       <label>Handicap</label>
+      <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="iHcp2" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayer2Profile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayer2Profile(); this.blur();}" />
@@ -825,6 +827,7 @@
       <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de afgelopen 365 dagen. Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
     </div>
     <div class="fg" style="margin-bottom:0">
+      <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
       <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit historie afgeleid: <span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
@@ -1789,7 +1792,7 @@ function fillPlayer2(type) {
   const name2El = document.getElementById('iName2');
   const hcp2El  = document.getElementById('iHcp2');
   if (name2El) name2El.value = savedName || 'Speler 2';
-  if (hcp2El)  hcp2El.value  = savedHcp  || '';
+  if (hcp2El)  setValidatedInput(hcp2El, savedHcp || '');
   onHcpBlur(hcp2El);
   savePlayer2Profile();
   updateChcp2();
@@ -1941,7 +1944,7 @@ function restorePlayer2Visibility() {
     const name2El = document.getElementById('iName2');
     const hcp2El  = document.getElementById('iHcp2');
     if (name2El && savedName2) name2El.value = savedName2;
-    if (hcp2El  && savedHcp2)  hcp2El.value  = savedHcp2;
+    if (hcp2El  && savedHcp2)  setValidatedInput(hcp2El, savedHcp2);
     updateChcp2();
     updateFavPlayer2Star();
     updatePlayer2Titles();
@@ -2342,11 +2345,47 @@ function getHcp() {
   return parseFloat(document.getElementById('iHcp').value);
 }
 
-// ══ HANDICAP-VALIDATIE (-5 t/m 54.0, max 1 decimaal) ════════════════════
+// Wijst een toets die tot een ongeldige waarde zou leiden (meer dan 1 decimaal, of
+// buiten -10..54) af — de waarde blijft op de vorige geldige staat staan (i.p.v.
+// achteraf te corrigeren) en een neutrale melding boven het veld legt uit waarom.
+// msgId is optioneel (Speler 2's veld heeft er nu ook een, maar dit blijft defensief).
+function handleRangeInput(el, msgId) {
+  const msgEl = msgId ? document.getElementById(msgId) : null;
+  const prev = el.dataset.lastValid ?? '';
+  let v = el.value.replace(',', '.');
+  const validFormat = /^-?\d*(\.\d?)?$/.test(v);
+  let ok = validFormat;
+  if (ok && v !== '' && v !== '-' && !v.endsWith('.')) {
+    const num = parseFloat(v);
+    if (isFinite(num) && (num < -10 || num > 54)) ok = false;
+  }
+  if (!ok) {
+    el.value = prev;
+    if (msgEl) {
+      msgEl.classList.remove('hidden');
+      clearTimeout(msgEl._hideTimer);
+      msgEl._hideTimer = setTimeout(() => msgEl.classList.add('hidden'), 2500);
+    }
+    return prev;
+  }
+  el.dataset.lastValid = v;
+  el.value = v;
+  if (msgEl) msgEl.classList.add('hidden');
+  return v;
+}
+
+// Vult een hcp/Low-HI-veld programmatisch (bij laden van een profiel, 'standaard
+// invullen', enz.) — zet meteen ook lastValid, anders zou de EERSTE toets die de
+// gebruiker daarna intypt bij afwijzing ten onrechte terugspringen naar leeg in plaats
+// van naar deze geladen waarde.
+function setValidatedInput(el, value) {
+  if (!el) return;
+  el.value = value;
+  el.dataset.lastValid = value;
+}
+
 function onHcpInput(input) {
-  let v = input.value.replace(',', '.');
-  const m = v.match(/^-?\d*(\.\d?)?/);
-  if (m) input.value = m[0];
+  handleRangeInput(input, input.id === 'iHcp2' ? 'hcpRangeMsg2' : 'hcpRangeMsg1');
   if (input.id === 'iHcp2') {
     updateChcp2();
   } else {
@@ -2631,6 +2670,7 @@ function startRound() {
   if (!name) { showStartError('Voer een speler in'); return; }
   const hcp = getHcp();
   if (isNaN(hcp)) { showStartError('Vul handicap in'); return; }
+  if (hcp < -10 || hcp > 54) { showStartError('<span style="color:var(--red)">Hcp moet tussen -10,0 en 54,0 liggen</span>'); return; }
 
   // Speler 2 validatie
   if (player2Visible) {
@@ -2638,6 +2678,7 @@ function startRound() {
     if (!name2) { showStartError('Voer een naam in voor speler 2'); return; }
     const hcp2 = parseFloat(document.getElementById('iHcp2').value.replace(',', '.'));
     if (isNaN(hcp2)) { showStartError('Vul handicap in voor speler 2'); return; }
+    if (hcp2 < -10 || hcp2 > 54) { showStartError('<span style="color:var(--red)">Hcp van speler 2 moet tussen -10,0 en 54,0 liggen</span>'); return; }
   }
 
   // Check datum, tijd, club en baan
@@ -5320,7 +5361,7 @@ function resetHcpToComputed() {
   const input = document.getElementById('iHcp');
   if (!el || !input) return;
   if (el.textContent && el.textContent !== '—') {
-    input.value = el.textContent;
+    setValidatedInput(input, el.textContent);
     savePlayerProfile();
   }
 }
@@ -9089,9 +9130,8 @@ function saveLowHi(el) {
 // Live preview terwijl je typt: sanitizet de invoer en werkt de waarschuwing al bij vóór
 // je het veld verlaat (zonder al op te slaan — dat gebeurt nog steeds pas bij onblur).
 function previewLowHi(el) {
-  el.value = el.value.replace(/[^0-9.,-]/g, '');
-  const raw = el.value.trim().replace(',', '.');
-  const n = raw === '' ? null : parseFloat(raw);
+  const v = handleRangeInput(el, 'lowHiRangeMsg');
+  const n = v === '' || v === '-' ? null : parseFloat(v);
   refreshLowHiWarning(isFinite(n) ? n : null);
 }
 // Ververst de afgeleide waarde en de eventuele waarschuwing. Zonder argument wordt de
@@ -9155,7 +9195,7 @@ function updateLowHiInput() {
   const el = document.getElementById('lowHiInput');
   if (!el) return;
   const v = getManualLowHi();
-  el.value = v == null ? '' : fmt1(v);
+  setValidatedInput(el, v == null ? '' : fmt1(v));
   refreshLowHiWarning();
 }
 
@@ -9314,7 +9354,7 @@ document.addEventListener('focusin', (e) => {
   const savedHcp    = storage.getItem('golf_profile_hcp');
   const savedGender = storage.getItem('golf_gender');
   if (savedName)   document.getElementById('iName').value = savedName;
-  if (savedHcp)    document.getElementById('iHcp').value  = savedHcp;
+  if (savedHcp)    setValidatedInput(document.getElementById('iHcp'), savedHcp);
   if (sel.holeCount) document.getElementById('cat-' + sel.holeCount)?.classList.add('active');
   document.getElementById('cat-par3')?.classList.toggle('active', sel.showPar3);
 
