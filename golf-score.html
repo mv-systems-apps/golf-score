@@ -3992,9 +3992,11 @@ function renderPlayerStats() {
     if (!e) return;
     // Index vóór deze ronde: staffel over de voorgaande rondes (max 20) uit de VOLLEDIGE
     // geschiedenis, zonder ESR/caps — ook als deze kaart zelf maar een periode toont, moet
-    // de lookback kloppen voor rondes die vroeg in die periode vallen.
-    const prev = rounds.slice(0, idx);
-    const lookback = prev.slice(-20);
+    // de lookback kloppen voor rondes die vroeg in die periode vallen. Direct begrensd
+    // slicen (i.p.v. eerst de hele voorgeschiedenis kopiëren en dán pas de laatste 20
+    // eruit pakken) — bij een groot aantal rondes zou dat anders per ronde een steeds
+    // grotere kopie maken, terwijl er toch nooit meer dan 20 elementen worden gebruikt.
+    const lookback = rounds.slice(Math.max(0, idx - 20), idx);
     const sds = lookback.map(x => { const pe = effectiveSD(x); return pe ? pe.value : null; }).filter(v => v != null);
     const staffel = whsStaffel(sds.length);
     if (!staffel) return;
@@ -4148,11 +4150,11 @@ function renderPlayerStats() {
   el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView);
+  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView);
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
@@ -4186,17 +4188,37 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     : '';
   // Cap-icoontjes: altijd getekend (ook bij veel punten), want caps zijn zeldzaam en
   // dus geen risico op visuele drukte zoals bij de gewone bolletjes.
+  // Cap-icoontjes én het 'afhankelijk van een onbevestigde ronde'-driehoekje staan beide
+  // boven het punt, met het driehoekje — als dat er is — het dichtst bij het punt en het
+  // cap-icoon (indien er ook een is) daar net buiten. Zonder driehoekje neemt het
+  // cap-icoon gewoon de dichtstbijzijnde plek in (geen onnodige lege ruimte). Eerdere
+  // pogingen om zo'n driehoekje op de grafiek te tekenen gebruikten DOM-metingen
+  // (getBoundingClientRect) en hadden daardoor bugs (driehoekjes overal) — dit gebruikt
+  // in plaats daarvan dezelfde pure SVG-coördinatenwiskunde (xOf/yOf) als de al
+  // langer werkende cap- en ESR-iconen hierboven/onder, wat betrouwbaarder is.
   const capIconsOf = (types) => {
-    if (!types) return '';
+    if (!types && !warnSeries) return '';
     return capPts.map(p => {
-      const type = types[p.i];
-      if (!type) return '';
+      const type = types ? types[p.i] : null;
+      const hasWarn = warnSeries ? !!warnSeries[p.i] : false;
+      if (!type && !hasWarn) return '';
       const x = xOf(p.i), y = yOf(p.v);
-      const color = type === 'hard' ? 'var(--red)' : 'var(--orange)';
-      const path = type === 'hard'
-        ? '<line x1="-6" y1="-7" x2="6" y2="-7"/><line x1="-6" y1="-3" x2="6" y2="-3"/><line x1="0" y1="7" x2="0" y2="1"/><polyline points="-4 4 0 1 4 4"/>'
-        : '<line x1="-6" y1="-5" x2="6" y2="-5"/><line x1="0" y1="7" x2="0" y2="-1"/><polyline points="-4 3 0 -1 4 3"/>';
-      return `<g transform="translate(${x.toFixed(1)} ${(y - 10).toFixed(1)})" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${path}</g>`;
+      let out = '';
+      // Driehoekje: dichtst bij het punt (offset -10), indien aanwezig.
+      if (hasWarn) {
+        out += `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 17).toFixed(1)}) scale(0.5)" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g>`;
+      }
+      // Cap-icoon: dichtstbijzijnde plek als er geen driehoekje is, anders een stap
+      // verder naar buiten (offset -20 i.p.v. -10).
+      if (type) {
+        const offset = hasWarn ? 20 : 10;
+        const color = type === 'hard' ? 'var(--red)' : 'var(--orange)';
+        const path = type === 'hard'
+          ? '<line x1="-6" y1="-7" x2="6" y2="-7"/><line x1="-6" y1="-3" x2="6" y2="-3"/><line x1="0" y1="7" x2="0" y2="1"/><polyline points="-4 4 0 1 4 4"/>'
+          : '<line x1="-6" y1="-5" x2="6" y2="-5"/><line x1="0" y1="7" x2="0" y2="-1"/><polyline points="-4 3 0 -1 4 3"/>';
+        out += `<g transform="translate(${x.toFixed(1)} ${(y - offset).toFixed(1)})" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${path}</g>`;
+      }
+      return out;
     }).join('');
   };
   // ESR-icoontje (Exceptional Score Reduction): klein pijltje-omlaag, ónder het punt —
