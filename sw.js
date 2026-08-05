@@ -11,7 +11,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-cb9c865a158d';
+const CACHE_VERSION = 'golf-score-f1d48ae58ca0';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
@@ -29,10 +29,20 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_VERSION)
       // Per bestand toevoegen is robuuster dan addAll (dat faalt als één bestand ontbreekt).
-      .then(c => Promise.all(APP_FILES.map(url => c.add(url).catch(() => {}))))
+      // Bij falen een paar keer opnieuw proberen i.p.v. de fout stilzwijgend te negeren —
+      // anders kan bijvoorbeeld een icoon per ongeluk blijvend uit de cache verdwijnen
+      // als het ophalen ervan één keer hapert tijdens het installeren van een nieuwe versie.
+      .then(c => Promise.all(APP_FILES.map(url => addWithRetry(c, url))))
       .then(() => self.skipWaiting())
   );
 });
+
+async function addWithRetry(cache, url, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try { await cache.add(url); return; }
+    catch (e) { if (i === attempts - 1) { /* laatste poging ook mislukt: laat de rest van de installatie doorgaan */ } }
+  }
+}
 
 self.addEventListener('activate', e => {
   e.waitUntil(
