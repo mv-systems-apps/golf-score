@@ -535,7 +535,7 @@
     <div class="fg" id="hcpField">
       <label>Handicap</label>
       <div id="computedHcpRow" style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
-      <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="iHcp" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayerProfile(); this.blur();}" />
@@ -563,7 +563,7 @@
     </div>
     <div class="fg">
       <label>Handicap</label>
-      <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="iHcp2" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayer2Profile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayer2Profile(); this.blur();}" />
@@ -827,7 +827,7 @@
       <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de afgelopen 365 dagen. Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
     </div>
     <div class="fg" style="margin-bottom:0">
-      <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
       <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit historie afgeleid: <span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
@@ -990,6 +990,22 @@
         <div style="display:flex;gap:10px">
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
+        </div>
+      </div>
+      <div class="subpanel" style="margin-top:12px">
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Herinnering</div>
+        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Herinner me als het langer geleden is dan:</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <span style="font-size:17px;color:var(--muted);flex:1">Dagen</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(-1)">−</button>
+          <span id="backupReminderDaysVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">7</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(1)">+</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:17px;color:var(--muted);flex:1">Nieuwe rondes</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(-1)">−</button>
+          <span id="backupReminderRoundsVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">2</span>
+          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(1)">+</button>
         </div>
       </div>
     </div>
@@ -2653,6 +2669,27 @@ function getRoundStorageLimit() {
 function setRoundStorageLimit(v) {
   const clamped = Math.max(20, Math.min(500, Math.round(v / 20) * 20));
   storage.setItem('golf_round_limit', String(clamped));
+  return clamped;
+}
+
+// Instelbare drempels voor de backup-herinnering (zowel de banner in Archief als de
+// oranje kleuring van 'Backup Rondes' in Instellingen → Gegevens) — zie isBackupOverdue().
+function getBackupReminderDays() {
+  const raw = parseInt(storage.getItem('golf_backup_reminder_days'), 10);
+  return (isFinite(raw) && raw >= 1 && raw <= 90) ? raw : 7;
+}
+function setBackupReminderDays(v) {
+  const clamped = Math.max(1, Math.min(90, Math.round(v)));
+  storage.setItem('golf_backup_reminder_days', String(clamped));
+  return clamped;
+}
+function getBackupReminderRounds() {
+  const raw = parseInt(storage.getItem('golf_backup_reminder_rounds'), 10);
+  return (isFinite(raw) && raw >= 1 && raw <= 50) ? raw : 2;
+}
+function setBackupReminderRounds(v) {
+  const clamped = Math.max(1, Math.min(50, Math.round(v)));
+  storage.setItem('golf_backup_reminder_rounds', String(clamped));
   return clamped;
 }
 
@@ -8241,10 +8278,11 @@ function isBackupOverdue() {
   if (total === 0) return false;
   const lastDate = storage.getItem('golf_last_backup_date');
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-  if (!lastDate) return total >= 5;
+  const roundsThreshold = getBackupReminderRounds();
+  if (!lastDate) return total >= roundsThreshold;
   const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  return newRounds > 10 || daysSince > 30;
+  return newRounds >= roundsThreshold || daysSince >= getBackupReminderDays();
 }
 
 function updateBackupReminder() {
@@ -8278,6 +8316,10 @@ function updateBackupReminder() {
 function updateLastBackupDisplay() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
+  const daysValEl = document.getElementById('backupReminderDaysVal');
+  if (daysValEl) daysValEl.textContent = getBackupReminderDays();
+  const roundsValEl = document.getElementById('backupReminderRoundsVal');
+  if (roundsValEl) roundsValEl.textContent = getBackupReminderRounds();
   const overdue = isBackupOverdue();
   el.style.color = overdue ? 'var(--orange)' : '';
   const label = 'Backup Rondes';
@@ -8287,6 +8329,21 @@ function updateLastBackupDisplay() {
   if (daysSince <= 0) el.innerHTML = `${label}: vandaag`;
   else if (daysSince === 1) el.innerHTML = `${label}: gisteren`;
   else el.innerHTML = `${label}: ${daysSince} dagen geleden`;
+}
+
+function adjustBackupReminderDays(delta) {
+  const newVal = setBackupReminderDays(getBackupReminderDays() + delta);
+  const el = document.getElementById('backupReminderDaysVal');
+  if (el) el.textContent = newVal;
+  updateLastBackupDisplay();
+  updateBackupReminder();
+}
+function adjustBackupReminderRounds(delta) {
+  const newVal = setBackupReminderRounds(getBackupReminderRounds() + delta);
+  const el = document.getElementById('backupReminderRoundsVal');
+  if (el) el.textContent = newVal;
+  updateLastBackupDisplay();
+  updateBackupReminder();
 }
 
 async function exportAllClubs() {
