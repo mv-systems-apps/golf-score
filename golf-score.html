@@ -3878,23 +3878,26 @@ function renderPlayerStats() {
     ? `<div class="card"><h2>Gemiddelde per tee</h2>${teeChartSvg}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px">${teeHeader}${teeCardBody}</div></div>`
     : '';
 
-  // Gemiddelde score t.o.v. par per par-type (3/4/5)
-  const parBuckets = { 3: [], 4: [], 5: [] };
+  // Gemiddelde score t.o.v. par per par-type (3 t/m 6)
+  const parBuckets = { 3: [], 4: [], 5: [], 6: [] };
   periodRounds.forEach(r => r.holes.forEach(h => {
     if (h.score == null) return;
     if (parBuckets[h.par]) parBuckets[h.par].push(h.score - h.par);
   }));
 
-  // Gemiddelde t.o.v. par per par-type (3/4/5), als streepjes-grafiek op een horizontale
-  // as (afstand t.o.v. par). Schaal is dynamisch: schaalt mee met hoe ver de gemiddeldes
+  // Gemiddelde t.o.v. par per par-type, als streepjes-grafiek op een horizontale as
+  // (afstand t.o.v. par). Schaal is dynamisch: schaalt mee met hoe ver de gemiddeldes
   // van par afliggen, en kan ook links van 'Par' doorlopen bij een onder-par-gemiddelde.
   // Zelfde neutrale accentkleur als 'Gemiddelde per weekdag' — de positie/het label maakt
   // het onderscheid tussen de holetypes, niet meer een aparte kleur per par.
   const parDevs = {};
-  [3, 4, 5].forEach(p => {
+  [3, 4, 5, 6].forEach(p => {
     const arr = parBuckets[p];
     if (arr.length) parDevs[p] = { dev: arr.reduce((s, x) => s + x, 0) / arr.length, n: arr.length };
   });
+  // Alleen de par-types die ook echt voorkomen krijgen een baan — voorkomt dat bv. een
+  // (zeldzame) par 6 altijd een vaste, meestal lege baan zou reserveren voor iedereen.
+  const presentPars = [3, 4, 5, 6].filter(p => parDevs[p]);
   const parDevVals = Object.values(parDevs).map(d => d.dev);
   let parDotsCard = '';
   if (parDevVals.length) {
@@ -3909,7 +3912,7 @@ function renderPlayerStats() {
     if (axisHi === axisLo) axisHi += step;
     // Vaste labels per holetype, net als bij 'Gemiddelde per weekdag' — direct op de y-as
     // i.p.v. alleen in de tabel eronder.
-    const parLabels = { 3: 'Par 3', 4: 'Par 4', 5: 'Par 5' };
+    const parLabels = { 3: 'Par 3', 4: 'Par 4', 5: 'Par 5', 6: 'Par 6' };
     // Zelfde canvasgrootte/opmaak als 'Gemiddelde per weekdag': bredere linkermarge voor
     // de y-as-labels, grotere baanafstand, en zebra-striping in de grafiek zelf.
     const w = 320, h = 118, padL = 46, padR = 12, tickTop = 10, tickBottom = 90, labelY = 108;
@@ -3924,24 +3927,24 @@ function renderPlayerStats() {
       `<line x1="${xOf(v).toFixed(1)}" y1="${tickTop}" x2="${xOf(v).toFixed(1)}" y2="${tickBottom}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
       + `<text x="${xOf(v).toFixed(1)}" y="${labelY}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis(v)}</text>`
     ).join('');
-    // Elk holetype krijgt een eigen, vaste 'baan' binnen de totale hoogte (Par 3
-    // boven, Par 4 midden, Par 5 onder) — zo kunnen de streepjes elkaar nooit
+    // Elk aanwezig holetype krijgt een eigen, vaste 'baan' binnen de totale hoogte
+    // (kleinste par boven, grootste onder) — zo kunnen de streepjes elkaar nooit
     // overlappen, ook niet als twee holetypes toevallig dezelfde afwijking hebben.
     const laneGap = 5;
     const laneSpan = tickBottom - tickTop;
-    const laneH = (laneSpan - laneGap * 2) / 3;
-    const stripesSvg = [3, 4, 5].map((p, i) => {
+    const laneCount = presentPars.length;
+    const laneH = (laneSpan - laneGap * (laneCount - 1)) / laneCount;
+    const stripesSvg = presentPars.map((p, i) => {
       if (i % 2 === 1) return '';
       const yTop = tickTop + i * (laneH + laneGap) - laneGap / 2;
       const yBottom = yTop + laneH + laneGap;
       return `<rect x="0" y="${yTop.toFixed(1)}" width="${w}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
     }).join('');
-    const labelsSvg = [3, 4, 5].map((p, i) => {
+    const labelsSvg = presentPars.map((p, i) => {
       const yMid = (tickTop + i * (laneH + laneGap) + laneH / 2).toFixed(1);
       return `<text x="${padL - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${parLabels[p]}</text>`;
     }).join('');
-    const barsSvg = [3, 4, 5].map((p, i) => {
-      if (!parDevs[p]) return '';
+    const barsSvg = presentPars.map((p, i) => {
       const x = xOf(parDevs[p].dev).toFixed(1);
       const yTop = (tickTop + i * (laneH + laneGap)).toFixed(1);
       const yBottom = (tickTop + i * (laneH + laneGap) + laneH).toFixed(1);
@@ -3953,7 +3956,7 @@ function renderPlayerStats() {
       + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Per par</span>`
       + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
       + `<span></span>`;
-    const legendRows = [3, 4, 5].filter(p => parDevs[p]).map((p, i) => {
+    const legendRows = presentPars.map((p, i) => {
       const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
       return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>Par ${p}</span>`
         + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${(p + parDevs[p].dev).toFixed(1)}</span>`
@@ -6519,17 +6522,43 @@ function setFieldValue(el, val) {
 
 // Zelfde live-filter-aanpak als bij hcp (onHcpInput): voorkomt rommelige invoer al
 // tijdens het typen, i.p.v. pas bij bevestigen te corrigeren. Alleen van toepassing op
-// Par/CR/SR — andere velden in deze gedeelde modal (bv. teenaam) blijven ongemoeid.
+// CR/SR — Par wordt niet meer los ingevoerd (zie updateAllTeeParDisplays hierboven) en
+// andere velden in deze gedeelde modal (bv. teenaam) blijven ongemoeid.
 function onValueEditInput(input) {
   if (!valueEditTarget) return;
-  if (valueEditTarget.classList.contains('cr-name-field')) {
-    const v = input.value.replace(',', '.');
-    const m = v.match(/^\d*(\.\d?)?/);
-    if (m) input.value = m[0];
-  } else if (valueEditTarget.classList.contains('par-name-field') || valueEditTarget.classList.contains('sr-name-field')) {
-    const m = input.value.match(/^\d*/);
-    if (m) input.value = m[0];
+  const msgEl = document.getElementById('valueEditRangeMsg');
+  const ranges = {
+    'cr-name-field':  { min: 55, max: 80,  decimal: true,  label: '55 t/m 80' },
+    'sr-name-field':  { min: 55, max: 155, decimal: false, label: '55 t/m 155' },
+  };
+  const field = Object.keys(ranges).find(cls => valueEditTarget.classList.contains(cls));
+  if (!field) return; // andere velden in deze modal (bv. teenaam): geen numerieke filter
+  const { min, max, decimal, label } = ranges[field];
+  const prev = input.dataset.lastValid ?? '';
+  let v = input.value.replace(',', '.');
+  const validFormat = decimal ? /^\d*(\.\d?)?$/.test(v) : /^\d*$/.test(v);
+  // Alleen de BOVENgrens hier al bewaken: een getal kan alleen maar groter worden
+  // naarmate je meer cijfers typt, dus overschrijding is altijd definitief. De
+  // ondergrens kan tijdens het typen nog prima tijdelijk onderschreden zijn (bv. '7' op
+  // weg naar '72') — die wordt pas bij bevestigen gecontroleerd.
+  let ok = validFormat;
+  if (ok && v !== '' && !v.endsWith('.')) {
+    const num = parseFloat(v);
+    if (isFinite(num) && num > max) ok = false;
   }
+  if (!ok) {
+    input.value = prev;
+    if (msgEl) {
+      msgEl.textContent = label;
+      msgEl.classList.remove('hidden');
+      clearTimeout(msgEl._hideTimer);
+      msgEl._hideTimer = setTimeout(() => msgEl.classList.add('hidden'), 2500);
+    }
+    return;
+  }
+  input.dataset.lastValid = v;
+  input.value = v;
+  if (msgEl) msgEl.classList.add('hidden');
 }
 
 function openValueEditModal(input, label) {
@@ -6541,9 +6570,11 @@ function openValueEditModal(input, label) {
   // waarde zodra een tussentijdse invoer (bv. '71.' vlak vóór het laatste cijfer) niet
   // als geldig getal geldt — zelfde reden waarom het hcp-veld dit ook al zo doet.
   editInput.type = 'text';
-  const isWholeNumberField = input.classList.contains('par-name-field') || input.classList.contains('sr-name-field');
+  const isWholeNumberField = input.classList.contains('sr-name-field');
   editInput.inputMode = isNumeric ? (isWholeNumberField ? 'numeric' : 'decimal') : 'text';
   editInput.value = getFieldValue(input);
+  editInput.dataset.lastValid = editInput.value;
+  document.getElementById('valueEditRangeMsg').classList.add('hidden');
   // Kleursneltoetsen alleen bij tee-naam veld
   const isTeeField = input.classList.contains('tee-name-field');
   document.getElementById('valueEditTeeHint').style.display = isTeeField ? '' : 'none';
@@ -6593,8 +6624,7 @@ function confirmValueEdit() {
   const isTeeNameField = valueEditTarget.classList.contains('tee-name-field');
   const isCrField = valueEditTarget.classList.contains('cr-name-field');
   const isSrField = valueEditTarget.classList.contains('sr-name-field');
-  const isParField = valueEditTarget.classList.contains('par-name-field');
-  const needsValue = isTeeNameField || isCrField || isSrField || isParField;
+  const needsValue = isTeeNameField || isCrField || isSrField;
 
   const showErr = (msg) => {
     if (errEl) {
@@ -6605,21 +6635,16 @@ function confirmValueEdit() {
     }
   };
 
-  if (needsValue && !newVal) { showErr(`Vul ${isTeeNameField ? 'tee' : isCrField ? 'CR' : isSrField ? 'SR' : 'par'} in`); return; }
+  if (needsValue && !newVal) { showErr(`Vul ${isTeeNameField ? 'tee' : isCrField ? 'CR' : 'SR'} in`); return; }
 
-  if (isParField) {
-    const v = parseFloat(newVal.replace(',', '.'));
-    if (isNaN(v) || v < 0 || v > 999) { showErr('Controleer par'); return; }
-    newVal = String(Math.round(v));
-  }
   if (isCrField) {
     const v = parseFloat(newVal.replace(',', '.'));
-    if (isNaN(v) || v < 0 || v > 999) { showErr('Controleer CR'); return; }
+    if (isNaN(v) || v < 55 || v > 80) { showErr('CR moet tussen 55 en 80 liggen'); return; }
     newVal = v.toFixed(1);
   }
   if (isSrField) {
     const v = parseFloat(newVal.replace(',', '.'));
-    if (isNaN(v) || v < 0 || v > 999) { showErr('Controleer SR'); return; }
+    if (isNaN(v) || v < 55 || v > 155) { showErr('SR moet tussen 55 en 155 liggen'); return; }
     newVal = String(Math.round(v));
   }
 
@@ -6697,7 +6722,7 @@ function makeTeeRow(gender, tee, par, cr, sr) {
       </div>
     </td>
     <td style="padding:3px 2px"><div class="tee-name-field" data-value="${tee}" onclick="openTeeFieldModal(this, 'Tee', false)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;overflow-wrap:break-word;cursor:pointer;text-align:center">${tee}</div></td>
-    <td style="padding:3px 2px"><div class="par-name-field" data-value="${parDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'Par', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${parDisp}</div></td>
+    <td style="padding:3px 2px"><div class="par-name-field" data-value="${parDisp}" data-numeric="1" title="Wordt automatisch berekend uit de hole-pars" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.04);color:var(--muted);border:1px solid rgba(255,255,255,.15);font-size:17px;text-align:center">${parDisp}</div></td>
     <td style="padding:3px 2px"><div class="cr-name-field" data-value="${crDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'CR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${crDisp}</div></td>
     <td style="padding:3px 2px"><div class="sr-name-field" data-value="${srDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'SR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${srDisp}</div></td>`;
   bindGenderLongPress(tr.querySelector('.gender-cycle-btn'));
@@ -6851,9 +6876,10 @@ function editGenderBtn(btn) {
 
 function addTeeRow() {
   if (document.querySelector('.tee-editor-row.tee-row-selected')) return;
-  const holeCount = readHolesFromEditor().length;
+  const holes = readHolesFromEditor();
+  const holeCount = holes.length;
   const is18 = holeCount > 9;
-  const defaultPar = is18 ? 72 : 36;
+  const defaultPar = holes.reduce((s, h) => s + h.par, 0);
   const defaultCR  = is18 ? 70.0 : 34.5;
   const defaultSR  = is18 ? 124 : 117;
   document.getElementById('editorTeesBody').appendChild(makeTeeRow('Heren', 'Geel', defaultPar, defaultCR, defaultSR));
@@ -6939,6 +6965,7 @@ function renderHoleEditor(holes) {
     tbody.appendChild(makeHoleRow(h, i));
   });
   updateEditorSectionCounts();
+  updateAllTeeParDisplays();
 }
 
 function makeHoleRow(h, i) {
@@ -7024,6 +7051,22 @@ function readHolesFromEditor() {
   });
 }
 
+// De Par-kolom in de tees-tabel is geen los invoerveld — het is altijd de som van de
+// hole-pars (de app verwachtte dat toch al bij het opslaan, dus nu kan die waarde
+// simpelweg niet meer los raken van de werkelijke holes). Wordt na elke wijziging aan
+// de hole-pars (toevoegen/verwijderen van een hole, of een losse hole-par aanpassen)
+// opnieuw aangeroepen om alle tee-rijen synchroon te houden.
+function updateAllTeeParDisplays() {
+  const holesEl = document.getElementById('editorHoles');
+  const teesBody = document.getElementById('editorTeesBody');
+  if (!holesEl || !teesBody) return;
+  const sum = readHolesFromEditor().reduce((s, h) => s + h.par, 0);
+  teesBody.querySelectorAll('.par-name-field').forEach(el => {
+    el.textContent = String(sum);
+    el.dataset.value = String(sum);
+  });
+}
+
 function editParBtn(btn) {
   const current = parseInt(btn.dataset.par) || 4;
   const holeNum = btn.dataset.hole;
@@ -7031,9 +7074,10 @@ function editParBtn(btn) {
   const idVal = row?.querySelector('.hole-id')?.value;
   let label = 'Par';
   if (holeNum) label = idVal ? `Hole ${holeNum} · ${idVal} · Par` : `Hole ${holeNum} · Par`;
-  openChoiceEditModal(label, [3, 4, 5], current, (choice) => {
+  openChoiceEditModal(label, [3, 4, 5, 6], current, (choice) => {
     btn.dataset.par = choice;
     btn.textContent = choice;
+    updateAllTeeParDisplays();
   });
 }
 
@@ -7439,9 +7483,7 @@ function openRoundInfoModal(idx) {
 // maar puur voor dit veld — geen WHS-herberekeningen, dit is enkel voor het rechtzetten
 // van administratiefoutjes achteraf.
 function onEditHcpInput(input) {
-  let v = input.value.replace(',', '.');
-  const m = v.match(/^-?\d*(\.\d?)?/);
-  if (m) input.value = m[0];
+  handleRangeInput(input, 'editHcpRangeMsg');
 }
 function onEditHcpBlur(input) {
   if (input.value === '' || input.value === '-') return;
@@ -7461,7 +7503,7 @@ function doOpenRoundInfoModal(idx) {
   document.getElementById('editDateInput').value = round.date || '';
   document.getElementById('editTimeInput').value = round.time || '';
   document.getElementById('editPlayerInput').value = round.player || '';
-  document.getElementById('editHcpInput').value = round.hcp != null && round.hcp !== '' ? String(round.hcp) : '';
+  setValidatedInput(document.getElementById('editHcpInput'), round.hcp != null && round.hcp !== '' ? String(round.hcp) : '');
   const activeId = storage.getItem('golf_active_id');
   const isActive = activeId && String(round.id) === activeId;
   const qSrc = isActive ? (game.qualifying ?? round.qualifying) : round.qualifying;
@@ -7510,7 +7552,7 @@ function doOpenRoundResultModal(idx) {
   })();
   document.getElementById('editPccBtn').textContent = formatPcc(_editPccVal);
   const sdSrc = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
-  document.getElementById('editSdInput').value = (sdSrc != null && sdSrc !== '') ? String(sdSrc) : '';
+  setValidatedInput(document.getElementById('editSdInput'), (sdSrc != null && sdSrc !== '') ? String(sdSrc) : '');
   updateEditSdHint(round);
   document.getElementById('roundResultModal').classList.remove('hidden');
 }
@@ -7539,7 +7581,7 @@ function updateEditSdHint(round) {
 // Neemt de berekende SD over als vastgestelde waarde
 function useCalcSd() {
   const el = document.getElementById('editSdInput');
-  el.value = _editCalcSd == null ? '' : _editCalcSd.toFixed(1);
+  setValidatedInput(el, _editCalcSd == null ? '' : _editCalcSd.toFixed(1));
   const msg = document.getElementById('editSdCopyMsg');
   if (msg) {
     msg.textContent = _editCalcSd == null ? 'Geen voorlopig dagresultaat' : 'Voorlopig dagresultaat overgenomen als vastgesteld';
@@ -7574,7 +7616,7 @@ function openPccChoice() {
       const wasInSync = sdEl && oldCalc != null && sdEl.value.trim() !== '' &&
         Math.abs(parseFloat(sdEl.value.replace(',', '.')) - oldCalc) < 0.05;
       updateEditSdHint(r);
-      if (wasInSync && sdEl) sdEl.value = _editCalcSd == null ? '' : _editCalcSd.toFixed(1);
+      if (wasInSync && sdEl) setValidatedInput(sdEl, _editCalcSd == null ? '' : _editCalcSd.toFixed(1));
     }
   });
 }
@@ -7599,14 +7641,22 @@ function fmt1(v) {
   return n.toFixed(1);
 }
 
+function onEditSdInput(input) {
+  handleRangeInput(input, 'editSdRangeMsg');
+}
+
 function onEditSdBlur() {
   const el = document.getElementById('editSdInput');
   const raw = el.value.trim().replace(',', '.');
-  if (raw === '') { el.value = ''; }
-  else {
+  if (raw === '') {
+    setValidatedInput(el, '');
+  } else {
     let v = parseFloat(raw);
-    if (isNaN(v)) el.value = '';
-    else el.value = (Math.round(v * 10) / 10).toFixed(1);
+    if (isNaN(v)) { setValidatedInput(el, ''); }
+    else {
+      v = Math.min(54, Math.max(-10, v));
+      setValidatedInput(el, (Math.round(v * 10) / 10).toFixed(1));
+    }
   }
   const round = loadSavedRounds()[_roundInfoIdx];
   if (round) updateEditSdHint(round);
@@ -9491,6 +9541,7 @@ document.addEventListener('focusin', (e) => {
     <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;margin-bottom:8px">Vul tee in</div>
     <div id="valueEditTeeHint" style="display:none;font-size:20px;color:var(--white);line-height:1.5;margin-bottom:8px">Herkende kleuren: Blauw · Bruin · Geel · Grijs · Groen · Oranje · Paars · Roze · Rood · Wit · Zilver · Zwart</div>
     <div id="valueEditSrHint" style="display:none;font-size:17px;color:var(--muted);margin-bottom:8px">SR ligt altijd tussen 55 en 155</div>
+    <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeValueEditModal()">Annuleren</button>
       <button class="btn-primary" style="flex:1;margin-top:0;padding:12px;font-size:20px" onclick="confirmValueEdit()">OK</button>
@@ -9670,6 +9721,7 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div class="fg" style="margin-bottom:14px">
       <label>Hcp</label>
+      <div id="editHcpRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="editHcpInput" class="field-input" type="text" inputmode="decimal" placeholder="—" style="text-align:left" oninput="onEditHcpInput(this)" onblur="onEditHcpBlur(this)">
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
@@ -9705,9 +9757,12 @@ document.addEventListener('focusin', (e) => {
         </td>
       </tr>
       <tr>
+        <td colspan="2" style="padding:0"><div id="editSdRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin:0 0 8px">-10,0 t/m 54,0</div></td>
+      </tr>
+      <tr>
         <td style="padding:0;vertical-align:middle"><label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700"><span style="display:block;color:var(--green-light)">Vastgesteld</span> dagresultaat (Sd<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:2px"><polyline points="20 6 9 17 4 12"/></svg>)</label></td>
         <td style="padding:0;width:76px">
-          <input id="editSdInput" class="field-input" type="text" inputmode="decimal" placeholder="—" oninput="this.value=this.value.replace(/[^0-9.,-]/g,'')" onblur="onEditSdBlur()">
+          <input id="editSdInput" class="field-input" type="text" inputmode="decimal" placeholder="—" oninput="onEditSdInput(this)" onblur="onEditSdBlur()">
         </td>
       </tr>
     </table>
