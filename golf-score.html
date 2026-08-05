@@ -6578,7 +6578,6 @@ function openValueEditModal(input, label) {
   // Kleursneltoetsen alleen bij tee-naam veld
   const isTeeField = input.classList.contains('tee-name-field');
   document.getElementById('valueEditTeeHint').style.display = isTeeField ? '' : 'none';
-  document.getElementById('valueEditSrHint').style.display = input.classList.contains('sr-name-field') ? '' : 'none';
   document.getElementById('valueEditModal').classList.remove('hidden');
   setTimeout(() => { editInput.focus(); editInput.select(); }, 50);
   startKeyboardAwarePositioning();
@@ -9540,7 +9539,6 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;margin-bottom:8px">Vul tee in</div>
     <div id="valueEditTeeHint" style="display:none;font-size:20px;color:var(--white);line-height:1.5;margin-bottom:8px">Herkende kleuren: Blauw · Bruin · Geel · Grijs · Groen · Oranje · Paars · Roze · Rood · Wit · Zilver · Zwart</div>
-    <div id="valueEditSrHint" style="display:none;font-size:17px;color:var(--muted);margin-bottom:8px">SR ligt altijd tussen 55 en 155</div>
     <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeValueEditModal()">Annuleren</button>
