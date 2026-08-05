@@ -8061,6 +8061,7 @@ function buildClubList() {
   const renderClub = (club) => {
     const isFav = favs.includes(club);
     const isHome = club === homeClub;
+    const isActive = club === activeClub;
     const courses = CLUBS[club]?.courses || {};
     const sortedCourseEntries = Object.entries(courses).sort(([nameA, dataA], [nameB, dataB]) => {
       const holesA = (dataA.holes || []).length;
@@ -8089,8 +8090,8 @@ function buildClubList() {
     };
     const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig');
     return `
-    <div class="card" style="margin-bottom:10px${isHome ? ';border-left:3px solid var(--gold);border-right:3px solid var(--gold)' : ''}">
-      <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:${isHome ? 'var(--gold)' : 'var(--white)'};cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">${escapeHtml(club)}</div>
+    <div class="card" style="margin-bottom:10px${isActive ? ';border-left:3px solid var(--gold);border-right:3px solid var(--gold)' : ''}">
+      <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:${isActive ? 'var(--gold)' : 'var(--white)'};cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">${escapeHtml(club)}</div>
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:var(--white);margin-top:4px;cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">Kort: ${escapeHtml(shortName || '—')}${isHome ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-left:8px;opacity:.8" title="Thuisclub"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg>' : ''}</div>
       <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:4px" onclick="toggleCourseList(this)">
         <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Banen</span>
@@ -8115,19 +8116,30 @@ function buildClubList() {
   };
 
   let html = '';
-  const homeClubs = filteredClubs.filter(c => c === homeClub);
-  const remaining  = filteredClubs.filter(c => c !== homeClub);
+  const activeClub = storage.getItem('golf_default_club');
+  const activeIsHome = activeClub && activeClub === homeClub;
+  // Actieve club (de op Start geselecteerde club) krijgt de bovenste, gouden categorie.
+  // Is die toevallig ook de thuisclub, dan worden beide samengevoegd tot één categorie
+  // ('Actief (Thuisclub)') i.p.v. twee aparte secties met dezelfde ene club erin.
+  const activeClubs = activeClub && CLUBS[activeClub] ? filteredClubs.filter(c => c === activeClub) : [];
+  const homeClubs = (homeClub && !activeIsHome) ? filteredClubs.filter(c => c === homeClub) : [];
+  const remaining  = filteredClubs.filter(c => c !== homeClub && c !== activeClub);
   const favClubs   = remaining.filter(c => favs.includes(c));
   const otherClubs = remaining.filter(c => !favs.includes(c));
+  const activeLabel = activeIsHome ? 'Actief (Thuisclub)' : 'Actief';
 
   if (window._clubGrouped) {
-    // Categorie weergave met inklapbare headers inclusief thuisclub
-    if (homeClubs.length) html += clubCollapsibleHeader('Thuisclub', homeClubs.length, 'home') + homeClubs.map(renderClub).join('') + '</div>';
-    if (favClubs.length)   html += clubCollapsibleHeader('Favorieten', favClubs.length, 'fav') + favClubs.map(renderClub).join('') + '</div>';
-    if (otherClubs.length) html += clubCollapsibleHeader('Overig', otherClubs.length, 'other') + otherClubs.map(renderClub).join('') + '</div>';
+    // Categorie weergave met inklapbare headers, actieve club (evt. samengevoegd met
+    // thuisclub) bovenaan
+    if (activeClubs.length) html += clubCollapsibleHeader(activeLabel, activeClubs.length, 'active') + activeClubs.map(renderClub).join('') + '</div>';
+    if (homeClubs.length)   html += clubCollapsibleHeader('Thuisclub', homeClubs.length, 'home') + homeClubs.map(renderClub).join('') + '</div>';
+    if (favClubs.length)    html += clubCollapsibleHeader('Favorieten', favClubs.length, 'fav') + favClubs.map(renderClub).join('') + '</div>';
+    if (otherClubs.length)  html += clubCollapsibleHeader('Overig', otherClubs.length, 'other') + otherClubs.map(renderClub).join('') + '</div>';
   } else {
-    // Platte lijst - thuisclub bovenaan zonder header, rest alfabetisch
-    if (homeClubs.length) html += homeClubs.map(renderClub).join('');
+    // Platte lijst - actieve club (evt. samengevoegd met thuisclub) bovenaan zonder
+    // header, rest alfabetisch
+    if (activeClubs.length) html += activeClubs.map(renderClub).join('');
+    if (homeClubs.length)   html += homeClubs.map(renderClub).join('');
     const restClubs = [...favClubs, ...otherClubs].sort((a, b) => a.localeCompare(b, 'nl'));
     html += restClubs.map(renderClub).join('');
   }
@@ -9178,7 +9190,7 @@ function toggleClubGroupByCategory() {
     return;
   }
   window._clubGrouped = true;
-  window._clubSectionCollapsed = { home: false, fav: true, other: true };
+  window._clubSectionCollapsed = { active: false, home: true, fav: true, other: true };
   if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = 'var(--green-deep)'; }
   buildClubList();
 }
