@@ -963,10 +963,10 @@
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:8px">Nog nooit geëxporteerd</div>
-    <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
-    <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
-    <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:right;margin-bottom:8px"></div>
-    <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
+    <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
+    <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
+    <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
+    <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
@@ -977,7 +977,7 @@
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exportmap</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderNameInBlock" style="color:var(--white);font-weight:700">Downloads</span></div>
         <div id="exportFolderUnsupported" class="hidden" style="font-size:15px;color:var(--muted);margin-bottom:8px">Mapkeuze wordt niet ondersteund op dit toestel/deze browser — exports gaan naar Downloads.</div>
-        <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:right;margin-bottom:8px"></div>
+        <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
         <div style="display:flex;gap:10px">
           <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
           <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
@@ -985,8 +985,8 @@
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
-        <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px;display:none"></div>
-        <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);margin-bottom:8px"></div>
+        <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px;display:none"></div>
+        <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
         <div style="display:flex;gap:10px">
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
@@ -1028,14 +1028,14 @@
         <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
         <div id="otherPlayerCleanupBody" class="hidden">
           <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="otherPlayerCount" style="color:var(--white);font-weight:700">0</span> rondes van andere spelers: <span id="otherPlayerNames" style="color:var(--white);font-weight:700">—</span>.</div>
-          <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+          <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
           <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Niet-qualifying rondes verwijderen</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="nonQCount" style="color:var(--white);font-weight:700">0</span> niet-qualifying rondes.</div>
-        <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
       <div class="subpanel" style="margin-top:12px">
@@ -1046,7 +1046,7 @@
           <span id="oldestDeleteCount" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">25</span>
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(5)">+</button>
         </div>
-        <div id="deleteOldestMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <div id="deleteOldestMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="deleteOldestBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOldest(this)">Verwijder de oudste rondes</button>
       </div>
     </div>
@@ -1058,7 +1058,7 @@
     <div class="more-full">
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
-        <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+        <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
     </div>
@@ -4231,11 +4231,11 @@ function renderPlayerStats() {
   el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView);
+  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds);
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries, countingIds, periodRoundsView) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
@@ -4312,9 +4312,24 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
       return `<g transform="translate(${x.toFixed(1)} ${(y + 10).toFixed(1)})" stroke="var(--red)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="0" y1="-6" x2="0" y2="4"/><polyline points="-4 0 0 4 4 0"/></g>`;
     }).join('');
   };
+  // Dunne ring om elk dagresultaat-punt dat op dit moment meetelt in de 'beste 8 van de
+  // laatste 20'-berekening (dezelfde selectie als de officiële handicap zelf gebruikt,
+  // via whs.usedIds) — maakt in één oogopslag zichtbaar welke rondes je hcp nu bepalen.
+  // Alleen zinvol te tonen als er ook losse stipjes getoond worden (showDots), anders
+  // zou een ring op een onzichtbaar punt niets betekenen.
+  const ringsOf = (pts) => {
+    if (!showDots || !countingIds || !countingIds.size || !periodRoundsView) return '';
+    return pts.filter(p => {
+      const id = periodRoundsView[p.i]?.id;
+      return id != null && countingIds.has(id);
+    }).map(p =>
+      `<circle cx="${xOf(p.i).toFixed(1)}" cy="${yOf(p.v).toFixed(1)}" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/>`
+    ).join('');
+  };
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
     + yTicks
     + `<path d="${lineOf(sdPts)}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`
+    + ringsOf(sdPts)
     + dotsOf(sdPts, 'var(--green-light)')
     + hiLine
     + capLine
@@ -6242,10 +6257,41 @@ function openClubEditor(club) {
   const data = CLUBS[club];
   document.getElementById('editorClubName').value = data.club;
   document.getElementById('editorShortName').value = data.shortName || '';
+  updateClubEditorHomeFavButtons();
   document.getElementById('clubEditorStatus').style.display = 'none';
   editorClubSnapshot = snapshotClubEditor();
   renderClubCourseList();
   document.getElementById('clubEditorOverlay').classList.remove('hidden');
+}
+
+function updateClubEditorHomeFavButtons() {
+  const isHome = storage.getItem('golf_home_club') === editorClub;
+  const isFav = getFavClubs().includes(editorClub);
+  const homeBtn = document.getElementById('editorHomeBtn');
+  const favBtn = document.getElementById('editorFavBtn');
+  if (homeBtn) {
+    homeBtn.classList.toggle('active-bg', isHome);
+    homeBtn.querySelector('svg').setAttribute('fill', isHome ? 'currentColor' : 'none');
+  }
+  if (favBtn) {
+    favBtn.classList.toggle('active-bg', isFav);
+    favBtn.querySelector('svg').setAttribute('fill', isFav ? 'currentColor' : 'none');
+  }
+}
+
+// Zelfde toggle-logica als toggleHomeClub()/toggleFavClub(), maar dan voor de club die
+// op dit moment in de editor open staat — werkt de eigen knop meteen visueel bij (i.p.v.
+// te wachten tot de kaartenlijst achter de modal opnieuw gerenderd wordt) en houdt die
+// achterliggende lijst via buildClubList() ook meteen synchroon voor als de modal sluit.
+function toggleHomeClubInEditor() {
+  if (!editorClub) return;
+  toggleHomeClub(editorClub);
+  updateClubEditorHomeFavButtons();
+}
+function toggleFavClubInEditor() {
+  if (!editorClub) return;
+  toggleFavClub(editorClub);
+  updateClubEditorHomeFavButtons();
 }
 
 // Banenlijst binnen de Club-modal: alleen naam + aantal holes + Bewerken-knop.
@@ -7081,6 +7127,10 @@ function editParBtn(btn) {
 }
 
 function validateClubInput() {
+  // Vangnet: als de club ondertussen al is verwijderd (bv. de modal was al bezig met
+  // sluiten na een verwijdering toen deze knop nog werd ingedrukt), is er niets meer om
+  // op te slaan — geef dat duidelijk aan i.p.v. verderop een technische fout te tonen.
+  if (!editorClub || !CLUBS[editorClub]) throw new Error('Deze club bestaat niet meer');
   const newClubName  = document.getElementById('editorClubName').value.trim();
   const newShortName = document.getElementById('editorShortName').value.trim();
   if (!newClubName)  throw new Error('Vul een clubnaam in');
@@ -7236,6 +7286,10 @@ function deleteClubFromEditor(btn) {
 }
 
 function validateCourseInput() {
+  // Vangnet: als de club (waar deze baan bij hoort) ondertussen al is verwijderd, is er
+  // niets meer om deze baan aan te koppelen — geef dat duidelijk aan i.p.v. verderop een
+  // technische fout te tonen.
+  if (!editorClub || !CLUBS[editorClub]) throw new Error('De bijbehorende club bestaat niet meer');
   const newCourseName = document.getElementById('editorCourseName').value.trim();
   if (!newCourseName) throw new Error('Vul een baannaam in');
 
@@ -8102,8 +8156,6 @@ function buildClubList() {
       <div class="hidden" data-club-export-msg="${escapeHtml(club)}" style="color:var(--green-light);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="hidden orange-msg" data-club-edit-msg="${escapeHtml(club)}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="club-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
-        <button class="btn-secondary${isHome ? ' active-bg' : ''}" style="font-size:17px;padding:8px 14px" title="${isHome ? 'Geen thuisclub' : 'Thuisclub'}" onclick="toggleHomeClub('${escapeJsString(club)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="${isHome ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg></button>
-        <button class="btn-secondary${isFav ? ' active-bg' : ''}" style="font-size:17px;padding:8px 14px" title="Favoriet" onclick="toggleFavClub('${escapeJsString(club)}', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
         <button class="btn-secondary" style="font-size:17px;padding:8px 14px" data-club="${escapeHtml(club)}" onclick="exportClub('${escapeJsString(club)}', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
         <button class="btn-secondary" style="font-size:17px;padding:8px 14px" data-club="${escapeHtml(club)}" onclick="confirmEditClub(this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
       </div>
@@ -9549,9 +9601,9 @@ document.addEventListener('focusin', (e) => {
     <div class="fg" style="margin-bottom:8px">
       <input id="valueEditInput" type="text" oninput="onValueEditInput(this)" onkeydown="if(event.key==='Enter'){confirmValueEdit();}" onblur="if(this.type==='text') this.value=this.value.trim()">
     </div>
-    <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;margin-bottom:8px">Vul tee in</div>
+    <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;text-align:center;margin-bottom:8px">Vul tee in</div>
     <div id="valueEditTeeHint" style="display:none;font-size:20px;color:var(--white);line-height:1.5;margin-bottom:8px">Herkende kleuren: Blauw · Bruin · Geel · Grijs · Groen · Oranje · Paars · Roze · Rood · Wit · Zilver · Zwart</div>
-    <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:8px"></div>
+    <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:center;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeValueEditModal()">Annuleren</button>
       <button class="btn-primary" style="flex:1;margin-top:0;padding:12px;font-size:20px" onclick="confirmValueEdit()">OK</button>
@@ -9648,8 +9700,12 @@ document.addEventListener('focusin', (e) => {
       <label>Korte naam</label>
       <input id="editorShortName" placeholder="Korte naam" maxlength="20" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
-    <div id="clubEditorStatus" style="font-size:17px;font-weight:700;display:none;margin-bottom:8px"></div>
-    <div id="clubDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:right;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn-secondary" id="editorHomeBtn" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="toggleHomeClubInEditor()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg>Thuisclub</button>
+      <button class="btn-secondary" id="editorFavBtn" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="toggleFavClubInEditor()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Favoriet</button>
+    </div>
+    <div id="clubEditorStatus" style="font-size:17px;font-weight:700;text-align:center;display:none;margin-bottom:8px"></div>
+    <div id="clubDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:18px">
       <button class="btn-secondary" id="deleteClubBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteClubFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
       <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="saveClubFromEditor()">Opslaan</button>
@@ -9701,8 +9757,8 @@ document.addEventListener('focusin', (e) => {
     </div>
 
     <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
-      <div id="editorStatus" style="font-size:20px;font-weight:700;display:none"></div>
-      <div id="courseDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700;text-align:right">Tik nogmaals om te bevestigen</div>
+      <div id="editorStatus" style="font-size:20px;font-weight:700;text-align:center;display:none"></div>
+      <div id="courseDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700;text-align:center">Tik nogmaals om te bevestigen</div>
       <div style="display:flex;gap:8px;align-items:stretch">
         <button class="btn-secondary" id="deleteCourseBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteCourseFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
         <button class="btn-primary" id="editorSaveBtn" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="saveCourseFromEditor()">Opslaan</button>
@@ -9738,7 +9794,7 @@ document.addEventListener('focusin', (e) => {
       <label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="editQualifyToggle"><span class="slider"></span></label>
     </div>
-    <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:right;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
+    <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch">
       <button class="btn-secondary" id="deleteRoundBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteRoundFromInfoModal(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeRoundInfoModal()">Annuleren</button>
@@ -9812,7 +9868,7 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
     </div>
-    <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);margin-bottom:12px"></div>
+    <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
       <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="confirmExportModal()">OK</button>
     </div>
