@@ -11,7 +11,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-a4ccfa32c3f2';
+const CACHE_VERSION = 'golf-score-d7f0cefd96d1';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
