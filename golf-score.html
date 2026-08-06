@@ -4228,14 +4228,14 @@ function renderPlayerStats() {
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
   const stickyPeriodBar = `<div style="position:sticky;top:var(--header-h, 60px);z-index:90;background:var(--green-deep);margin:0 -12px 12px;padding:12px 12px 12px">${periodBar}</div>`;
-  el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
+  el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste 8 van 20</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds);
+  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)));
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries, countingIds, periodRoundsView) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries, countingIds, periodRoundsView, last20Ids) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
@@ -4285,14 +4285,21 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
       if (!type && !hasWarn) return '';
       const x = xOf(p.i), y = yOf(p.v);
       let out = '';
-      // Driehoekje: dichtst bij het punt (offset -10), indien aanwezig.
+      // Driehoekje: dichtst bij het punt (offset -10), indien aanwezig. Als op ditzelfde
+      // punt ook de 'telt mee'-ring staat (r=5 i.p.v. het gewone stipje van r=2.5), moet
+      // het driehoekje een klein stukje verder omhoog om niet tegen die ring aan te
+      // schurken — de ring steekt namelijk 2,5px verder uit dan een gewoon stipje.
+      const ringHere = showDots && countingIds && countingIds.size && periodRoundsView
+        && (() => { const id = periodRoundsView[p.i]?.id; return id != null && countingIds.has(id); })();
       if (hasWarn) {
-        out += `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 17).toFixed(1)}) scale(0.5)" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g>`;
+        const extra = ringHere ? 3 : 0;
+        out += `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 17 - extra).toFixed(1)}) scale(0.5)" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g>`;
       }
       // Cap-icoon: dichtstbijzijnde plek als er geen driehoekje is, anders een stap
-      // verder naar buiten (offset -20 i.p.v. -10).
+      // verder naar buiten (offset -20 i.p.v. -10, plus dezelfde extra ruimte voor de ring).
       if (type) {
-        const offset = hasWarn ? 20 : 10;
+        const extra = ringHere ? 3 : 0;
+        const offset = (hasWarn ? 20 : 10) + extra;
         const color = type === 'hard' ? 'var(--red)' : 'var(--orange)';
         const path = type === 'hard'
           ? '<line x1="-6" y1="-7" x2="6" y2="-7"/><line x1="-6" y1="-3" x2="6" y2="-3"/><line x1="0" y1="7" x2="0" y2="1"/><polyline points="-4 4 0 1 4 4"/>'
@@ -4326,8 +4333,25 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
       `<circle cx="${xOf(p.i).toFixed(1)}" cy="${yOf(p.v).toFixed(1)}" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/>`
     ).join('');
   };
+  // Horizontale lijn helemaal onderin het canvas, die het 'laatste 20'-venster van de
+  // handicapberekening op de x-as weergeeft — dynamisch: bij minder dan 20 beschikbare
+  // qualifying rondes (last20Ids bevat er dan ook minder dan 20) wordt de lijn vanzelf
+  // korter, want die begint dan al bij de oudste ronde die nog meetelt i.p.v. bij een
+  // vast punt 20 rondes terug. Gedempte, neutrale kleur (zelfde als de as/gridlijnen) —
+  // dit is een oriëntatie-hulpmiddel, geen datalijn, dus mag niet met sd/hcp concurreren.
+  let windowLine = '';
+  if (last20Ids && last20Ids.size && periodRoundsView) {
+    const idxs = periodRoundsView
+      .map((r, i) => (r && last20Ids.has(r.id)) ? i : null)
+      .filter(i => i != null);
+    if (idxs.length) {
+      const xStart = xOf(Math.min(...idxs)), xEnd = xOf(Math.max(...idxs));
+      windowLine = `<line x1="${xStart.toFixed(1)}" y1="${(h - 2).toFixed(1)}" x2="${xEnd.toFixed(1)}" y2="${(h - 2).toFixed(1)}" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+    }
+  }
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
     + yTicks
+    + windowLine
     + `<path d="${lineOf(sdPts)}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`
     + ringsOf(sdPts)
     + dotsOf(sdPts, 'var(--green-light)')
