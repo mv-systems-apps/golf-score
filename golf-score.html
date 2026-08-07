@@ -8463,9 +8463,21 @@ function updateLastBackupDisplay() {
   const lastDate = storage.getItem('golf_last_backup_date');
   if (!lastDate) { el.innerHTML = `${label}: geen`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  if (daysSince <= 0) el.innerHTML = `${label}: vandaag`;
-  else if (daysSince === 1) el.innerHTML = `${label}: gisteren`;
-  else el.innerHTML = `${label}: ${daysSince} dagen geleden`;
+  const daysText = daysSince <= 0 ? 'vandaag' : daysSince === 1 ? 'gisteren' : `${daysSince} dagen geleden`;
+  // Bij oranje (drempel overschreden) ook het aantal nieuwe rondes tonen — anders lijkt
+  // het onlogisch als bv. '4 dagen geleden' oranje is terwijl de dagen-limiet op 7 staat:
+  // de rondes-drempel kan dan de eigenlijke reden zijn (het is een OF-voorwaarde), en dat
+  // moet dan ook zichtbaar zijn i.p.v. alleen het dagen-getal.
+  if (overdue) {
+    const total = loadSavedRounds().length;
+    const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
+    const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+    el.innerHTML = newRounds > 0
+      ? `${label}: ${daysText} · ${newRounds} nieuwe ronde${newRounds !== 1 ? 's' : ''}`
+      : `${label}: ${daysText}`;
+  } else {
+    el.innerHTML = `${label}: ${daysText}`;
+  }
 }
 
 function adjustBackupReminderDays(delta) {
