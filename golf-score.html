@@ -3749,6 +3749,23 @@ function renderPlayerStats() {
     + newLowBanner
     + `</div>`;
 
+  // ══ WAT ALS...? ═══════════════════════════════════════════════════════
+  // Simuleert het effect van een hypothetische extra ronde op de handicap, zonder ook
+  // maar iets op te slaan — hergebruikt exact hetzelfde berekeningspad (whsHandicap +
+  // last20Qualifying + esrMapFor) als de echte KPI hierboven, met één tijdelijke,
+  // alleen-in-het-geheugen ronde toegevoegd. Caps en ESR tellen dus gewoon mee in de
+  // uitkomst (net als in het echt), en worden met een klein icoontje gesignaleerd als ze
+  // een rol speelden — zonder verdere uitleg, dat zou de kaart te druk maken.
+  const watIfCard = `<div class="card" id="watIfCard">`
+    + `<h2>Wat als...?</h2>`
+    + `<div class="fg" style="margin-bottom:0">`
+    + `<label>Fictief volgend dagresultaat</label>`
+    + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>`
+    + `<input id="watIfInput" type="text" inputmode="decimal" placeholder="bijv. 18.4" oninput="onWatIfInput(this)">`
+    + `</div>`
+    + `<div id="watIfResult" style="margin-top:10px"></div>`
+    + `</div>`;
+
   // Scoreverdeling over alle qualifying holes
   let eagle=0, birdie=0, par=0, bogey=0, dbl=0, worse=0, holesTot=0;
   periodRounds.forEach(r => r.holes.forEach(h => {
@@ -3968,6 +3985,94 @@ function renderPlayerStats() {
       + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader}${legendRows}</div></div>`;
   }
 
+  // ══ STROKE-INDEX-ANALYSE ═══════════════════════════════════════════════
+  // Zelfde soort streepjes-grafiek als 'Gemiddelde per par', maar nu gegroepeerd op
+  // stroke index (SI) i.p.v. par — dus op de eigen moeilijkheidsinschaling van de baan,
+  // los van holelengte. Dat maakt een ander soort patroon zichtbaar dan de par-grafiek:
+  // een hole kan een makkelijke par 5 zijn met een hoge SI, of een korte, lastige par 3
+  // met een lage SI — dat verschil laat de par-grafiek niet zien, deze wel.
+  //
+  // Indeling is bewust RELATIEF (rangschikking binnen de holes van elke ronde zelf),
+  // niet op vaste grenzen zoals '1-6/7-12/13-18' — anders zou een 9-holes-baan die de
+  // oneven of even nummering van een 18-holes-baan hergebruikt (dus bv. SI 1,3,5...17)
+  // een scheve, misleidende indeling krijgen. Zelfde principe als distributeChcp() elders
+  // in de app: alleen de onderlinge volgorde telt, niet de absolute getallen.
+  let siDotsCard = '';
+  {
+    const siBuckets = { hard: [], mid: [], easy: [] };
+    periodRounds.forEach(r => {
+      const validHoles = r.holes.filter(h => h.score != null && h.si != null);
+      if (!validHoles.length) return;
+      const sortedBySi = [...validHoles].sort((a, b) => a.si - b.si);
+      const third = Math.ceil(sortedBySi.length / 3);
+      sortedBySi.forEach((h, i) => {
+        const bucket = i < third ? 'hard' : (i < third * 2 ? 'mid' : 'easy');
+        siBuckets[bucket].push(h.score - h.par);
+      });
+    });
+    const siLabels = { hard: 'Moeilijkste', mid: 'Middelste', easy: 'Makkelijkste' };
+    const siDevs = {};
+    ['hard', 'mid', 'easy'].forEach(k => {
+      const arr = siBuckets[k];
+      if (arr.length) siDevs[k] = { dev: arr.reduce((s, x) => s + x, 0) / arr.length, n: arr.length };
+    });
+    const presentSi = ['hard', 'mid', 'easy'].filter(k => siDevs[k]);
+    const siDevVals = Object.values(siDevs).map(d => d.dev);
+    if (siDevVals.length) {
+      const minDev = Math.min(0, ...siDevVals);
+      const maxDev = Math.max(0, ...siDevVals);
+      const range = maxDev - minDev;
+      const step = range <= 1.5 ? 0.5 : (range <= 4 ? 1 : 2);
+      let axisLo = Math.floor(minDev / step) * step;
+      let axisHi = Math.ceil(maxDev / step) * step;
+      if (axisHi <= maxDev) axisHi += step;
+      if (axisLo < 0 && axisLo >= minDev) axisLo -= step;
+      if (axisHi === axisLo) axisHi += step;
+      const w3 = 320, h3 = 118, padL3 = 46, padR3 = 12, tickTop3 = 10, tickBottom3 = 90, labelY3 = 108;
+      const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
+      const fmtDev3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+      const fmtAxis3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
+      const ticks3 = [];
+      for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
+      const gridSvg3 = ticks3.map(v =>
+        `<line x1="${xOf3(v).toFixed(1)}" y1="${tickTop3}" x2="${xOf3(v).toFixed(1)}" y2="${tickBottom3}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
+        + `<text x="${xOf3(v).toFixed(1)}" y="${labelY3}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis3(v)}</text>`
+      ).join('');
+      const laneGap3 = 5;
+      const laneSpan3 = tickBottom3 - tickTop3;
+      const laneCount3 = presentSi.length;
+      const laneH3 = (laneSpan3 - laneGap3 * (laneCount3 - 1)) / laneCount3;
+      const stripesSvg3 = presentSi.map((k, i) => {
+        if (i % 2 === 1) return '';
+        const yTop = tickTop3 + i * (laneH3 + laneGap3) - laneGap3 / 2;
+        const yBottom = yTop + laneH3 + laneGap3;
+        return `<rect x="0" y="${yTop.toFixed(1)}" width="${w3}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
+      }).join('');
+      const labelsSvg3 = presentSi.map((k, i) => {
+        const yMid = (tickTop3 + i * (laneH3 + laneGap3) + laneH3 / 2).toFixed(1);
+        return `<text x="${padL3 - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${siLabels[k]}</text>`;
+      }).join('');
+      const barsSvg3 = presentSi.map((k, i) => {
+        const x = xOf3(siDevs[k].dev).toFixed(1);
+        const yTop = (tickTop3 + i * (laneH3 + laneGap3)).toFixed(1);
+        const yBottom = (tickTop3 + i * (laneH3 + laneGap3) + laneH3).toFixed(1);
+        return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="5" stroke-linecap="butt"/>`;
+      }).join('');
+      const legendHeader3 = `<span></span>`
+        + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
+        + `<span></span>`;
+      const legendRows3 = presentSi.map((k, i) => {
+        const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
+        return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${siLabels[k]}</span>`
+          + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${fmtDev3(siDevs[k].dev)}</span>`
+          + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${siDevs[k].n}×</span>`;
+      }).join('');
+      siDotsCard = `<div class="card"><h2>Gemiddelde per SI</h2>`
+        + `<svg viewBox="0 0 ${w3} ${h3}" style="width:100%;height:auto">${stripesSvg3}${gridSvg3}${labelsSvg3}${barsSvg3}</svg>`
+        + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader3}${legendRows3}</div></div>`;
+    }
+  }
+
   // Gemiddelde Sd per dag van de week (Ma t/m Zo), zelfde soort streepjes-grafiek als
   // 'Gemiddelde per par' — nu op de Sd-as i.p.v. afwijking-t.o.v.-par. Wisselbaar tussen
   // 7 losse dagen en een tweedeling doordeweeks/weekend (window._weekdayViewMode).
@@ -4135,6 +4240,52 @@ function renderPlayerStats() {
     const sds = rs.map(x => { const e = effectiveSD(x); return e ? e.value : null; }).filter(v => v != null);
     return sds.length ? sds.reduce((s, x) => s + x, 0) / sds.length : null;
   };
+  // Gemiddeld dagresultaat minus handicap-op-dat-moment — negatief is beter dan je
+  // handicap. Alleen zinvol bij genoeg rondes (MIN_ROUNDS), anders te veel ruis.
+  const MIN_ROUNDS_PERF = 3;
+  const avgDiffOf = rs => {
+    const diffs = rs.map(x => {
+      const e = effectiveSD(x); const hcpVal = parseFloat(x.hcp);
+      return (e && e.value != null && !isNaN(hcpVal)) ? e.value - hcpVal : null;
+    }).filter(v => v != null);
+    return diffs.length >= MIN_ROUNDS_PERF ? diffs.reduce((s, x) => s + x, 0) / diffs.length : null;
+  };
+  const fmtDiff = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  // Beste/lastigste baan over alle club→baan-combinaties heen (voor de highlight
+  // bovenaan de kaart) — zelfde MIN_ROUNDS-drempel als avgDiffOf zelf al hanteert.
+  const allTrackPerf = [];
+  Object.keys(byClub).forEach(club => Object.keys(byClub[club]).forEach(track => {
+    const diff = avgDiffOf(byClub[club][track]);
+    if (diff != null) allTrackPerf.push({ club, track, diff });
+  }));
+  allTrackPerf.sort((a, b) => a.diff - b.diff);
+  const bestTrackPerf = allTrackPerf[0];
+  const worstTrackPerf = allTrackPerf[allTrackPerf.length - 1];
+  const trackPerfName = s => `${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
+  let trackPerfSentence = '';
+  if (bestTrackPerf && allTrackPerf.length > 1) {
+    trackPerfSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste baan is <span style="font-weight:700">${trackPerfName(bestTrackPerf)}</span>, je lastigste is <span style="font-weight:700">${trackPerfName(worstTrackPerf)}</span>.</div>`;
+  }
+  // Zelfde vergelijking, maar dan op tee-niveau — bewust een APARTE zin i.p.v. samen met
+  // de baan-vergelijking in één lijst, want een baan-totaal en een tee-binnen-die-baan
+  // zijn geen onafhankelijke categorieën (de tee-rondes zitten al in het baan-totaal
+  // verwerkt); door elkaar zou tot verwarrende, dubbelop-tellende uitkomsten kunnen leiden.
+  const allTeePerf = [];
+  Object.keys(byClub).forEach(club => Object.keys(byClub[club]).forEach(track => {
+    const byTeeGlobal = {};
+    byClub[club][track].forEach(r => { const t = r.tee || 'Onbekend'; (byTeeGlobal[t] = byTeeGlobal[t] || []).push(r); });
+    Object.keys(byTeeGlobal).forEach(tee => {
+      const diff = avgDiffOf(byTeeGlobal[tee]);
+      if (diff != null) allTeePerf.push({ club, track, tee, diff });
+    });
+  }));
+  allTeePerf.sort((a, b) => a.diff - b.diff);
+  const bestTeePerf = allTeePerf[0];
+  const worstTeePerf = allTeePerf[allTeePerf.length - 1];
+  const teePerfName = s => `${escapeHtml(s.tee)} op ${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
+  if (bestTeePerf && allTeePerf.length > 1) {
+    trackPerfSentence += `<div style="font-size:16px;margin-bottom:8px">Je beste tee is <span style="font-weight:700">${teePerfName(bestTeePerf)}</span>, je lastigste is <span style="font-weight:700">${teePerfName(worstTeePerf)}</span>.</div>`;
+  }
   window._statClubCollapsed = window._statClubCollapsed || {};
   const clubNames = Object.keys(byClub).sort((a, b) => {
     const ca = Object.values(byClub[a]).reduce((s, x) => s + x.length, 0);
@@ -4151,21 +4302,25 @@ function renderPlayerStats() {
       const rs = tracks[track];
       const avg = avgSdOf(rs);
       const tk = ck + '_' + track.replace(/\W/g, '_');
-      const tCollapsed = window._statTrackCollapsed[tk] !== false; // standaard ingeklapt
+      const tCollapsed = window._statTrackCollapsed[tk] === true; // standaard opengeklapt (i.t.t. clubs zelf)
       // Tee-subgroepen: gemiddeld dagresultaat per tee op deze baan
       const byTee = {};
       rs.forEach(r => { const t = r.tee || 'Onbekend'; (byTee[t] = byTee[t] || []).push(r); });
       const teeRows = Object.keys(byTee).sort((a, b) => byTee[b].length - byTee[a].length).map(tee => {
         const trs = byTee[tee];
         const tAvg = avgSdOf(trs);
+        const tDiff = avgDiffOf(trs);
         return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0 3px 24px">`
-          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:16px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}</span>`
-          + `<span style="min-width:64px;text-align:right;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:flex-end;gap:5px">${(tAvg != null && trs.some(roundHasWarning)) ? warningIconSmall : ''}${tAvg != null ? 'Sd ' + tAvg.toFixed(1) : '—'}</span>`
+          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:16px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}${trs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
+          + `<span style="min-width:52px;text-align:right;font-size:16px;font-weight:700">${tAvg != null ? tAvg.toFixed(1) : '—'}</span>`
+          + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${tDiff != null ? fmtDiff(tDiff) : '—'}</span>`
           + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${trs.length}×</span></div>`;
       }).join('');
-      const trackHeader = `<div onclick="window._statTrackCollapsed['${tk}']=window._statTrackCollapsed['${tk}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 4px 12px">`
-        + `<span style="flex:1;font-size:17px">${escapeHtml(track)}</span>`
-        + `<span style="min-width:64px;text-align:right;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:flex-end;gap:5px">${(avg != null && rs.some(roundHasWarning)) ? warningIconSmall : ''}${avg != null ? 'Sd ' + avg.toFixed(1) : '—'}</span>`
+      const trackDiff = avgDiffOf(rs);
+      const trackHeader = `<div onclick="window._statTrackCollapsed['${tk}']=window._statTrackCollapsed['${tk}']!==true;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 4px 12px">`
+        + `<span style="flex:1;font-size:17px;display:flex;align-items:center;gap:6px">${escapeHtml(track)}${rs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
+        + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${avg != null ? avg.toFixed(1) : '—'}</span>`
+        + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${trackDiff != null ? fmtDiff(trackDiff) : '—'}</span>`
         + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${rs.length}×</span>`
         + `<span style="display:inline-block;font-size:13px;transform:rotate(${tCollapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
       return trackHeader + (tCollapsed ? '' : teeRows);
@@ -4180,7 +4335,8 @@ function renderPlayerStats() {
   const trackCollapsed = window._statCardCollapsed['card_club'] !== false;
   const anyClubWarning = Object.values(byClub).some(tracks => Object.values(tracks).some(arr => arr.some(roundHasWarning)));
   const trackCard = clubBlocks
-    ? `<div class="card">${cardHead('Per club &amp; baan', 'card_club', anyClubWarning)}${trackCollapsed ? '' : clubBlocks}</div>`
+    ? `<div class="card">${cardHead('Club, baan &amp; tees', 'card_club', anyClubWarning)}${trackPerfSentence}`
+      + `${trackCollapsed ? '' : clubBlocks}</div>`
     : '';
 
   // Vorm & consistentie
@@ -4228,7 +4384,7 @@ function renderPlayerStats() {
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
   const stickyPeriodBar = `<div style="position:sticky;top:var(--header-h, 60px);z-index:90;background:var(--green-deep);margin:0 -12px 12px;padding:12px 12px 12px">${periodBar}</div>`;
-  el.innerHTML = kpiRow + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span></div></div>` + distCard + teeCard + parDotsCard + weekdayDotsCard + formCard + trackCard;
+  el.innerHTML = kpiRow + watIfCard + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span></div></div>` + distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
   renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)));
@@ -6600,6 +6756,12 @@ function onValueEditInput(input) {
   const ranges = {
     'cr-name-field':  { min: 55, max: 80,  decimal: true,  label: '55 t/m 80' },
     'sr-name-field':  { min: 55, max: 155, decimal: false, label: '55 t/m 155' },
+    // Bereik is bewust 1 t/m 18 en NIET gekoppeld aan het aantal holes van deze baan:
+    // bij een 9-holes-baan die de helft van een 18-holes-baan is, wordt de SI vaak
+    // gewoon overgenomen uit de originele 18-holes-nummering (dus alleen de oneven of
+    // alleen de even getallen, tot en met 17/18) — dat is een legitieme, veelgebruikte
+    // vorm, geen invoerfout.
+    'hole-si':        { min: 1,  max: 18,  decimal: false, label: '1 t/m 18' },
   };
   const field = Object.keys(ranges).find(cls => valueEditTarget.classList.contains(cls));
   if (!field) return; // andere velden in deze modal (bv. teenaam): geen numerieke filter
@@ -6640,7 +6802,7 @@ function openValueEditModal(input, label) {
   // waarde zodra een tussentijdse invoer (bv. '71.' vlak vóór het laatste cijfer) niet
   // als geldig getal geldt — zelfde reden waarom het hcp-veld dit ook al zo doet.
   editInput.type = 'text';
-  const isWholeNumberField = input.classList.contains('sr-name-field');
+  const isWholeNumberField = input.classList.contains('sr-name-field') || input.classList.contains('hole-si');
   editInput.inputMode = isNumeric ? (isWholeNumberField ? 'numeric' : 'decimal') : 'text';
   editInput.value = getFieldValue(input);
   editInput.dataset.lastValid = editInput.value;
@@ -6693,7 +6855,8 @@ function confirmValueEdit() {
   const isTeeNameField = valueEditTarget.classList.contains('tee-name-field');
   const isCrField = valueEditTarget.classList.contains('cr-name-field');
   const isSrField = valueEditTarget.classList.contains('sr-name-field');
-  const needsValue = isTeeNameField || isCrField || isSrField;
+  const isSiField = valueEditTarget.classList.contains('hole-si');
+  const needsValue = isTeeNameField || isCrField || isSrField || isSiField;
 
   const showErr = (msg) => {
     if (errEl) {
@@ -6704,7 +6867,7 @@ function confirmValueEdit() {
     }
   };
 
-  if (needsValue && !newVal) { showErr(`Vul ${isTeeNameField ? 'tee' : isCrField ? 'CR' : 'SR'} in`); return; }
+  if (needsValue && !newVal) { showErr(`Vul ${isTeeNameField ? 'tee' : isCrField ? 'CR' : isSrField ? 'SR' : 'SI'} in`); return; }
 
   if (isCrField) {
     const v = parseFloat(newVal.replace(',', '.'));
@@ -6714,6 +6877,11 @@ function confirmValueEdit() {
   if (isSrField) {
     const v = parseFloat(newVal.replace(',', '.'));
     if (isNaN(v) || v < 55 || v > 155) { showErr('SR moet tussen 55 en 155 liggen'); return; }
+    newVal = String(Math.round(v));
+  }
+  if (isSiField) {
+    const v = parseFloat(newVal.replace(',', '.'));
+    if (isNaN(v) || v < 1 || v > 18) { showErr('SI moet tussen 1 en 18 liggen'); return; }
     newVal = String(Math.round(v));
   }
 
@@ -7342,7 +7510,10 @@ function validateCourseInput() {
   const dupeIds = holeIds.filter((id, i) => holeIds.indexOf(id) !== i);
   if (dupeIds.length) throw new Error(`Dubbele holenaam: "${[...new Set(dupeIds)].join('", "')}"`);
 
-  // Check SI: uniek en binnen bereik 1 t/m aantal holes
+  // Check SI: uniek en binnen bereik (geen check op 1 t/m aantal holes — bij een
+  // 9-holes-baan die de helft van een 18-holes-baan is, is bijvoorbeeld alleen de
+  // oneven of alleen de even nummering uit die 18-holes-indexering ook een legitieme,
+  // veelgebruikte vorm; zie ook de 'hole-si'-toelichting in onValueEditInput hierboven).
   const siValues = holes.map(h => h.si);
   const dupeSi = siValues.filter((v, i) => siValues.indexOf(v) !== i);
   if (dupeSi.length) throw new Error(`Dubbele SI: ${[...new Set(dupeSi)].join(', ')}`);
@@ -7716,6 +7887,48 @@ function fmt1(v) {
   const n = Number(v);
   if (!isFinite(n)) return '—';
   return n.toFixed(1);
+}
+
+// ══ WAT ALS...? ═════════════════════════════════════════════════════════
+function onWatIfInput(input) {
+  const v = handleRangeInput(input, 'watIfRangeMsg');
+  const resultEl = document.getElementById('watIfResult');
+  if (!resultEl) return;
+  const n = v === '' || v === '-' ? null : parseFloat(v);
+  if (!isFinite(n)) { resultEl.innerHTML = ''; return; }
+  const player = startPlayerName();
+  if (!player) { resultEl.innerHTML = ''; return; }
+  const whatIf = computeWhatIf(player, n);
+  if (!whatIf) { resultEl.innerHTML = ''; return; }
+  const { current, hypo } = whatIf;
+  const diff = current != null && hypo != null ? hypo.value - current.value : null;
+  const fmtSignedLocal = v => (v > 0 ? '+' : '') + v.toFixed(1);
+  const arrow = diff == null || Math.abs(diff) < 0.05 ? '→' : (diff < 0 ? '▼' : '▲');
+  const col = diff == null || Math.abs(diff) < 0.05 ? 'var(--muted)' : (diff < 0 ? 'var(--green-light)' : 'var(--red)');
+  // Caps/ESR tellen al mee in de uitkomst zelf (hypo.value) — hier alleen signaleren dát
+  // ze een rol speelden, zonder verdere toelichting (dat zou de kaart te druk maken).
+  const signals = [];
+  if (hypo.capped) signals.push(hypo.capType === 'hard' ? 'hardcap' : 'softcap');
+  if (hypo.esrApplied) signals.push('ESR');
+  const signalText = signals.length ? ` <span style="color:var(--muted);font-weight:400">(${signals.join(' + ')})</span>` : '';
+  resultEl.innerHTML = `<div style="font-size:20px;font-weight:700">${fmt1(hypo.value)}${signalText}</div>`
+    + (diff != null ? `<div style="font-size:15px;color:${col};font-weight:700">${arrow} ${fmtSignedLocal(diff)} t.o.v. nu (${fmt1(current.value)})</div>` : '');
+}
+
+// Rekent de handicap uit met één tijdelijke, alleen-in-het-geheugen ronde toegevoegd —
+// hergebruikt exact hetzelfde berekeningspad (whsHandicap/last20Qualifying/esrMapFor) als
+// de echte KPI, dus caps en ESR werken automatisch mee. Slaat nergens iets op.
+function computeWhatIf(player, sdValue) {
+  const all = loadSavedRounds();
+  const current = whsHandicap(last20Qualifying(player, all, null, null), effectiveLowHi(player, all), esrMapFor(player, all));
+  const tempRound = {
+    id: '__WATIF__', player, qualifying: true,
+    date: todayISO(), time: '12:00',
+    sdFinal: sdValue, playedCount: 18, holesCount: 18, holes: [],
+  };
+  const allWithTemp = [...all, tempRound];
+  const hypo = whsHandicap(last20Qualifying(player, allWithTemp, null, null), effectiveLowHi(player, allWithTemp), esrMapFor(player, allWithTemp));
+  return { current, hypo };
 }
 
 function onEditSdInput(input) {
