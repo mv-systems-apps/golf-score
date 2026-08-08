@@ -5005,14 +5005,21 @@ function doAdditiveImport(parsed) {
     doImportRound(r, current, true);
     imported++;
   });
-  nav('archive');
   // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
   // (die immers al ergens vandaan kwamen, dus per definitie al een keer geëxporteerd
   // zijn geweest) — alleen écht nieuw gespeelde rondes na dit moment tellen weer mee.
-  // De backup-datum zelf blijft ongewijzigd: dat blijft een apart, historisch feit.
+  // Uitzondering: als er nog HELEMAAL geen backup-datum bekend was (bv. een schone import
+  // op een nieuw toestel, waarbij dit dezelfde weg volgt als een volledige herstel-import,
+  // zie de aanroeplogica hierboven), dan ís deze import zelf het meest actuele, volledige
+  // beeld — dan mag de backup-datum niet 'ongewijzigd' blijven, want die bestond nog niet.
+  // Vóór nav('archive') gezet, zodat de banner meteen met de juiste staat rendert.
   if (storage.getItem('golf_last_backup_date')) {
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+  } else {
+    storage.setItem('golf_last_backup_date', todayISO());
+    storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
   }
+  nav('archive');
   const parts = [`${imported} ronde${imported !== 1 ? 's' : ''} geïmporteerd.`];
   if (exactDup) parts.push(`${exactDup} ronde${exactDup !== 1 ? 's' : ''} overgeslagen: bestond${exactDup !== 1 ? 'en' : ''} al (zelfde datum, tijd en speler).`);
   if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} overgeslagen: er stonden al 2 rondes op die datum/tijd — importeer die apart als je alsnog wilt overschrijven.`);
