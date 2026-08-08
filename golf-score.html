@@ -985,8 +985,6 @@
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
-        <div class="club-import-status" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px;display:none"></div>
-        <div class="import-round-status hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
         <div style="display:flex;gap:10px">
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
           <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
@@ -4812,17 +4810,7 @@ function importRound(input) {
   if (!file) return;
   input.value = '';
 
-  const showStatus = (msg, isError) => {
-    document.querySelectorAll('.import-round-status').forEach(el => {
-      el.textContent = msg;
-      el.style.color = '';
-      if (isError) el.classList.add('error-msg'); else el.classList.remove('error-msg');
-      el.style.color = isError ? 'var(--red)' : 'var(--green-light)';
-      el.classList.remove('hidden');
-      clearTimeout(el._hideTimer);
-      el._hideTimer = setTimeout(() => el.classList.add('hidden'), isError ? 5000 : 3000);
-    });
-  };
+  const showStatus = (msg, isError) => showInfoModal(isError ? 'Import mislukt' : 'Import voltooid', msg, isError ? 'red' : null);
 
   const reader = new FileReader();
   reader.onload = e => {
@@ -4916,7 +4904,6 @@ function importRound(input) {
             if (isActive) { storage.removeItem('golf_active_id'); restoreActiveRound(); }
             if (isP2) { game2Id = null; storage.removeItem('golf_game2_id'); updatePlayerSwitchBar(); }
             showStatus('Ronde overschreven', false);
-            nav('archive');
           },
           'Annuleren',
           null,
@@ -4928,15 +4915,12 @@ function importRound(input) {
       if (sameSlot.length === 1) {
         const partner = sameSlot[0];
         doImportRound(r, saved);
-        showStatus('Ronde geïmporteerd', false);
-        nav('archive');
-        showInfoModal('Koppeling mogelijk', `De geïmporteerde ronde kan gekoppeld worden aan de bestaande ronde van ${partner.player} op dezelfde datum en tijd.`);
+        showInfoModal('Import voltooid', `Ronde geïmporteerd. Deze kan gekoppeld worden aan de bestaande ronde van ${partner.player} op dezelfde datum en tijd.`);
         return;
       }
 
       doImportRound(r, saved);
       showStatus('Ronde geïmporteerd', false);
-      nav('archive');
     } catch(e) {
       showStatus('Ongeldig JSON-bestand', true);
     }
@@ -5019,7 +5003,11 @@ function doAdditiveImport(parsed) {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
   }
-  nav('archive');
+  // Blijft in Instellingen staan (net als bij het importeren van clubs) i.p.v. weg te
+  // navigeren naar Archief — de relevante onderdelen hier worden rechtstreeks ververst.
+  updateStorageSettingsUI();
+  updateLastBackupDisplay();
+  updateLowHiInput();
   const parts = [`${imported} ronde${imported !== 1 ? 's' : ''} geïmporteerd.`];
   if (exactDup) parts.push(`${exactDup} ronde${exactDup !== 1 ? 's' : ''} overgeslagen: bestond${exactDup !== 1 ? 'en' : ''} al (zelfde datum, tijd en speler).`);
   if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} overgeslagen: er stonden al 2 rondes op die datum/tijd — importeer die apart als je alsnog wilt overschrijven.`);
@@ -5047,7 +5035,11 @@ function doFullRestoreImport(parsed) {
   player2Visible = false;
   resetHeader();
   updatePlayerSwitchBar();
-  nav('archive');
+  // Blijft in Instellingen staan (net als bij het importeren van clubs) i.p.v. weg te
+  // navigeren naar Archief — de relevante onderdelen hier worden rechtstreeks ververst.
+  updateStorageSettingsUI();
+  updateLastBackupDisplay();
+  updateLowHiInput();
 }
 
 function archiveImportedRound(idx, btn) {
@@ -6427,30 +6419,6 @@ let editorOrigCourseName = null;
 
 function confirmEditClub(btn) {
   const club = btn.dataset.club;
-  const msg = document.querySelector(`[data-club-edit-msg="${CSS.escape(club)}"]`);
-  if (btn.dataset.confirm !== '1') {
-    btn.dataset.confirm = '1';
-    btn.style.background = 'var(--orange)';
-    btn.style.borderColor = 'var(--orange)';
-    btn.classList.add('confirm-armed');
-    msg?.classList.remove('hidden');
-    lockSiblingButtons(btn);
-    clearTimeout(btn._confirmTimeout);
-    btn._confirmTimeout = setTimeout(() => {
-      btn.dataset.confirm = '0';
-      btn.style.background = '';
-      btn.style.borderColor = '';
-      btn.classList.remove('confirm-armed');
-      msg?.classList.add('hidden');
-      unlockSiblingButtons(btn);
-    }, 2000);
-    return;
-  }
-  msg?.classList.add('hidden');
-  btn.style.background = '';
-  btn.style.borderColor = '';
-  btn.classList.remove('confirm-armed');
-  unlockSiblingButtons(btn);
   openClubEditor(club);
 }
 
@@ -8413,7 +8381,6 @@ function buildClubList() {
       </div>
       <div class="course-list-toggle" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;display:none;cursor:pointer" onclick="toggleCourseList(this)">${courseList}</div>
       <div class="hidden" data-club-export-msg="${escapeHtml(club)}" style="color:var(--green-light);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
-      <div class="hidden orange-msg" data-club-edit-msg="${escapeHtml(club)}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="club-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
         <button class="btn-secondary" style="font-size:17px;padding:8px 14px" data-club="${escapeHtml(club)}" onclick="exportClub('${escapeJsString(club)}', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
         <button class="btn-secondary" style="font-size:17px;padding:8px 14px" data-club="${escapeHtml(club)}" onclick="confirmEditClub(this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
@@ -8876,35 +8843,15 @@ function validateImportedClubData(data) {
 // Bootst hetzelfde element-interface (style.display/color, classList, textContent) na,
 // maar werkt tegelijk ALLE elementen met deze klasse bij — zodat de importstatus
 // zichtbaar is ongeacht vanuit welk tabblad de import werd gestart.
-function statusProxy(selector) {
-  const els = () => [...document.querySelectorAll(selector)];
-  return {
-    get style() {
-      return {
-        set display(v) { els().forEach(el => el.style.display = v); },
-        set color(v) { els().forEach(el => el.style.color = v); },
-      };
-    },
-    classList: {
-      add: c => els().forEach(el => el.classList.add(c)),
-      remove: c => els().forEach(el => el.classList.remove(c)),
-    },
-    set textContent(v) { els().forEach(el => el.textContent = v); },
-  };
-}
-
 function importCourseData(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const status = statusProxy('.club-import-status');
     try {
       const raw = (e.target.result || '').trim();
       if (!raw) {
-        status.style.display = 'block';
-        status.style.color = 'var(--red)'; status.classList.add('error-msg');
-        status.textContent = 'Leeg bestand — geen gegevens gevonden';
+        showInfoModal('Import mislukt', 'Leeg bestand — geen gegevens gevonden', 'red');
         input.value = '';
         return;
       }
@@ -8930,10 +8877,7 @@ function importCourseData(input) {
           rebuildAll();
           saveClubsToStorage();
           const skippedCount = invalid.length + (overwriteExisting ? 0 : existing.length);
-          status.style.display = 'block';
-          status.style.color = 'var(--green-light)'; status.classList.remove('error-msg');
-          status.textContent = `${toImport.length} club${toImport.length !== 1 ? 's' : ''} geïmporteerd${skippedCount ? `, ${skippedCount} overgeslagen` : ''}`;
-          setTimeout(() => { status.style.display = 'none'; }, 3000);
+          showInfoModal('Import voltooid', `${toImport.length} club${toImport.length !== 1 ? 's' : ''} geïmporteerd${skippedCount ? `, ${skippedCount} overgeslagen` : ''}`);
           input.value = '';
         };
 
@@ -8962,10 +8906,7 @@ function importCourseData(input) {
         rebuildAll();
         saveClubsToStorage();
         const n = Object.keys(data.courses).length;
-        status.style.display = 'block';
-        status.style.color = 'var(--green-light)'; status.classList.remove('error-msg');
-        status.textContent = `"${data.club}" geïmporteerd (${n} baan${n !== 1 ? 'en' : ''})`;
-        setTimeout(() => { status.style.display = 'none'; }, 3000);
+        showInfoModal('Import voltooid', `"${data.club}" geïmporteerd (${n} baan${n !== 1 ? 'en' : ''})`);
       };
 
       if (CLUBS[data.club]) {
@@ -8985,17 +8926,12 @@ function importCourseData(input) {
         doImport();
       }
     } catch(err) {
-      status.style.display = 'block';
-      status.style.color = 'var(--red)'; status.classList.add('error-msg');
-      status.textContent = 'Fout: ' + err.message;
+      showInfoModal('Import mislukt', 'Fout: ' + err.message, 'red');
     }
     input.value = '';
   };
   reader.onerror = () => {
-    const status = statusProxy('.club-import-status');
-    status.style.display = 'block';
-    status.style.color = 'var(--red)'; status.classList.add('error-msg');
-    status.textContent = 'Kon het bestand niet lezen';
+    showInfoModal('Import mislukt', 'Kon het bestand niet lezen', 'red');
     input.value = '';
   };
   reader.readAsText(file);
