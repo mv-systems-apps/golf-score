@@ -3298,7 +3298,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       ['Aangepast (AGS)',     played.length ? totalAgs : '—'],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
-      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
+      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
         const done = game.holes.length > 0 && played.length === game.holes.length;
         if (!done) return '—';
         const c = computeSD({ holes: game.holes, CR: game.CR, SR: game.SR, hcp: game.hcp, pcc: game.pcc });
@@ -5791,7 +5791,7 @@ function loadSaved() {
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span>${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
-          ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
+          ${done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q">Q</span>' : ''}
         </span>
@@ -7895,7 +7895,7 @@ function onWatIfInput(input) {
   const resultEl = document.getElementById('watIfResult');
   if (!resultEl) return;
   const n = v === '' || v === '-' ? null : parseFloat(v);
-  if (!isFinite(n)) { resultEl.innerHTML = ''; return; }
+  if (n === null || !isFinite(n)) { resultEl.innerHTML = ''; return; }
   const player = startPlayerName();
   if (!player) { resultEl.innerHTML = ''; return; }
   const whatIf = computeWhatIf(player, n);
