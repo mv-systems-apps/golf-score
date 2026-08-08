@@ -5026,11 +5026,12 @@ function doFullRestoreImport(parsed) {
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
   storage.setItem('golf_rounds', JSON.stringify(entries.slice(0, getRoundStorageLimit())));
-  // Zelfde reden als bij doAdditiveImport: een herstelde backup bestaat per definitie al
-  // ergens, dus mag niet als 'nieuwe, nog niet gebackupte rondes' meetellen.
-  if (storage.getItem('golf_last_backup_date')) {
-    storage.setItem('golf_last_backup_count', String(entries.length));
-  }
+  // Een volledige herstel-import ís zelf een complete backup-momentopname — ongeacht of er
+  // al eerder een backup-datum bekend was. Anders zou de app direct na een schone import
+  // (bv. op een nieuw toestel) ten onrechte 'geen backup' melden, terwijl de zojuist
+  // geïmporteerde data feitelijk de meest actuele, volledige stand al vertegenwoordigt.
+  storage.setItem('golf_last_backup_date', todayISO());
+  storage.setItem('golf_last_backup_count', String(entries.length));
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
   game = { started: false, holes: [] };
