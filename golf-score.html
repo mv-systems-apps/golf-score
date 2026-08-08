@@ -4233,6 +4233,9 @@ function renderPlayerStats() {
       + `<span style="flex:1;display:flex;align-items:center;gap:8px">${title}${hasWarning ? warningIconSmall : ''}</span>`
       + `<span style="display:inline-block;font-size:15px;transform:rotate(${col ? 0 : 90}deg);transition:transform .15s">▶</span></h2>`;
   };
+  // Statische variant zonder inklap-functie — voor kaarten waar een submenu de daadwerkelijke
+  // in-/uitklap-taak overneemt (zie 'Club, baan & tees').
+  const cardHeadStatic = (title) => `<h2 style="display:flex;align-items:center;gap:8px"><span style="flex:1">${title}</span></h2>`;
 
   // Uitsplitsing per club → banen (inklapbaar, standaard ingeklapt)
   const byClub = {};
@@ -4338,11 +4341,16 @@ function renderPlayerStats() {
       + `<span style="display:inline-block;transform:rotate(${collapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
     return header + (collapsed ? '' : `<div>${trackRows}</div>`);
   }).join('');
-  const trackCollapsed = window._statCardCollapsed['card_club'] !== false;
   const anyClubWarning = Object.values(byClub).some(tracks => Object.values(tracks).some(arr => arr.some(roundHasWarning)));
+  const clubCount = Object.keys(byClub).length;
+  const subCollapsed = window._statCardCollapsed['card_club_sub'] !== false; // standaard ingeklapt
+  const subHeader = `<div onclick="window._statCardCollapsed['card_club_sub']=window._statCardCollapsed['card_club_sub']===false?true:false;renderPlayerStats()" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:8px">`
+    + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Banen en tees per club${anyClubWarning ? warningIconSmall : ''}</span>`
+    + `<span style="font-size:15px;color:var(--muted)">${clubCount}</span>`
+    + `<span style="display:inline-block;font-size:15px;transform:rotate(${subCollapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
   const trackCard = clubBlocks
-    ? `<div class="card">${cardHead('Club, baan &amp; tees', 'card_club', anyClubWarning)}${trackPerfSentence}`
-      + `${trackCollapsed ? '' : clubBlocks}</div>`
+    ? `<div class="card">${cardHeadStatic('Club, baan &amp; tees')}${trackPerfSentence}${subHeader}`
+      + `${subCollapsed ? '' : clubBlocks}</div>`
     : '';
 
   // Vorm & consistentie
