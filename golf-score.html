@@ -9626,11 +9626,8 @@ function refreshLowHiWarning(previewVal) {
   // waarde is ingevuld (voorheen werd deze melding overgeslagen zodra het veld leeg was,
   // waardoor je dan alleen een kaal streepje zag zonder enige uitleg waarom).
   if (!status.established) {
-    const roundsLeft = Math.max(0, 20 - status.roundsCount);
     warnEl.style.color = 'var(--muted)';
-    warnEl.innerHTML = roundsLeft > 0
-      ? `Nog ${roundsLeft} ${roundsLeft === 1 ? 'ronde' : 'rondes'} tot dit zelf te controleren is`
-      : `Bijna zover om dit zelf te controleren`;
+    warnEl.innerHTML = `20 rondes vereist (${status.roundsCount} bereikt)`;
     warnEl.classList.remove('hidden');
     return;
   }
