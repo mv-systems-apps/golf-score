@@ -8615,6 +8615,7 @@ async function exportAllRounds() {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
     updateBackupReminder();
+    updateLastBackupDisplay();
   } catch(e) { console.error('Backup rondes mislukt:', e); }
 }
 
