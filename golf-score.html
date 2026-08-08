@@ -821,15 +821,15 @@
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Handicap <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>)</span></div>
   <div class="card">
     <div style="margin-bottom:8px">
-      <div style="font-size:20px;font-weight:700;color:var(--white)">Low HI (365 dagen)</div>
+      <div style="font-size:20px;font-weight:700;color:var(--white)">Low HI</div>
       <div style="font-size:17px;color:var(--muted)">Begrenst hoe snel je handicap mag stijgen (WHS-caps). Leeg = automatisch afgeleid.</div>
       <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-      <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de afgelopen 365 dagen. Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
+      <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
     </div>
     <div class="fg" style="margin-bottom:0">
       <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
-      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit historie afgeleid: <span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit<span id="derivedLowHiSpan"> historie</span> afgeleid: <span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span><span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
     </div>
   </div>
@@ -892,7 +892,7 @@
       <div>
         <div style="font-size:17px;color:var(--muted)">Softcap: stijgt je index meer dan <b>3,0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Low HI is je laagste index van de afgelopen 365 dagen. Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3,0-grens maar voor de helft mee. Speel je bijvoorbeeld 4,0 boven je Low HI, dan wordt dat 3,0 + (1,0 × 0,5) = 3,5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
+        <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3,0-grens maar voor de helft mee. Speel je bijvoorbeeld 4,0 boven je Low HI, dan wordt dat 3,0 + (1,0 × 0,5) = 3,5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
@@ -1539,7 +1539,13 @@ function derivedLowHi(player, allRounds) {
       const db = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`);
       return da - db; // oudste eerst
     });
-  if (!qual.length) return null;
+  // WHS-regel 5.7: een Low Handicap Index wordt pas vastgesteld ('established') zodra een
+  // speler minstens 20 acceptabele scores heeft. Vóór die drempel bestaat er dus officieel
+  // nog geen Low HI om tegen te toetsen — en dus ook geen soft-/hardcap die erop mag steunen.
+  // Zonder deze check zou een paar vroege, toevallig goede rondes al bij bv. 5-10 rondes een
+  // (veel te) lage, statistisch onbetrouwbare Low HI opleveren die de cap voortijdig laat
+  // ingrijpen op de daadwerkelijke handicap — dat is het scenario dat deze check voorkomt.
+  if (qual.length < 20) return null;
   // Officieel: 365 dagen vóórafgaand aan de datum van de MEEST RECENTE ronde — niet
   // vandaag. Bij een tijdje niet spelen zou 'Date.now()' een verkeerd (te vroeg
   // verlopen) venster geven t.o.v. de officiële definitie.
@@ -9559,18 +9565,61 @@ function previewLowHi(el) {
 // wordt tegen die voorlopige waarde vergeleken, zodat de waarschuwing al live meebeweegt.
 function refreshLowHiWarning(previewVal) {
   const dEl = document.getElementById('derivedLowHiVal');
+  const dWarnEl = document.getElementById('derivedLowHiWarn');
+  const spanEl = document.getElementById('derivedLowHiSpan');
   const player = startPlayerName();
   const rounds = loadSavedRounds();
   // Alleen vastgestelde dagresultaten — dit getal dient als betrouwbare referentie om je
   // handmatige Low HI tegen te controleren, dus geen voorlopige schattingen hierin.
   const d = player ? derivedLowHi(player, rounds) : null;
   if (dEl) dEl.textContent = (d != null && isFinite(d)) ? fmt1(d) : '—';
-  const v = previewVal !== undefined ? previewVal : getManualLowHi();
+  const status = player ? lowHiCheckStatus(player, rounds) : { established: false, roundsCount: 0, daysSinceFirst: 0 };
+  // Toont hoeveel dagen eigen, in de app bijgehouden geschiedenis er is — los van de
+  // 20-rondes-eis. Nuttig om zelf te kunnen inschatten hoe betrouwbaar de afgeleide waarde
+  // is als je vóór het gebruik van deze app al langer speelde: de 365-dagen-berekening kan
+  // dan alleen putten uit wat de app zelf kent, ook al is je werkelijke speelgeschiedenis
+  // langer. Bij >= 365 dagen dekt de eigen historie het volledige officiële venster.
+  if (spanEl) {
+    if (status.established && status.daysSinceFirst > 0) {
+      const enough = status.daysSinceFirst >= 365;
+      spanEl.textContent = enough ? ` ≥365 dagen` : ` ${status.daysSinceFirst} dagen`;
+    } else {
+      spanEl.textContent = ' historie';
+    }
+  }
+  // Los van de handmatige-waarde-check hieronder: het getoonde afgeleide getal zelf kan
+  // samenvallen met een nog niet vastgestelde ronde (net als bij de Low HI-KPI in
+  // Statistieken) — zelfde signaal, zelfde voorwaarde, hergebruikt voor consistentie.
+  if (dWarnEl) {
+    const last20 = player ? last20Qualifying(player, rounds, null, null) : [];
+    const whs = player ? whsHandicap(last20, effectiveLowHi(player, rounds), esrMapFor(player, rounds)) : null;
+    const hcpUncertain = last20.some(roundHasWarning);
+    const derivedUncertain = d != null && whs && whs.value != null
+      && Math.abs(d - whs.value) < 0.05 && hcpUncertain;
+    if (derivedUncertain) {
+      dWarnEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      dWarnEl.classList.remove('hidden');
+    } else {
+      dWarnEl.classList.add('hidden');
+    }
+  }
   const warnEl = document.getElementById('lowHiStaleWarning');
   if (!warnEl) return;
-  if (v == null || !isFinite(v)) { warnEl.classList.add('hidden'); return; }
-
   const triangle = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  // Check 0: onvoldoende eigen historie — dit geldt ongeacht of er al een handmatige
+  // waarde is ingevuld (voorheen werd deze melding overgeslagen zodra het veld leeg was,
+  // waardoor je dan alleen een kaal streepje zag zonder enige uitleg waarom).
+  if (!status.established) {
+    const roundsLeft = Math.max(0, 20 - status.roundsCount);
+    warnEl.style.color = 'var(--muted)';
+    warnEl.innerHTML = roundsLeft > 0
+      ? `Nog ${roundsLeft} ${roundsLeft === 1 ? 'ronde' : 'rondes'} tot dit zelf te controleren is`
+      : `Bijna zover om dit zelf te controleren`;
+    warnEl.classList.remove('hidden');
+    return;
+  }
+  const v = previewVal !== undefined ? previewVal : getManualLowHi();
+  if (v == null || !isFinite(v)) { warnEl.classList.add('hidden'); return; }
 
   // Check 1: HUIDIGE officiële handicap — blijft 'effective' (dus inclusief je nieuwste
   // ronde), want dat is precies waar je nieuwsgierig naar bent na een goede ronde. Als die
@@ -9581,31 +9630,20 @@ function refreshLowHiWarning(previewVal) {
   if (currStale) {
     const last20 = player ? last20Qualifying(player, rounds, null, null) : [];
     const currUncertain = last20.some(roundHasWarning);
-    const label = currUncertain ? 'Verwachte' : 'Je huidige';
+    const label = currUncertain ? 'Verwachte hcp' : 'Je hcp';
     warnEl.style.color = 'var(--orange)';
-    warnEl.innerHTML = `${triangle} ${label} handicap ligt lager (${fmt1(curr)}) — controleer je Low HI.`;
+    warnEl.innerHTML = `${triangle} ${label} (${fmt1(curr)}) ligt lager — controleer je Low HI.`;
     warnEl.classList.remove('hidden');
     return;
   }
 
   // Check 2: over de hele geschiedenis afgeleide laagste index — dit ís een statistische
-  // inschatting, dus alleen tonen met genoeg opgebouwde eigen historie (zie lowHiCheckStatus).
-  const status = player ? lowHiCheckStatus(player, rounds) : { established: false, roundsCount: 0, daysSinceFirst: 0 };
-  if (!status.established) {
-    const parts = [];
-    const roundsLeft = Math.max(0, 20 - status.roundsCount);
-    const daysLeft = Math.max(0, 365 - status.daysSinceFirst);
-    if (roundsLeft > 0) parts.push(`${roundsLeft} ${roundsLeft === 1 ? 'ronde' : 'rondes'}`);
-    if (daysLeft > 0) parts.push(`${daysLeft} ${daysLeft === 1 ? 'dag' : 'dagen'}`);
-    warnEl.style.color = 'var(--muted)';
-    warnEl.innerHTML = `Nog ${parts.join(' en ')} tot de app dit zelf kan controleren`;
-    warnEl.classList.remove('hidden');
-    return;
-  }
+  // inschatting, dus alleen tonen met genoeg opgebouwde eigen historie (hierboven al
+  // gecontroleerd via status.established).
   const stale = d != null && isFinite(d) && d < v;
   warnEl.style.color = 'var(--orange)';
   if (stale) {
-    warnEl.innerHTML = `${triangle} Uit je vastgestelde rondes blijkt een lagere waarde (${fmt1(d)}) — controleer je Low HI.`;
+    warnEl.innerHTML = `${triangle} Je rondes tonen een lagere waarde (${fmt1(d)}) — controleer je Low HI.`;
     warnEl.classList.remove('hidden');
   } else {
     warnEl.classList.add('hidden');
