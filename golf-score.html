@@ -703,7 +703,8 @@
     <button id="archiveSearchBtn" class="btn-secondary" style="padding:10px 14px" onclick="var w=document.getElementById('archiveSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('archiveSearch').focus();else{document.getElementById('archiveSearch').value='';loadSaved();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
-    <input id="archiveSearch" type="text" placeholder="Zoek op club, baan of speler" oninput="loadSaved()">
+    <div id="archiveDateErrMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">Ongeldige datum</div>
+    <input id="archiveSearch" type="text" placeholder="Club, baan, speler of datum..." oninput="loadSaved()" onblur="archiveSearchBlur()">
   </div>
   <input type="file" id="importRoundFile" accept=".json" style="display:none" onchange="importRound(this)">
   <div id="archiveEmptyMsg" class="info-msg hidden" style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:8px">Geen rondes</div>
@@ -724,7 +725,7 @@
     <button id="clubSearchBtn" class="btn-secondary" style="padding:8px 14px" onclick="var w=document.getElementById('clubSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('clubSearch').focus();else{document.getElementById('clubSearch').value='';buildClubList();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="clubSearchWrap" style="margin-bottom:14px">
-    <input id="clubSearch" type="text" placeholder="Zoek op club" oninput="buildClubList()">
+    <input id="clubSearch" type="text" placeholder="Club..." oninput="buildClubList()">
   </div>
   <div id="clubListEmptyMsg" class="hidden"></div>
   <div id="clubList" style="display:flex;flex-direction:column;gap:0"></div>
@@ -949,13 +950,12 @@
     </div>
   </div>
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
-        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in Archief.</div>
-      </div>
-      <label class="switch"><input type="checkbox" id="quickGroupingToggle" onchange="toggleQuickGrouping()"><span class="slider"></span></label>
-    </div>
+    <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
+    <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in Archief.</div>
+  </div>
+  <div class="card">
+    <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in Archief</div>
+    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam. Voeg een <b>@</b> toe voor een datum: <b>8-8-2026</b> (exact), <b>8-2026</b> (hele maand), <b>2026</b> (heel jaar), of <b>8-8</b> (die dag, elk jaar). Met een <b>:</b> geef je een periode op, bv. <b>1-1-2026:30-6-2026</b>. Combineren kan: <b>heelsum@2026</b>. Zonder <b>@</b> wordt alles als gewone tekst gezocht.</div>
   </div>
 
   </div>
@@ -5715,6 +5715,149 @@ function resetHcpToComputed() {
   }
 }
 
+// Ontleedt de archief-zoekterm in een tekstdeel en een optioneel datumbereik.
+// Syntax: 'tekst@van:tot' — alles vóór een '@' is gewone tekst (club/baan/speler),
+// alles erna is een datum of periode. Zonder '@' is de hele term gewoon tekst, ook
+// als die toevallig op een datum lijkt (bv. een clubnaam met cijfers) — de '@' is de
+// enige trigger die 'hierna komt een datum' betekent, zodat er nooit geraden hoeft
+// te worden. Spaties rond '@' en ':' worden genegeerd.
+//   heelsum@8-8-2026      -> tekst 'heelsum', exact 8 augustus 2026
+//   heelsum@8-2026        -> tekst 'heelsum', hele maand augustus 2026
+//   heelsum@2026          -> tekst 'heelsum', heel 2026
+//   @8-8                  -> geen tekstfilter, 8 augustus, elk jaar
+//   heelsum@1-1-2026:31-12-2026  -> tekst 'heelsum', periode 2026
+//   @1-1-2026:            -> vanaf 1-1-2026 (open einde)
+//   @:31-12-2025          -> t/m 31-12-2025 (open begin)
+// Onherkenbare datum na '@' -> die kant wordt genegeerd (geen foutmelding in een
+// zoekveld; valt terug op alleen het tekstdeel, indien aanwezig).
+function parseArchiveSearch(raw) {
+  // Resultaat zonder datumcriteria; dateError = ongeldige datum na @ of : (rode melding,
+  // niet filteren), dateIncomplete = kan nog uitgroeien tot een geldige datum (geen
+  // melding tijdens typen, nog niet op datum filteren; bij onblur wél melding).
+  const none = t => ({ text: t, dateFrom: null, dateTo: null, recurring: null, dateError: false, dateIncomplete: false });
+  const atIdx = raw.indexOf('@');
+  if (atIdx === -1) return none(raw.trim().toLowerCase());
+  const text = raw.slice(0, atIdx).trim().toLowerCase();
+  const spec = raw.slice(atIdx + 1).trim();
+  if (!spec) return { ...none(text), dateIncomplete: true }; // net '@' getypt, nog geen datum
+
+  // Max. aantal dagen in een maand; zonder jaar het ruimste geval (feb -> 29, schrikkeljaar)
+  const daysInMonthMax = (m, y) => y != null ? new Date(y, m, 0).getDate() : [31,29,31,30,31,30,31,31,30,31,30,31][m-1];
+
+  // Eén losse datumtoken classificeren:
+  //  ok         -> geldig; { y, m, d } (d/y null indien niet opgegeven)
+  //  empty      -> leeg (open kant van een bereik)
+  //  incomplete -> nog geen geldige datum, maar kan er nog één worden (bv. jaartal in wording)
+  //  invalid    -> kan nooit meer een geldige datum worden (verkeerde tekens, maand 13, 30-2, ...)
+  const classify = tok => {
+    tok = tok.trim();
+    if (!tok) return { kind: 'empty' };
+    if (!/^[0-9-]+$/.test(tok)) return { kind: 'invalid' };
+    const parts = tok.split('-').map(p => p.trim()).filter(p => p !== '');
+    if (!parts.length) return { kind: 'incomplete' }; // alleen streepjes
+    if (parts.length === 1) {
+      const p0 = parts[0];
+      if (/^\d{4}$/.test(p0)) return { kind: 'ok', y: parseInt(p0, 10), m: null, d: null }; // kaal jaartal
+      if (/^\d{1,3}$/.test(p0)) return { kind: 'incomplete' }; // jaartal in wording, of dag/maand vóór het streepje
+      return { kind: 'invalid' }; // 5+ cijfers
+    }
+    if (parts.length === 2) {
+      const [a, b] = parts;
+      if (!/^\d{1,2}$/.test(a)) return { kind: 'invalid' }; // eerste deel is altijd dag óf maand
+      const av = parseInt(a, 10);
+      if (/^\d{4}$/.test(b)) {
+        // maand-jaar
+        return (av >= 1 && av <= 12) ? { kind: 'ok', y: parseInt(b, 10), m: av, d: null } : { kind: 'invalid' };
+      }
+      if (/^\d{1,3}$/.test(b)) {
+        if (/^\d{1,2}$/.test(b)) {
+          const bv = parseInt(b, 10);
+          if (bv >= 1 && bv <= 12 && av >= 1 && av <= daysInMonthMax(bv, null)) return { kind: 'ok', y: null, m: bv, d: av }; // dag-maand
+        }
+        // (Nog) geen geldige dag-maand: kan alleen nog uitgroeien tot maand-jjjj
+        return (av >= 1 && av <= 12) ? { kind: 'incomplete' } : { kind: 'invalid' };
+      }
+      return { kind: 'invalid' };
+    }
+    if (parts.length === 3) {
+      const [a, b, c] = parts;
+      if (!/^\d{1,2}$/.test(a) || !/^\d{1,2}$/.test(b)) return { kind: 'invalid' };
+      const d = parseInt(a, 10), m = parseInt(b, 10);
+      if (m < 1 || m > 12 || d < 1 || d > daysInMonthMax(m, null)) return { kind: 'invalid' };
+      if (/^\d{4}$/.test(c)) {
+        // Volledige datum: via Date controleren dat hij echt bestaat (vangt o.a. 29-2 buiten schrikkeljaren)
+        const y = parseInt(c, 10);
+        const dt = new Date(y, m - 1, d);
+        return (dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d)
+          ? { kind: 'ok', y, m, d } : { kind: 'invalid' };
+      }
+      if (/^\d{1,3}$/.test(c)) return { kind: 'incomplete' }; // jaartal in wording
+      return { kind: 'invalid' };
+    }
+    return { kind: 'invalid' }; // 4+ delen
+  };
+
+  // Eerste ':' splitst van/tot; een eventuele tweede ':' belandt in het tot-deel en
+  // wordt daar door de tekencontrole als ongeldig aangemerkt.
+  const colonIdx = spec.indexOf(':');
+  const isRange = colonIdx !== -1;
+  const rawFrom = isRange ? spec.slice(0, colonIdx) : spec;
+  const rawTo = isRange ? spec.slice(colonIdx + 1) : spec;
+
+  const fromCls = classify(rawFrom);
+  const toCls = isRange ? classify(rawTo) : fromCls;
+
+  if (fromCls.kind === 'invalid' || toCls.kind === 'invalid') return { ...none(text), dateError: true };
+  if (fromCls.kind === 'incomplete' || toCls.kind === 'incomplete') return { ...none(text), dateIncomplete: true };
+  if (fromCls.kind === 'empty' && toCls.kind === 'empty') return { ...none(text), dateIncomplete: true }; // '@:' zonder datums
+
+  const fromTok = fromCls.kind === 'ok' ? fromCls : undefined; // undefined = open kant
+  const toTok = isRange ? (toCls.kind === 'ok' ? toCls : undefined) : fromTok;
+
+  // Losse dag-maand zonder bereik (geen ':') en zonder jaar -> terugkerend, elk jaar.
+  if (!isRange && fromTok && fromTok.y == null && fromTok.m != null && fromTok.d != null) {
+    return { ...none(text), recurring: { m: fromTok.m, d: fromTok.d } };
+  }
+
+  // Bereik waarbij BEIDE kanten dag-maand zonder jaar zijn -> terugkerend bereik
+  // (per kalenderjaar, geen jaargrens-overschrijding ondersteund).
+  if (isRange && fromTok && toTok && fromTok.y == null && fromTok.d != null && toTok.y == null && toTok.d != null) {
+    return { ...none(text), recurring: { fromM: fromTok.m, fromD: fromTok.d, toM: toTok.m, toD: toTok.d } };
+  }
+
+  const toIso = (tok, isEnd) => {
+    if (!tok) return null; // open kant
+    const y = tok.y != null ? tok.y : new Date().getFullYear();
+    if (tok.m == null) {
+      // Kaal jaartal: hele jaar
+      return isEnd ? `${y}-12-31` : `${y}-01-01`;
+    }
+    if (tok.d == null) {
+      // Maand-jaar: hele maand
+      const lastDay = new Date(y, tok.m, 0).getDate();
+      return isEnd ? `${y}-${String(tok.m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` : `${y}-${String(tok.m).padStart(2, '0')}-01`;
+    }
+    return `${y}-${String(tok.m).padStart(2, '0')}-${String(tok.d).padStart(2, '0')}`;
+  };
+
+  return {
+    ...none(text),
+    dateFrom: toIso(fromTok, false),
+    dateTo: toIso(toTok, true),
+  };
+}
+
+// Bij het verlaten van het zoekveld telt 'nog niet af' als fout: een half getypte
+// datum die blijft staan, krijgt dan alsnog de rode melding (tijdens het typen niet,
+// om geflits te voorkomen).
+function archiveSearchBlur() {
+  const inp = document.getElementById('archiveSearch');
+  const msg = document.getElementById('archiveDateErrMsg');
+  if (!inp || !msg) return;
+  const p = parseArchiveSearch(inp.value || '');
+  if (p.dateIncomplete) msg.classList.remove('hidden');
+}
+
 function loadSaved() {
   const saved = loadSavedRounds();
   // Rondedata kan op veel manieren wijzigen (import, koppelen, bewerken, vaststellen) —
@@ -5724,15 +5867,24 @@ function loadSaved() {
   updateStorageSettingsUI();
   const el = document.getElementById('savedList');
   const searchInput = document.getElementById('archiveSearch');
-  const query = (searchInput?.value || '').trim().toLowerCase();
+  const rawSearch = searchInput?.value || '';
+  const parsedSearch = parseArchiveSearch(rawSearch);
+  const query = parsedSearch.text; // blijft bestaan als losse naam voor de tekst-check hieronder
+
+  // Rode melding boven het zoekveld bij een ongeldige datum na @ of : — en dan wordt
+  // er ook helemaal niet gefilterd (zie filtered hieronder). Een nog incomplete datum
+  // toont tijdens het typen géén melding; archiveSearchBlur() vangt dat bij verlaten
+  // van het veld alsnog af.
+  const dateErrMsg = document.getElementById('archiveDateErrMsg');
+  if (dateErrMsg) dateErrMsg.classList.toggle('hidden', !parsedSearch.dateError);
 
   // Lazy render van de platte lijst (geen groepering): begin bij een nieuwe
   // zoekopdracht altijd weer met de standaardlimiet, niet met een eerder
   // opgehoogde limiet van een vorige, andere zoekopdracht.
   const FLAT_LIST_PAGE_SIZE = 50;
-  if (window._flatListLastQuery !== query) {
+  if (window._flatListLastQuery !== rawSearch) {
     window._flatListLimit = FLAT_LIST_PAGE_SIZE;
-    window._flatListLastQuery = query;
+    window._flatListLastQuery = rawSearch;
   }
 
   // WHS-set: alleen voor de speler bovenin Start (nooit speler 2 of andere spelers)
@@ -5772,12 +5924,41 @@ function loadSaved() {
   groupSearchBtns.forEach(id => setBtn(id, false));
   const activeId = storage.getItem('golf_active_id');
 
-  const filtered = query
+  const hasDateCriteria = !!(parsedSearch.dateFrom || parsedSearch.dateTo || parsedSearch.recurring);
+  const filtered = (!parsedSearch.dateError && (query || hasDateCriteria))
     ? saved.filter(r => {
-        const club = r.club || '';
-        return (r.track || '').toLowerCase().includes(query) ||
-               club.toLowerCase().includes(query) ||
-               (r.player || '').toLowerCase().includes(query);
+        if (query) {
+          const club = r.club || '';
+          const textMatch = (r.track || '').toLowerCase().includes(query) ||
+                 club.toLowerCase().includes(query) ||
+                 (r.player || '').toLowerCase().includes(query);
+          if (!textMatch) return false;
+        }
+        if (parsedSearch.recurring) {
+          const parts = (r.date || '').split('-').map(Number);
+          const rm = parts[1], rd = parts[2];
+          if (!rm || !rd) return false;
+          if (parsedSearch.recurring.m != null) {
+            // Losse terugkerende dag-maand, elk jaar (bv. @8-8)
+            if (rm !== parsedSearch.recurring.m || rd !== parsedSearch.recurring.d) return false;
+          } else {
+            // Terugkerend bereik per kalenderjaar (bv. @8-8:15-8) — een bereik dat de
+            // jaargrens overschrijdt (bv. dec->jan) wordt hier niet ondersteund en
+            // levert dan stilzwijgend geen match op, i.p.v. een verkeerde uitkomst.
+            const val = rm * 100 + rd;
+            const fromVal = parsedSearch.recurring.fromM * 100 + parsedSearch.recurring.fromD;
+            const toVal = parsedSearch.recurring.toM * 100 + parsedSearch.recurring.toD;
+            if (fromVal <= toVal) {
+              if (val < fromVal || val > toVal) return false;
+            } else {
+              return false;
+            }
+          }
+        } else {
+          if (parsedSearch.dateFrom && (r.date || '') < parsedSearch.dateFrom) return false;
+          if (parsedSearch.dateTo && (r.date || '') > parsedSearch.dateTo) return false;
+        }
+        return true;
       })
     : saved;
 
@@ -6171,7 +6352,7 @@ function loadSaved() {
         + `</div>`;
     }
   }
-  if (query) {
+  if (query || hasDateCriteria) {
     html = `<div class="info-msg" style="font-size:17px;color:var(--muted);font-weight:700;margin-bottom:8px">${filtered.length} ronde${filtered.length !== 1 ? 's' : ''} gevonden</div>` + html;
   }
   el.innerHTML = html;
@@ -9107,7 +9288,6 @@ function nav(id) {
     updateExportFolderUI();
     updateProgressToggleBtn();
     updateBadWeatherToggle();
-    updateQuickGroupingToggle();
     updateStorageSettingsUI();
     updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
@@ -9248,11 +9428,7 @@ function toggleBadWeather() {
 }
 
 // Long-press-gebaar bij groeperen (club, speler, categorie-archief, categorie-clubs):
-// standaard aan, één instelling voor alle vier — ze deelden toch precies hetzelfde
-// aan/uit-gedrag, dus geen aparte schakelaar per knop nodig.
-function quickGroupingEnabled() {
-  return storage.getItem('golf_quick_grouping') !== 'off'; // afwezig = aan
-}
+// altijd aan, geen aparte instelling — alle vier delen toch precies hetzelfde gedrag.
 // Instellingen-scherm: drie tabs (Instellingen / WHS / Gegevens). 'Instellingen' bestaat
 // uit twee losse containers in de HTML (settingsTabMain en settingsTabMain2, een
 // restant van toen de WHS-uitleg daar nog fysiek tussenin stond), die samen als één tab
@@ -9276,11 +9452,6 @@ function switchSettingsTab(tab) {
     btn.style.color = active ? 'var(--green-deep)' : '';
     btn.style.borderColor = active ? 'var(--gold)' : '';
   });
-}
-
-function updateQuickGroupingToggle() {
-  const cb = document.getElementById('quickGroupingToggle');
-  if (cb) cb.checked = quickGroupingEnabled();
 }
 
 // ══ OPSLAG (Instellingen → Rondes) ═══════════════════════════════════════
@@ -9503,12 +9674,6 @@ function confirmDeleteOtherPlayers(btn) {
     }
   );
 }
-function toggleQuickGrouping() {
-  const cb = document.getElementById('quickGroupingToggle');
-  const on = cb ? cb.checked : !quickGroupingEnabled();
-  storage.setItem('golf_quick_grouping', on ? 'on' : 'off');
-}
-
 // Actieknoppen bij rondes in het archief: standaard altijd zichtbaar. Uitgezet
 // betekent dat de knoppenbalk pas verschijnt na een tik op het rondeblok.
 function actionsAlwaysVisible() {
@@ -9785,7 +9950,6 @@ document.addEventListener('focusin', (e) => {
     if (!btn) return;
     let timer = null, fired = false;
     const start = () => {
-      if (!quickGroupingEnabled()) return;
       fired = false;
       timer = setTimeout(() => { fired = true; collapseAllPlayers(); }, 550);
     };
@@ -9804,7 +9968,6 @@ document.addEventListener('focusin', (e) => {
     if (!btn) return;
     let timer = null, fired = false;
     const start = () => {
-      if (!quickGroupingEnabled()) return;
       fired = false;
       timer = setTimeout(() => { fired = true; collapseAllCategories(); }, 550);
     };
@@ -9822,7 +9985,6 @@ document.addEventListener('focusin', (e) => {
     if (!btn) return;
     let timer = null, fired = false;
     const start = () => {
-      if (!quickGroupingEnabled()) return;
       fired = false;
       timer = setTimeout(() => { fired = true; collapseAllClubCategories(); }, 550);
     };
@@ -9840,7 +10002,6 @@ document.addEventListener('focusin', (e) => {
     if (!btn) return;
     let timer = null, fired = false;
     const start = () => {
-      if (!quickGroupingEnabled()) return;
       fired = false;
       timer = setTimeout(() => { fired = true; collapseAllClubs(); }, 550);
     };
@@ -9860,7 +10021,6 @@ document.addEventListener('focusin', (e) => {
     if (!btn) return;
     let timer = null, fired = false;
     const start = () => {
-      if (!quickGroupingEnabled()) return;
       fired = false;
       timer = setTimeout(() => { fired = true; setWhsShort(); }, 550);
     };
