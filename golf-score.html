@@ -829,7 +829,8 @@
     <div class="fg" style="margin-bottom:0">
       <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
-      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);margin-top:6px">Uit<span id="derivedLowHiSpan"> historie</span> afgeleid: <span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span><span id="derivedLowHiVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);font-weight:700;margin-top:6px"><span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span>Low HI <span id="derivedLowHiVal" style="color:var(--green-light)">—</span><span id="derivedLowHiDate"></span></div>
+      <div id="derivedLowHiSpan" style="font-size:15px;color:var(--muted);margin-top:2px"></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
     </div>
   </div>
@@ -1528,7 +1529,10 @@ function currentOfficialHcp(player, allRounds) {
   return whs ? whs.value : null;
 }
 
-function derivedLowHi(player, allRounds) {
+// Zelfde berekening als derivedLowHi(), maar geeft ook de ronde terug die het laagste punt
+// opleverde — nodig om dat punt in de verloopgrafiek te kunnen markeren. derivedLowHi()
+// zelf blijft een dunne wrapper hieromheen, zodat bestaande aanroepen ongewijzigd werken.
+function derivedLowHiDetailed(player, allRounds) {
   const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
   const qual = allRounds
     .filter(r => r.player === player && r.qualifying && isDone(r))
@@ -1543,7 +1547,7 @@ function derivedLowHi(player, allRounds) {
   // Zonder deze check zou een paar vroege, toevallig goede rondes al bij bv. 5-10 rondes een
   // (veel te) lage, statistisch onbetrouwbare Low HI opleveren die de cap voortijdig laat
   // ingrijpen op de daadwerkelijke handicap — dat is het scenario dat deze check voorkomt.
-  if (qual.length < 20) return null;
+  if (qual.length < 20) return { value: null, roundId: null };
   // Officieel: 365 dagen vóórafgaand aan de datum van de MEEST RECENTE ronde — niet
   // vandaag. Bij een tijdje niet spelen zou 'Date.now()' een verkeerd (te vroeg
   // verlopen) venster geven t.o.v. de officiële definitie.
@@ -1551,6 +1555,7 @@ function derivedLowHi(player, allRounds) {
   const lastRoundT = new Date(`${lastRound.date || '1970-01-01'}T${lastRound.time || '00:00'}`).getTime();
   const cutoff = lastRoundT - 365 * 24 * 60 * 60 * 1000;
   let low = null;
+  let lowRoundId = null;
   qual.forEach((r, idx) => {
     const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
     if (t < cutoff) return;
@@ -1564,9 +1569,13 @@ function derivedLowHi(player, allRounds) {
     if (!staffel) return;
     const avg = [...sds].sort((a, b) => a - b).slice(0, staffel.count).reduce((s, x) => s + x, 0) / staffel.count;
     const hi = whsIndexRound(avg + staffel.adj);
-    if (low == null || hi < low) low = hi;
+    if (low == null || hi < low) { low = hi; lowRoundId = r.id; }
   });
-  return low;
+  return { value: low, roundId: lowRoundId };
+}
+
+function derivedLowHi(player, allRounds) {
+  return derivedLowHiDetailed(player, allRounds).value;
 }
 
 // Low HI: handmatig indien ingevuld, anders afgeleid uit de historie.
@@ -3593,7 +3602,13 @@ function renderPlayerStats() {
   // Periodekeuze voor de grafiek: 'l20' | 'jaar' | 'alles' (standaard laatste 20).
   // De reeksen worden volledig berekend en pas bij het tekenen afgesneden,
   // zodat het handicapverloop van het eerste zichtbare punt correct blijft.
-  const yearAgoTs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  // Ankerpunt is de datum van de laatst ingevoerde ronde (niet 'vandaag') — consistent met
+  // hoe Low HI zijn 365-dagen-venster ook altijd vanaf de laatste ronde terugrekent.
+  const lastRoundForYear = rounds[rounds.length - 1];
+  const lastRoundTs = lastRoundForYear
+    ? new Date(`${lastRoundForYear.date || '1970-01-01'}T${lastRoundForYear.time || '00:00'}`).getTime()
+    : Date.now();
+  const yearAgoTs = (isFinite(lastRoundTs) ? lastRoundTs : Date.now()) - 365 * 24 * 60 * 60 * 1000;
   const startIdxOf = (key) => {
     if (key === 'l20') return Math.max(0, rounds.length - 20);
     if (key === 'jaar') {
@@ -4396,22 +4411,49 @@ function renderPlayerStats() {
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
   const stickyPeriodBar = `<div style="position:sticky;top:var(--header-h, 60px);z-index:90;background:var(--green-deep);margin:0 -12px 12px;padding:12px 12px 12px">${periodBar}</div>`;
-  el.innerHTML = kpiRow + watIfCard + stickyPeriodBar + `<div class="card" id="sdChartCard"><h2>Dagresultaat en handicapverloop</h2><div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span></div></div>` + distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard + trackCard;
+  // Low HI voor de grafiek: handmatig heeft voorrang (net als overal elders), maar dan is
+  // er geen specifieke ronde om als 'behaald op dit punt' te markeren — dat kan alleen bij
+  // de afgeleide waarde. Blijft vanzelf leeg zolang er nog geen 20 rondes zijn (zie
+  // derivedLowHiDetailed) of als de gebruiker dit zelf heeft uitgezet.
+  const lowHiManualForGraph = getManualLowHi();
+  const lowHiDetailForGraph = lowHiManualForGraph != null
+    ? { value: lowHiManualForGraph, roundId: null }
+    : derivedLowHiDetailed(player, all);
+  const lowHiToggleBtn = lowHiDetailForGraph.value != null
+    ? `<button onclick="toggleLowHiGraph()" title="${lowHiGraphEnabled() ? 'Low HI verbergen' : 'Low HI tonen'}" style="background:${lowHiGraphEnabled() ? 'var(--purple, #9b7fd4)' : 'none'};border:1.5px solid var(--purple, #9b7fd4);border-radius:4px;padding:2px 7px;cursor:pointer;font-size:12px;font-weight:700;color:${lowHiGraphEnabled() ? '#fff' : 'var(--purple, #9b7fd4)'}">Low HI</button>`
+    : '';
+  // Datum van de ronde die Low HI opleverde — alleen te tonen als de weergave aan staat
+  // én er een gekoppelde ronde is (bij een handmatig ingevulde Low HI is die er niet).
+  const lowHiDateRound = (lowHiGraphEnabled() && lowHiDetailForGraph.roundId != null)
+    ? all.find(r => r.id === lowHiDetailForGraph.roundId)
+    : null;
+  const lowHiDateLine = lowHiDateRound
+    ? `<div style="font-size:14px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px;margin-bottom:8px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
+    : '';
+  el.innerHTML = kpiRow + watIfCard + stickyPeriodBar + `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0">Dagresultaat en handicapverloop</h2>${lowHiToggleBtn}</div>${lowHiDateLine}<div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+        const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
+        return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span>`;
+      })() : ''}</div></div>` + distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard + trackCard;
 
   // Grafiek tekenen (na invoegen in DOM)
-  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)));
+  // Low HI voor de grafiek: handmatig heeft voorrang (net als overal elders), maar dan is
+  // er geen specifieke ronde om als 'behaald op dit punt' te markeren — dat kan alleen bij
+  // de afgeleide waarde. Blijft vanzelf leeg zolang er nog geen 20 rondes zijn (zie
+  // derivedLowHiDetailed) of als de gebruiker dit zelf heeft uitgezet.
+  renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)), lowHiGraphEnabled() ? lowHiDetailForGraph : null);
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
-function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries, countingIds, periodRoundsView, last20Ids) {
+function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedSeries, warnSeries, countingIds, periodRoundsView, last20Ids, lowHiDetail) {
   const host = document.getElementById('sdChart');
   if (!host) return;
   const sdPts = sdSeries.map((v, i) => ({ i, v })).filter(p => p.v != null);
   if (sdPts.length < 2) { host.innerHTML = '<div style="font-size:17px;color:var(--muted)">Te weinig rondes voor een grafiek.</div>'; return; }
   const hiPts = (hiSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
   const capPts = (capSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
-  const w = 320, h = 140, padL = 28, padR = 8, padT = 10, padB = 18;
+  const w = 320, h = 154, padL = 36, padR = 8, padT = 10, padB = 32;
   const allY = [...sdPts.map(p => p.v), ...hiPts.map(p => p.v), ...capPts.map(p => p.v)];
+  if (lowHiDetail && lowHiDetail.value != null) allY.push(lowHiDetail.value, lowHiDetail.value + 3, lowHiDetail.value + 5);
   const minY = Math.floor(Math.min(...allY)) - 1, maxY = Math.ceil(Math.max(...allY)) + 1;
   const n = sdSeries.length;
   const xOf = i => padL + (n <= 1 ? 0 : (i / (n - 1)) * (w - padL - padR));
@@ -4508,18 +4550,75 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
   // vast punt 20 rondes terug. Gedempte, neutrale kleur (zelfde als de as/gridlijnen) —
   // dit is een oriëntatie-hulpmiddel, geen datalijn, dus mag niet met sd/hcp concurreren.
   let windowLine = '';
+  let windowDateLabels = '';
   if (last20Ids && last20Ids.size && periodRoundsView) {
     const idxs = periodRoundsView
       .map((r, i) => (r && last20Ids.has(r.id)) ? i : null)
       .filter(i => i != null);
     if (idxs.length) {
-      const xStart = xOf(Math.min(...idxs)), xEnd = xOf(Math.max(...idxs));
-      windowLine = `<line x1="${xStart.toFixed(1)}" y1="${(h - 2).toFixed(1)}" x2="${xEnd.toFixed(1)}" y2="${(h - 2).toFixed(1)}" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+      const minIdx = Math.min(...idxs), maxIdx = Math.max(...idxs);
+      const xStart = xOf(minIdx), xEnd = xOf(maxIdx);
+      windowLine = `<line x1="${xStart.toFixed(1)}" y1="138" x2="${xEnd.toFixed(1)}" y2="138" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+      // Datums van de allereerste en de laatste (meest recente) kaart in de grafiek staan
+      // altijd vast — dat zijn de twee randen van de hele weergegeven periode. Alleen de
+      // startdatum van de balk zélf (waar het 'laatste 20'-venster begint) is optioneel:
+      // bij veel data (bv. periode 'Alles') wordt de balk smaller t.o.v. de vaste
+      // tekstbreedte van de labels, waardoor die kan gaan botsen met een van de twee vaste
+      // labels — dan valt alleen het balk-start-label weg, nooit de eerste/laatste datum.
+      // Ruwe breedteschatting (geen echte tekstmeting nodig, dit hoeft niet pixel-perfect
+      // te zijn).
+      const fmtShort = iso => {
+        if (!iso) return '';
+        const [y, m, d] = iso.split('-');
+        return `${parseInt(d, 10)}-${parseInt(m, 10)}-${y}`;
+      };
+      const estWidth = txt => txt.length * 5.3;
+      const gapMin = 6; // minimale lucht tussen twee labels om ze nog los leesbaar te houden
+
+      const chartFirstDate = fmtShort(periodRoundsView[0]?.date);
+      const lastDate = fmtShort(periodRoundsView[periodRoundsView.length - 1]?.date);
+      const barStartDate = minIdx > 0 ? fmtShort(periodRoundsView[minIdx]?.date) : '';
+
+      const showChartFirst = !!chartFirstDate;
+      const showLast = !!lastDate && periodRoundsView.length > 1;
+      let showBarStart = !!barStartDate;
+      if (showBarStart) {
+        const barStartLeft = xStart, barStartRight = xStart + estWidth(barStartDate);
+        if (showChartFirst && (padL + estWidth(chartFirstDate) + gapMin > barStartLeft)) showBarStart = false;
+        if (showBarStart && showLast && (barStartRight + gapMin > xEnd - estWidth(lastDate))) showBarStart = false;
+        if (showBarStart && barStartRight > w - padR) showBarStart = false;
+      }
+
+      if (showChartFirst) windowDateLabels += `<text x="${padL}" y="150" font-size="10" fill="var(--muted)" text-anchor="start">${chartFirstDate}</text>`;
+      if (showBarStart) windowDateLabels += `<text x="${xStart.toFixed(1)}" y="150" font-size="10" fill="var(--muted)" text-anchor="start">${barStartDate}</text>`;
+      if (showLast) windowDateLabels += `<text x="${xEnd.toFixed(1)}" y="150" font-size="10" fill="var(--muted)" text-anchor="end">${lastDate}</text>`;
     }
+  }
+  // Low HI + de twee cap-drempels (softcap/hardcap): dunne, gestippelde referentielijnen,
+  // met kleine waarde-badges op de y-as zelf (i.p.v. een tekstlabel náást de lijn, die al
+  // snel dwars door de data heen liep). Zelfde rood/oranje-conventie als de bestaande
+  // cap-iconen verderop in deze functie — Low HI zelf blijft paars, want dat is geen cap,
+  // maar de basis waar de caps van worden afgeleid.
+  let lowHiLine = '';
+  let lowHiBadges = '';
+  if (lowHiDetail && lowHiDetail.value != null) {
+    const low = lowHiDetail.value, soft = low + 3, hard = low + 5;
+    const yLow = yOf(low), ySoft = yOf(soft), yHard = yOf(hard);
+    const dashedLine = (y, color) => `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${(w - padR).toFixed(1)}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    lowHiLine = dashedLine(yLow, 'var(--purple, #9b7fd4)') + dashedLine(ySoft, 'var(--orange)') + dashedLine(yHard, 'var(--red)');
+    const badge = (y, value, color) => {
+      const text = fmt1(value);
+      const bw = text.length * 5.2 + 6;
+      return `<rect x="0" y="${(y - 6).toFixed(1)}" width="${bw.toFixed(0)}" height="12" rx="3" fill="${color}"/>`
+        + `<text x="3" y="${(y + 3).toFixed(1)}" font-size="9" font-weight="700" fill="#fff">${text}</text>`;
+    };
+    lowHiBadges = badge(yLow, low, 'var(--purple, #9b7fd4)') + badge(ySoft, soft, 'var(--orange)') + badge(yHard, hard, 'var(--red)');
   }
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
     + yTicks
+    + lowHiLine
     + windowLine
+    + windowDateLabels
     + `<path d="${lineOf(sdPts)}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`
     + ringsOf(sdPts)
     + dotsOf(sdPts, 'var(--green-light)')
@@ -4527,6 +4626,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     + capLine
     + capIconsOf(capTypeSeries)
     + esrIconsOf()
+    + lowHiBadges
     + `</svg>`;
 }
 
@@ -9120,6 +9220,15 @@ function toggleProgressIndicator() {
   if (game.started) renderScore();
 }
 
+// Low HI tonen in de verloopgrafiek (standaard aan)
+function lowHiGraphEnabled() {
+  return storage.getItem('golf_lowhi_graph') !== 'off';
+}
+function toggleLowHiGraph() {
+  storage.setItem('golf_lowhi_graph', lowHiGraphEnabled() ? 'off' : 'on');
+  renderPlayerStats();
+}
+
 // Slechtweer-modus (standaard uit)
 function badWeatherEnabled() {
   return storage.getItem('golf_bad_weather') === 'on';
@@ -9518,25 +9627,31 @@ function previewLowHi(el) {
 function refreshLowHiWarning(previewVal) {
   const dEl = document.getElementById('derivedLowHiVal');
   const dWarnEl = document.getElementById('derivedLowHiWarn');
+  const dDateEl = document.getElementById('derivedLowHiDate');
   const spanEl = document.getElementById('derivedLowHiSpan');
   const player = startPlayerName();
   const rounds = loadSavedRounds();
   // Alleen vastgestelde dagresultaten — dit getal dient als betrouwbare referentie om je
   // handmatige Low HI tegen te controleren, dus geen voorlopige schattingen hierin.
-  const d = player ? derivedLowHi(player, rounds) : null;
+  const detail = player ? derivedLowHiDetailed(player, rounds) : { value: null, roundId: null };
+  const d = detail.value;
   if (dEl) dEl.textContent = (d != null && isFinite(d)) ? fmt1(d) : '—';
+  if (dDateEl) {
+    const lowRound = detail.roundId != null ? rounds.find(r => r.id === detail.roundId) : null;
+    dDateEl.textContent = lowRound ? ` op ${formatFullDate(lowRound.date)}` : '';
+  }
   const status = player ? lowHiCheckStatus(player, rounds) : { established: false, roundsCount: 0, daysSinceFirst: 0 };
-  // Toont hoeveel dagen eigen, in de app bijgehouden geschiedenis er is — los van de
-  // 20-rondes-eis. Nuttig om zelf te kunnen inschatten hoe betrouwbaar de afgeleide waarde
-  // is als je vóór het gebruik van deze app al langer speelde: de 365-dagen-berekening kan
-  // dan alleen putten uit wat de app zelf kent, ook al is je werkelijke speelgeschiedenis
-  // langer. Bij >= 365 dagen dekt de eigen historie het volledige officiële venster.
+  // Losse, ondergeschikte contextregel: hoeveel dagen eigen, in de app bijgehouden
+  // geschiedenis er is — los van de 20-rondes-eis. Nuttig om zelf te kunnen inschatten hoe
+  // betrouwbaar de afgeleide waarde is als je vóór het gebruik van deze app al langer
+  // speelde: de 365-dagen-berekening kan dan alleen putten uit wat de app zelf kent, ook al
+  // is je werkelijke speelgeschiedenis langer.
   if (spanEl) {
-    if (status.established && status.daysSinceFirst > 0) {
+    if (d != null && status.established && status.daysSinceFirst > 0) {
       const enough = status.daysSinceFirst >= 365;
-      spanEl.textContent = enough ? ` ≥365 dagen` : ` ${status.daysSinceFirst} dagen`;
+      spanEl.textContent = enough ? `Gebaseerd op ≥365 dagen` : `Gebaseerd op ${status.daysSinceFirst} dagen`;
     } else {
-      spanEl.textContent = ' historie';
+      spanEl.textContent = '';
     }
   }
   // Los van de handmatige-waarde-check hieronder: het getoonde afgeleide getal zelf kan
