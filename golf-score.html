@@ -76,9 +76,10 @@
     html.light-mode .sum-tr:nth-child(even) { background: rgba(0,0,0,.03); }
     html.light-mode .sum-tr:active { background: rgba(0,0,0,.04); }
     html.light-mode .fg input,
+    html.light-mode .fg textarea,
     html.light-mode .chcp-adjust,
     html.light-mode .chcp-box { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.14); color: var(--text); }
-    html.light-mode .fg input::placeholder { color: rgba(0,0,0,.4); }
+    html.light-mode .fg input::placeholder, html.light-mode .fg textarea::placeholder { color: rgba(0,0,0,.4); }
     html.light-mode .field-like { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.14); color: var(--text); }
     .field-like.compact { padding: 8px 10px; font-size: 20px; }
     input.field-input { width: 100%; padding: 8px 10px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: var(--white); font-size: 20px; -webkit-appearance: none; text-align: right; box-sizing: border-box; }
@@ -155,6 +156,7 @@
     }
     .tee-badge.badge-q { background: var(--gold); color: var(--green-deep); }
     .tee-badge.badge-whs { background: var(--green-light); color: var(--green-deep); }
+    .tee-badge.badge-lowhi { background: var(--purple, #9b7fd4); color: #ffffff; }
     .tee-badge.tee-Wit    { background: #ffffff; color: #1a1a1a; }
     .tee-badge.tee-Geel   { background: #e8c800; color: #1a1a1a; }
     .tee-badge.tee-Blauw  { background: #1e64c8; color: var(--white); }
@@ -224,7 +226,7 @@
     .fg { margin-bottom: 12px; }
     .fg label { font-size:17px; color: var(--green-light); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 6px; font-weight: 700; }
     #roundInfoModal .fg > label:not([style*="green-light"]), #roundInfoModal > div > label { color: var(--gold); }
-    .fg input, .fg select {
+    .fg input, .fg select, .fg textarea {
       width: 100%; padding: 12px 14px;
       background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.15);
       border-radius: 8px; color: var(--white); font-size:20px; -webkit-appearance: none;
@@ -236,7 +238,7 @@
       font-family: inherit; line-height: normal; box-sizing: border-box;
       cursor: pointer; display: flex; align-items: center;
     }
-    .fg input::placeholder { color: rgba(255,255,255,.35); }
+    .fg input::placeholder, .fg textarea::placeholder { color: rgba(255,255,255,.35); }
 
     /* track selector */
     .track-list { display: flex; flex-direction: column; gap: 8px; }
@@ -328,6 +330,13 @@
     #screen-score { padding-bottom: calc(65px + env(safe-area-inset-bottom)) !important; padding-top: 9px; }
     #screen-score:has(#nineTabBar:not(.hidden)) { padding-top: 0; }
     @keyframes pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
+    /* Wisknopje (×) rechts in een zoekveld */
+    .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:26px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
+    /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en controlekaart */
+    .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
+    /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
+    .saved-item.round-flash { animation: roundFlash 1.6s ease; }
+    @keyframes roundFlash { 0%, 55% { box-shadow: inset 0 0 0 3px var(--gold); } 100% { box-shadow: inset 0 0 0 3px transparent; } }
     .pop { animation: pop .22s ease; }
     .ppar-dot     { width: 8px; height: 8px; border-radius: 50%; background: var(--green-light); flex-shrink: 0; }
     .ppar-dot-red { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1px solid transparent; box-sizing: border-box; flex-shrink: 0; }
@@ -704,7 +713,10 @@
   </div>
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
     <div id="archiveDateErrMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">Ongeldige datum</div>
-    <input id="archiveSearch" type="text" placeholder="Club, baan, speler of datum..." oninput="loadSaved()" onblur="archiveSearchBlur()">
+    <div style="position:relative">
+      <input id="archiveSearch" type="text" placeholder="Club, baan, speler, notitie, datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
+      <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', loadSaved)" title="Wissen">&times;</button>
+    </div>
   </div>
   <input type="file" id="importRoundFile" accept=".json" style="display:none" onchange="importRound(this)">
   <div id="archiveEmptyMsg" class="info-msg hidden" style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:8px">Geen rondes</div>
@@ -725,7 +737,10 @@
     <button id="clubSearchBtn" class="btn-secondary" style="padding:8px 14px" onclick="var w=document.getElementById('clubSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('clubSearch').focus();else{document.getElementById('clubSearch').value='';buildClubList();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="clubSearchWrap" style="margin-bottom:14px">
-    <input id="clubSearch" type="text" placeholder="Club..." oninput="buildClubList()">
+    <div style="position:relative">
+      <input id="clubSearch" type="text" placeholder="Club" oninput="buildClubList()" style="padding-right:40px">
+      <button id="clubSearchClear" class="search-clear hidden" onclick="clearSearchField('clubSearch', buildClubList)" title="Wissen">&times;</button>
+    </div>
   </div>
   <div id="clubListEmptyMsg" class="hidden"></div>
   <div id="clubList" style="display:flex;flex-direction:column;gap:0"></div>
@@ -772,6 +787,24 @@
         <div style="font-size:17px;color:var(--muted)">Traditionele rondjes/vierkantjes om het cijfer op het Score-tabblad (birdie/eagle = rond, bogey/dubbel = vierkant)</div>
       </div>
       <label class="switch"><input type="checkbox" id="scorecardSymbolsToggle" onchange="toggleScorecardSymbols()"><span class="slider"></span></label>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Tik op grafiek springt naar ronde</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: een tik op de handicapgrafiek (Statistieken) springt naar de bijbehorende ronde in het Archief.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="chartJumpToggle" onchange="toggleChartJump()"><span class="slider"></span></label>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Handicap-groep altijd uitgeklapt</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: de Handicap-groep op Statistieken start altijd uitgeklapt; inklappen geldt dan per sessie. Uit: de stand wordt onthouden, net als bij de andere groepen.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="handicapAlwaysToggle" onchange="toggleHandicapAlways()"><span class="slider"></span></label>
     </div>
   </div>
 
@@ -922,9 +955,10 @@
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:10px">Symbolen</div>
-    <div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
+    <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:0 0 8px">WHS</div><div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
       <span class="tee-badge badge-q" style="justify-self:center">Q</span><span style="justify-self:start">Qualifying-ronde</span>
-      <span class="tee-badge badge-whs" style="justify-self:center">WHS</span><span style="justify-self:start">Telt mee in je laatste 20</span>
+      <span class="tee-badge badge-whs" style="justify-self:center">1</span><span style="justify-self:start">Beste 8 van laatste 20 (1 = oudste)</span>
+      <span class="tee-badge badge-lowhi" style="justify-self:center">L</span><span style="justify-self:start">Ronde die je Low HI opleverde</span>
       <span style="font-size:24px;font-weight:900;line-height:1">≈</span><span style="justify-self:start">Voorlopig/geschat dagresultaat</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="justify-self:start">Dagresultaat niet vastgesteld</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span style="justify-self:start">Dagresultaat vastgesteld</span>
@@ -934,7 +968,12 @@
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"/><line x1="12" y1="19" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg><span style="justify-self:start">Softcap toegepast</span>
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="4" x2="19" y2="4"/><line x1="5" y1="8" x2="19" y2="8"/><line x1="12" y1="19" x2="12" y2="12"/><polyline points="8 16 12 12 16 16"/></svg><span style="justify-self:start">Hardcap toegepast</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg><span style="justify-self:start">ESR toegepast</span>
+    </div>
+    <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:14px 0 8px">Overige symbolen</div><div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--white)" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg><span style="justify-self:start">Thuisclub</span>
+      <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6" y="3" width="8" height="14" rx="1" fill="var(--green-light)"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, laatste 2 jaar</span>
+      <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6.75" y="3.75" width="6.5" height="12.5" rx="1" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, ouder dan 2 jaar</span>
+    
     </div>
   </div>
   </div>
@@ -955,7 +994,9 @@
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in Archief</div>
-    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam. Voeg een <b>@</b> toe voor een datum: <b>8-8-2026</b> (exact), <b>8-2026</b> (hele maand), <b>2026</b> (heel jaar), of <b>8-8</b> (die dag, elk jaar). Met een <b>:</b> geef je een periode op, bv. <b>1-1-2026:30-6-2026</b>. Combineren kan: <b>heelsum@2026</b>. Zonder <b>@</b> wordt alles als gewone tekst gezocht.</div>
+    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">Volgorde: dag-maand(-jaar). <b>@8-8-2026</b> exact, <b>@8-2026</b> maand, <b>@2026</b> jaar, <b>@8-8</b> elk jaar. Periode: <b>@1-1-2026:30-6-2026</b>; open kant mag (<b>@2025:</b> of <b>@:2026</b>); <b>@8-8:15-8</b> geldt voor elk jaar. Combineren: <b>heelsum@2026</b>.</div>
   </div>
 
   </div>
@@ -2099,6 +2140,7 @@ function buildRoundEntry() {
     playedCount: played.length, holesCount: game.holes.length,
     currentHole, started: true,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
+    note: game.note || undefined,
     holes: game.holes.map(h => ({ ...h })),
   };
 }
@@ -3653,7 +3695,11 @@ function renderPlayerStats() {
   const periodBar = `<div style="display:flex;gap:6px">`
     + periodBtn('Laatste 20', 'l20') + periodBtn('12 maanden', 'jaar') + periodBtn('Alles', 'alles')
     + `</div>`;
-  const whs = whsHandicap(last20, effectiveLowHi(player, all), esrMapFor(player, all));
+  // Eén keer berekenen en hergebruiken (ook in de Vooruitblik verderop) — beide
+  // functies scannen de volledige rondehistorie.
+  const lowHiEff = effectiveLowHi(player, all);
+  const esrMapStats = esrMapFor(player, all);
+  const whs = whsHandicap(last20, lowHiEff, esrMapStats);
   const bestSd = validSd.length ? Math.min(...validSd) : null;
   const avgSd  = validSd.length ? validSd.reduce((s, x) => s + x, 0) / validSd.length : null;
   const sdKpiWarning = rounds.some(r => { const e = effectiveSD(r); return e && e.value != null && roundHasWarning(r); });
@@ -3768,6 +3814,50 @@ function renderPlayerStats() {
     + newLowBanner
     + `</div>`;
 
+  // ── Vooruitblik: wat gebeurt er bij je volgende qualifying ronde? ──
+  // Bij een vol venster (20) duwt elke nieuwe qualifying ronde de oudste eruit. Valt
+  // daarbij een meetellende (beste 8) ronde weg, dan kan de hcp stijgen — hier wordt
+  // het slechtste geval doorgerekend met exact dezelfde whsHandicap-logica (staffel,
+  // ESR, soft-/hardcap) als de officiële hcp, via een fictieve 'heel slechte' nieuwe
+  // ronde die gegarandeerd buiten de beste 8 valt. De drempel is de 8e-beste
+  // (esr-gecorrigeerde) SD van de overblijvende 19: alleen een nieuw dagresultaat
+  // dat dáár strikt onder ligt, neemt de vrijgekomen plek in de beste 8 over (bij
+  // gelijke SD's wint de oudste ronde, dus precies gelijkspelen is niet genoeg).
+  const vooruitblikBody = (() => {
+    if (!last20.length) return '';
+    let body = '';
+    if (last20.length < 20) {
+      body = `<div style="font-size:17px;color:var(--muted)">Je venster is nog niet vol (${last20.length} van 20) — er valt nog niets uit.</div>`;
+    } else {
+      const oldest = last20[last20.length - 1]; // last20 is nieuwste-eerst
+      const oldestLabel = `de ronde op <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
+      const counts = whs && whs.usedIds.has(oldest.id);
+      if (!counts) {
+        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} uit je laatste 20. Die telt niet mee — je hcp verandert niet.</div>`;
+      } else {
+        const remaining = last20.slice(0, last20.length - 1);
+        const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
+        const scenario = whsHandicap([dummy, ...remaining], lowHiEff, esrMapStats);
+        const remSds = remaining
+          .map(r => { const e = effectiveSD(r); return e == null ? null : e.value + (esrMapStats ? (esrMapStats.get(r.id) || 0) : 0); })
+          .filter(v => v != null)
+          .sort((a, b) => a - b);
+        const threshold = remSds.length >= 8 ? remSds[7] : null;
+        let scenarioLine = '';
+        if (scenario && whs) {
+          const delta = Math.round((scenario.value - whs.value) * 10) / 10;
+          if (delta > 0) {
+            scenarioLine = ` Speel je ${threshold != null ? `geen dagresultaat onder <b>${fmt1(threshold)}</b>` : 'geen voldoende goed dagresultaat'}, dan gaat je hcp naar <span style="color:var(--orange);font-weight:700">${fmt1(scenario.value)} (+${fmt1(delta)})</span>.`;
+          } else {
+            scenarioLine = ` Je hcp blijft dan <b>${fmt1(scenario.value)}</b>.`;
+          }
+        }
+        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} <span class="tee-badge badge-whs">1</span> uit je laatste 20.${scenarioLine}</div>`;
+      }
+    }
+    return body;
+  })();
+
   // ══ WAT ALS...? ═══════════════════════════════════════════════════════
   // Simuleert het effect van een hypothetische extra ronde op de handicap, zonder ook
   // maar iets op te slaan — hergebruikt exact hetzelfde berekeningspad (whsHandicap +
@@ -3775,14 +3865,29 @@ function renderPlayerStats() {
   // alleen-in-het-geheugen ronde toegevoegd. Caps en ESR tellen dus gewoon mee in de
   // uitkomst (net als in het echt), en worden met een klein icoontje gesignaleerd als ze
   // een rol speelden — zonder verdere uitleg, dat zou de kaart te druk maken.
+  // Inklapbare kaart (standaard ingeklapt, net als de andere inklap-categorieën);
+  // de toestand leeft alleen in het geheugen en geldt per sessie. De Vooruitblik is
+  // hierin opgenomen als tweede groene sectie — beide beantwoorden dezelfde vraag
+  // ('wat doet mijn volgende ronde met mijn hcp?'), alleen vanuit een andere hoek.
+  const watIfCollapsed = window._watIfCollapsed !== false; // afwezig = ingeklapt
+  const watIfSubHead = (txt) => `<div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:14px 0 4px">${txt}</div>`;
   const watIfCard = `<div class="card" id="watIfCard">`
-    + `<h2>Wat als...?</h2>`
-    + `<div class="fg" style="margin-bottom:0">`
-    + `<label>Fictief volgend dagresultaat</label>`
-    + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>`
-    + `<input id="watIfInput" type="text" inputmode="decimal" placeholder="bijv. 18.4" oninput="onWatIfInput(this)">`
+    + `<div style="display:flex;align-items:center;cursor:pointer;line-height:1" onclick="toggleWatIfCard()">`
+    + `<h2 style="margin:0;flex:1">Wat als...?</h2>`
+    + `<span style="font-size:14px;color:var(--green-light);transition:transform .2s;display:inline-block${watIfCollapsed ? '' : ';transform:rotate(90deg)'}">▶</span>`
     + `</div>`
-    + `<div id="watIfResult" style="margin-top:10px"></div>`
+    + (watIfCollapsed ? '' :
+      watIfSubHead('Fictief dagresultaat')
+      + `<div class="fg" style="margin-bottom:0">`
+      + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>`
+      + `<div style="position:relative">`
+      + `<input id="watIfInput" type="text" inputmode="decimal" placeholder="bijv. 18.4" oninput="onWatIfInput(this)" style="padding-right:40px">`
+      + `<button id="watIfClear" class="search-clear hidden" onclick="clearSearchField('watIfInput', watIfClearRefresh)" title="Wissen">&times;</button>`
+      + `</div>`
+      + `</div>`
+      + `<div id="watIfResult" style="margin-top:10px"></div>`
+      + watIfSubHead('Vooruitblik')
+      + vooruitblikBody)
     + `</div>`;
 
   // Scoreverdeling over alle qualifying holes
@@ -4356,14 +4461,10 @@ function renderPlayerStats() {
   }).join('');
   const anyClubWarning = Object.values(byClub).some(tracks => Object.values(tracks).some(arr => arr.some(roundHasWarning)));
   const clubCount = Object.keys(byClub).length;
-  const subCollapsed = window._statCardCollapsed['card_club_sub'] !== false; // standaard ingeklapt
-  const subHeader = `<div onclick="window._statCardCollapsed['card_club_sub']=window._statCardCollapsed['card_club_sub']===false?true:false;renderPlayerStats()" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:8px">`
-    + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Banen en tees per club${anyClubWarning ? warningIconSmall : ''}</span>`
-    + `<span style="font-size:15px;color:var(--muted)">${clubCount}</span>`
-    + `<span style="display:inline-block;font-size:15px;transform:rotate(${subCollapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
+  // De vroegere interne inklapkop ("Banen en tees per club") is vervangen door de
+  // Banen & tees-hoofdgroep eromheen; binnen de kaart staan de clubblokken dus altijd.
   const trackCard = clubBlocks
-    ? `<div class="card">${cardHeadStatic('Club, baan &amp; tees')}${trackPerfSentence}${subHeader}`
-      + `${subCollapsed ? '' : clubBlocks}</div>`
+    ? `<div class="card">${cardHeadStatic('Beste baan en beste tee')}${trackPerfSentence}${cardHeadStatic('Banen en tees per club')}${clubBlocks}</div>`
     : '';
 
   // Vorm & consistentie
@@ -4430,10 +4531,171 @@ function renderPlayerStats() {
   const lowHiDateLine = lowHiDateRound
     ? `<div style="font-size:14px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px;margin-bottom:8px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
     : '';
-  el.innerHTML = kpiRow + watIfCard + stickyPeriodBar + `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0">Dagresultaat en handicapverloop</h2>${lowHiToggleBtn}</div>${lowHiDateLine}<div id="sdChart"></div><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+  // ── Drie inklapbare hoofdgroepen (stand in storage, blijft dus staan tussen
+  // sessies; standaard: Handicap open, Prestaties en Banen & tees dicht). De
+  // KPI-regel blijft altijd zichtbaar, buiten de groepen. De inklap ván de Wat
+  // als-kaart en de legenda-uitklapper binnenin blijven bewust per sessie.
+  const grpOpen = key => {
+    // Instelling 'Handicap-groep altijd uitgeklapt' (standaard aan): dan start de
+    // Handicap-groep elke keer open en geldt inklappen alleen voor de sessie —
+    // zo doen de periodeknoppen altijd zichtbaar iets. Staat de instelling uit,
+    // dan wordt de stand onthouden zoals bij de andere groepen.
+    if (key === 'handicap' && handicapAlwaysOpen()) {
+      return window._grpHandicapOpen !== false; // sessie: standaard open
+    }
+    const v = storage.getItem('golf_stats_grp_' + key);
+    return v == null ? key === 'handicap' : v === 'open';
+  };
+  const grpHeader = (key, title, extra = '') => {
+    const open = grpOpen(key);
+    return `<div onclick="toggleStatsGroup('${key}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin:10px 2px 4px">`
+      + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">${title}</span>`
+      + extra
+      + `<span style="display:inline-block;font-size:15px;transform:rotate(${open ? 90 : 0}deg);transition:transform .15s">▶</span></div>`;
+  };
+  // ── EXPERIMENT: controlekaart voor de dagresultaten (zonder cap) ──
+  // XmR-opzet (zoals de Trends-app voor dagelijkse metingen): centerlijn x̄, limieten
+  // x̄ ± 2,66·mR̄ (3σ-equivalent, rood gestippeld) en ± 1,77·mR̄ (2σ-equivalent,
+  // oranje), met mR̄ = gemiddelde absolute verschil tussen opeenvolgende punten.
+  // Aggregatie per periode: laatste 20 = losse rondes, 12 maanden = per maand,
+  // alles = per kwartaal; lege buckets geven lijnbreuk en een leeg plekje (zoals
+  // Trends), mR̄ loopt over de gevulde buckets. Signalering: buiten 3σ = rood;
+  // run-regels = oranje (8 opeenvolgende punten aan één kant van x̄, of 2 van 3
+  // voorbij 2σ aan dezelfde kant — punten exact op x̄ breken een run). Dunne
+  // buckets (1 ronde) krijgen een kleiner stipje; onder 10 punten zijn de
+  // limieten indicatief (melding onder de kaart). Tik op een punt voor details.
+  // Staat bewust helemaal onderaan, buiten de groepen — plek volgt na beoordeling.
+  const controlChartInner = (() => {
+    const pairs = periodRounds.map((r, i) => ({ date: (r && r.date) || null, time: (r && r.time) || '', v: sdView[i] }))
+      .filter(p => p.v != null && p.date);
+    const aggMode = period === 'l20' ? 'ronde' : (period === 'jaar' ? 'maand' : 'kwartaal');
+    const maandNamen = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+    const dmOf = d => `${+d.slice(8, 10)}-${+d.slice(5, 7)}`;
+    // Buckets: { v, n, label, jaarStart } — v null = leeg (lijnbreuk + leeg plekje)
+    let buckets = [];
+    if (aggMode === 'ronde') {
+      buckets = pairs.map(p => ({ v: p.v, n: 1, label: dmOf(p.date) + '-' + p.date.slice(0, 4), tijd: p.time, jaarStart: null }));
+    } else if (pairs.length) {
+      const perY = aggMode === 'maand' ? 12 : 4;
+      const keyOf = d => {
+        const y = +d.slice(0, 4), m = +d.slice(5, 7);
+        return aggMode === 'maand' ? y * 12 + (m - 1) : y * 4 + Math.floor((m - 1) / 3);
+      };
+      const sums = new Map();
+      pairs.forEach(p => {
+        const k = keyOf(p.date);
+        if (!sums.has(k)) sums.set(k, { s: 0, n: 0 });
+        const b = sums.get(k); b.s += p.v; b.n++;
+      });
+      const keys = [...sums.keys()];
+      const kMin = Math.min(...keys), kMax = Math.max(...keys);
+      for (let k = kMin; k <= kMax; k++) {
+        const b = sums.get(k);
+        const label = aggMode === 'maand'
+          ? `${maandNamen[k % 12]} ${Math.floor(k / 12)}`
+          : `Q${(k % 4) + 1} ${Math.floor(k / 4)}`;
+        buckets.push({ v: b ? b.s / b.n : null, n: b ? b.n : 0, label, jaarStart: (k % perY === 0) ? String(Math.floor(k / perY)) : null });
+      }
+    }
+    const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
+    const filled = filledIdx.map(i => buckets[i].v);
+    const inner = (() => {
+      if (filled.length < 2) return `<div style="font-size:17px;color:var(--muted)">Te weinig rondes in deze periode voor een controlekaart.</div>`;
+      const n = filled.length;
+      const mean = filled.reduce((s, v) => s + v, 0) / n;
+      const sdInfo = Math.sqrt(filled.reduce((s, v) => s + (v - mean) * (v - mean), 0) / (n - 1));
+      let mrSum = 0;
+      for (let i = 1; i < filled.length; i++) mrSum += Math.abs(filled[i] - filled[i - 1]);
+      const mrBar = mrSum / (filled.length - 1);
+      const lim3 = 2.66 * mrBar, lim2 = 1.77 * mrBar;
+      // Signalering per gevuld punt: 0 = normaal, 1 = oranje (run-regel), 2 = rood (buiten 3σ)
+      const flags = filled.map(v => Math.abs(v - mean) > lim3 ? 2 : 0);
+      // Run-regel 1: 8 opeenvolgende punten aan één kant van x̄ (exact x̄ breekt de run)
+      let side = 0, runLen = 0, runStart = 0;
+      for (let i = 0; i < filled.length; i++) {
+        const s = Math.sign(filled[i] - mean);
+        if (s !== 0 && s === side) runLen++;
+        else { side = s; runLen = s === 0 ? 0 : 1; runStart = i; }
+        if (runLen >= 8) for (let j = runStart; j <= i; j++) if (flags[j] < 1) flags[j] = 1;
+      }
+      // Run-regel 2: 2 van 3 opeenvolgende punten voorbij 2σ aan dezelfde kant
+      for (let i = 2; i < filled.length; i++) {
+        [1, -1].forEach(sgn => {
+          const beyond = [i - 2, i - 1, i].filter(j => sgn * (filled[j] - mean) > lim2);
+          if (beyond.length >= 2) beyond.forEach(j => { if (flags[j] < 1) flags[j] = 1; });
+        });
+      }
+      const w = 320, h = 184, padL = 34, padR = 8, padT = 10, padB = 26;
+      const chartBottom = h - padB;
+      const lo = Math.min(mean - lim3, ...filled), hi = Math.max(mean + lim3, ...filled);
+      const span = (hi - lo) || 1;
+      const m = buckets.length;
+      const xOf = i => padL + (m === 1 ? 0 : i * (w - padL - padR) / (m - 1));
+      const yOf = v => padT + (hi - v) / span * (chartBottom - padT);
+      const limOpacity = n < 10 ? '.55' : '1';
+      const limLine = (v, color) => `<line x1="${padL}" y1="${yOf(v).toFixed(1)}" x2="${w - padR}" y2="${yOf(v).toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 3" opacity="${limOpacity}"/>`;
+      const labelFor = (v, txt) => `<text x="2" y="${(yOf(v) + 4).toFixed(1)}" font-size="10" fill="var(--muted)">${txt}</text>`;
+      let svg = limLine(mean + lim3, 'var(--red)') + limLine(mean - lim3, 'var(--red)')
+        + limLine(mean + lim2, 'var(--orange)') + limLine(mean - lim2, 'var(--orange)')
+        + `<line x1="${padL}" y1="${yOf(mean).toFixed(1)}" x2="${w - padR}" y2="${yOf(mean).toFixed(1)}" stroke="var(--gold)" stroke-width="1.5"/>`
+        + labelFor(mean + lim3, '+3σ') + labelFor(mean + lim2, '+2σ') + labelFor(mean, 'x̄')
+        + labelFor(mean - lim2, '-2σ') + labelFor(mean - lim3, '-3σ');
+      // X-as-labels: bij aggregatie de jaargrenzen (jan / Q1); zonder jaargrens in
+      // beeld, en bij losse rondes, alleen het eerste en laatste punt.
+      const axisY = h - 4;
+      const axisText = (i, txt, anchor) => `<text x="${xOf(i).toFixed(1)}" y="${axisY}" font-size="10" fill="var(--muted)" text-anchor="${anchor}">${txt}</text>`;
+      if (aggMode === 'ronde') {
+        svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
+      } else {
+        const jaarIdx = buckets.map((b, i) => b.jaarStart ? i : null).filter(i => i != null);
+        if (jaarIdx.length) {
+          jaarIdx.forEach(i => { svg += axisText(i, buckets[i].jaarStart, i === 0 ? 'start' : (i === m - 1 ? 'end' : 'middle')); });
+        } else {
+          svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
+        }
+      }
+      // Lijn met breuken: alleen segmenten tussen direct opeenvolgende gevulde buckets
+      let d = '', prevFilled = false;
+      buckets.forEach((b, i) => {
+        if (b.v == null) { prevFilled = false; return; }
+        d += `${prevFilled ? 'L' : 'M'}${xOf(i).toFixed(1)} ${yOf(b.v).toFixed(1)} `;
+        prevFilled = true;
+      });
+      svg += `<path d="${d.trim()}" fill="none" stroke="var(--green-light)" stroke-width="1.5" opacity=".8"/>`;
+      // Punten + tik-vlakken; dunne buckets (1 ronde bij aggregatie) een kleiner stipje
+      window._ccData = [];
+      const slotHalf = m > 1 ? (w - padL - padR) / (m - 1) / 2 : (w - padL - padR) / 2;
+      filledIdx.forEach((bi, fi) => {
+        const b = buckets[bi];
+        const flag = flags[fi];
+        const dun = aggMode !== 'ronde' && b.n === 1;
+        const r = flag === 2 ? 4 : (flag === 1 ? 3.5 : (dun ? 1.7 : 2.5));
+        const kleur = flag === 2 ? 'var(--red)' : (flag === 1 ? 'var(--orange)' : 'var(--green-light)');
+        svg += `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
+        window._ccData.push(aggMode === 'ronde'
+          ? `Ronde <b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · dagresultaat <b>${fmt1(b.v)}</b>`
+          : `<b>${b.label}</b>: gem. <b>${fmt1(b.v)}</b> · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
+        svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
+      });
+      const aggLabel = aggMode === 'ronde' ? 'per ronde' : (aggMode === 'maand' ? 'per maand' : 'per kwartaal');
+      const stats = `<div style="font-size:15px;color:var(--muted);margin-bottom:4px">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}&nbsp;&nbsp;·&nbsp;&nbsp;${aggLabel}</div>`;
+      const detail = `<div id="ccDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
+      const indicatief = n < 10 ? `<div style="font-size:15px;color:var(--muted);margin-top:2px">Limieten zijn indicatief bij minder dan 10 punten.</div>` : '';
+      return stats + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg>` + detail + indicatief;
+    })();
+    return inner;
+  })();
+  el.innerHTML = kpiRow
+    + stickyPeriodBar
+    + grpHeader('handicap', 'Handicap')
+    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Controlekaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-7px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
-        return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span>`;
-      })() : ''}</div></div>` + distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard + trackCard;
+        return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
+      })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
+    + grpHeader('prestaties', 'Prestaties')
+    + (grpOpen('prestaties') ? distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
+    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--muted)">${clubCount}</span>`)
+    + (grpOpen('banen') ? trackCard : '');
 
   // Grafiek tekenen (na invoegen in DOM)
   // Low HI voor de grafiek: handmatig heeft voorrang (net als overal elders), maar dan is
@@ -4441,6 +4703,7 @@ function renderPlayerStats() {
   // de afgeleide waarde. Blijft vanzelf leeg zolang er nog geen 20 rondes zijn (zie
   // derivedLowHiDetailed) of als de gebruiker dit zelf heeft uitgezet.
   renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)), lowHiGraphEnabled() ? lowHiDetailForGraph : null);
+  initSdSwipe();
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
@@ -4614,6 +4877,19 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     };
     lowHiBadges = badge(yLow, low, 'var(--purple, #9b7fd4)') + badge(ySoft, soft, 'var(--orange)') + badge(yHard, hard, 'var(--red)');
   }
+  // Paars driehoekje net boven de 'laatste 20'-balk dat omhoog wijst naar de ronde die
+  // de Low HI opleverde (het punt zelf viel visueel weg tussen de andere markeringen).
+  // Alleen bij een uit de historie afgeleide Low HI: een handmatig ingevulde Low HI
+  // heeft geen ronde om aan te wijzen (roundId is dan null). Valt de ronde buiten de
+  // getoonde periode, dan is er niets om aan te wijzen en blijft het driehoekje weg.
+  let lowHiMarker = '';
+  if (lowHiDetail && lowHiDetail.roundId != null && periodRoundsView) {
+    const mIdx = periodRoundsView.findIndex(r => r && r.id === lowHiDetail.roundId);
+    if (mIdx !== -1) {
+      const mx = xOf(mIdx);
+      lowHiMarker = `<polygon points="${(mx - 4.5).toFixed(1)},136 ${(mx + 4.5).toFixed(1)},136 ${mx.toFixed(1)},129" fill="var(--purple, #9b7fd4)"/>`;
+    }
+  }
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
     + yTicks
     + lowHiLine
@@ -4627,7 +4903,323 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     + capIconsOf(capTypeSeries)
     + esrIconsOf()
     + lowHiBadges
+    + lowHiMarker
     + `</svg>`;
+  // Tik op de grafiek: spring naar de bijbehorende ronde in het archief. De tik hoeft
+  // het stipje niet precies te raken — de ronde die op x-positie het dichtstbij ligt
+  // wint, dus ook een tik ernaast of erboven komt goed terecht. Alleen actief als de
+  // schakelaar 'Tik op grafiek springt naar ronde' (Instellingen > Weergave) aanstaat.
+  const svgEl = host.querySelector('svg');
+  if (svgEl && periodRoundsView && periodRoundsView.length && chartJumpEnabled()) {
+    svgEl.style.cursor = 'pointer';
+    svgEl.onclick = ev => {
+      const rect = svgEl.getBoundingClientRect();
+      if (!rect.width) return;
+      const vx = (ev.clientX - rect.left) / rect.width * w;
+      let best = null, bestDist = Infinity;
+      for (let i = 0; i < n; i++) {
+        const dist = Math.abs(xOf(i) - vx);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+      }
+      const roundId = best != null ? periodRoundsView[best]?.id : null;
+      if (roundId != null) jumpToArchiveRound(roundId);
+    };
+  }
+}
+
+// Vanuit de grafiek naar een ronde in het archief springen. Groepering, zoekfilter en
+// lazy-limiet worden gereset zodat de kaart gegarandeerd in de platte lijst staat,
+// wat er in het archief ook aan stond; daarna scrollen naar de kaart en die kort
+// goud laten oplichten.
+function jumpToArchiveRound(roundId) {
+  window._groupByPlayer = false;
+  window._groupByCategory = false;
+  window._groupByTrack = false;
+  window._groupByWhs = false;
+  window._forceShowPlanned = false;
+  window._pgCollapsed = {};
+  window._pgYearCollapsed = {};
+  ['groupByPlayerBtn', 'groupByCategoryBtn', 'groupByTrackBtn', 'groupByWhsBtn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.background = ''; b.style.color = ''; }
+  });
+  const inp = document.getElementById('archiveSearch');
+  if (inp) inp.value = '';
+  const wrap = document.getElementById('archiveSearchWrap');
+  if (wrap) wrap.classList.add('hidden');
+  const sBtn = document.getElementById('archiveSearchBtn');
+  if (sBtn) { sBtn.style.background = ''; sBtn.style.color = ''; }
+  // Lazy-limiet precies hoog genoeg zetten om de doelronde te renderen: positie van de
+  // ronde in de platte lijst (zelfde datum-nieuw→oud-sortering), afgerond omhoog naar
+  // een veelvoud van de paginagrootte (50, gelijk aan FLAT_LIST_PAGE_SIZE in loadSaved)
+  // zodat de 'Toon meer'-paginering netjes blijft kloppen. Zo blijft de sprong ook bij
+  // een groot archief snel, i.p.v. in één keer álles te renderen.
+  {
+    const all = loadSavedRounds();
+    const sortKey = r => (r.date || '') + (r.time || '');
+    const sorted = [...all].sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+    const pos = sorted.findIndex(r => r.id === roundId);
+    const PAGE = 50;
+    window._flatListLimit = pos === -1 ? all.length : Math.ceil((pos + 1) / PAGE) * PAGE;
+  }
+  window._flatListLastQuery = '';
+  nav('archive');
+  loadSaved();
+  setTimeout(() => {
+    const card = document.getElementById(`round-full-${roundId}`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'auto', block: 'center' });
+    card.classList.add('round-flash');
+    setTimeout(() => card.classList.remove('round-flash'), 1700);
+  }, 60);
+}
+
+// Detailregel onder de controlekaart: toont het aangetikte punt (window._ccData
+// wordt bij elke render van de kaart opnieuw gevuld).
+function ccShowPoint(idx) {
+  const el = document.getElementById('ccDetail');
+  const d = window._ccData && window._ccData[idx];
+  if (el && d) el.innerHTML = d;
+}
+
+// Wisselen tussen verloopgrafiek en controlekaart binnen dezelfde kaart (zoals de
+// Trends-app): via swipe of via de driehoekjes-hints (klikbaar, voor de laptop).
+// Sessie-toestand in window._sdChartView; het Low HI-oogje hoort alleen bij de
+// verloopgrafiek en gaat in de controle-weergave mee verborgen.
+function ccSwapView() {
+  const a = document.getElementById('sdViewVerloop');
+  const b = document.getElementById('sdViewControle');
+  if (!a || !b) return;
+  const naarControle = !a.classList.contains('hidden');
+  a.classList.toggle('hidden', naarControle);
+  b.classList.toggle('hidden', !naarControle);
+  window._sdChartView = naarControle ? 'controle' : 'verloop';
+  const title = document.getElementById('sdChartTitle');
+  if (title) title.textContent = naarControle ? 'Controlekaart dagresultaat' : 'Dagresultaat en handicapverloop';
+  const oogWrap = document.getElementById('sdLowHiBtnWrap');
+  if (oogWrap) oogWrap.classList.toggle('hidden', naarControle);
+}
+// Horizontale swipe op de grafiekzone detecteren (ruime marge zodat verticaal
+// scrollen niet per ongeluk wisselt).
+function initSdSwipe() {
+  const wrap = document.getElementById('sdSwipeWrap');
+  if (!wrap) return;
+  wrap.ontouchstart = e => { window._sdSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  wrap.ontouchend = e => {
+    const t = window._sdSwipe; window._sdSwipe = null;
+    if (!t || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - t.x;
+    const dy = e.changedTouches[0].clientY - t.y;
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 60) ccSwapView();
+  };
+}
+
+// In-/uitklappen van de Wat als-kaart op Statistieken (sessie-toestand, geen storage).
+function toggleWatIfCard() {
+  window._watIfCollapsed = window._watIfCollapsed === false; // false (open) -> true, anders -> false
+  renderPlayerStats();
+}
+
+// In-/uitklappen van de drie hoofdgroepen op Statistieken; stand in storage zodat
+// de eigen indeling tussen sessies blijft staan. Standaard alleen Handicap open.
+function toggleStatsGroup(key) {
+  if (key === 'handicap' && handicapAlwaysOpen()) {
+    window._grpHandicapOpen = window._grpHandicapOpen === false; // sessie-toestand
+    renderPlayerStats();
+    return;
+  }
+  const v = storage.getItem('golf_stats_grp_' + key);
+  const open = v == null ? key === 'handicap' : v === 'open';
+  storage.setItem('golf_stats_grp_' + key, open ? 'closed' : 'open');
+  renderPlayerStats();
+}
+
+// Refresh voor het wisknopje van het Wat als-veld: resultaat en meldingen bijwerken.
+function watIfClearRefresh() {
+  const inp = document.getElementById('watIfInput');
+  if (inp) onWatIfInput(inp);
+}
+
+// ── Baananalyse (Club-tab): per-hole-analyse onder een baanrij ──
+// Aggregeert alle afgeronde rondes van de hoofdspeler op één baan tot een
+// per-hole-overzicht, gesplitst in 'nu' (laatste 2 jaar) en 'toen' (alles
+// daarvoor) zodat je ziet of het beeld nog actueel is — ook bij 1 of 2 rondes
+// wil je weten in welke bucket ze vallen, dus er is geen minimum. Holes worden
+// gematcht op hun id binnen de baan; de afwijking wordt per ronde tegen de par
+// van tóén gerekend (label toont de par uit de nieuwste ronde). Qualifying én
+// niet-qualifying tellen mee: dit gaat om baankennis, niet om WHS.
+function courseAnalysisData(club, track) {
+  const player = startPlayerName();
+  if (!player) return null;
+  const isDoneCa = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const rs = loadSavedRounds()
+    .filter(r => r.player === player && isDoneCa(r) && r.club === club && r.track === track && Array.isArray(r.holes) && r.holes.length)
+    .sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || ''))); // nieuwste eerst
+  if (!rs.length) return null;
+  const cut = new Date();
+  cut.setFullYear(cut.getFullYear() - 2);
+  const cutIso = `${cut.getFullYear()}-${String(cut.getMonth() + 1).padStart(2, '0')}-${String(cut.getDate()).padStart(2, '0')}`;
+  const leeg = () => ({ sumDiff: 0, sum: 0, n: 0, best: Infinity, worst: -Infinity });
+  const agg = new Map();
+  rs.forEach(r => {
+    const recent = (r.date || '') >= cutIso;
+    r.holes.forEach((h, i) => {
+      if (h.score == null || h.par == null) return;
+      if (!agg.has(h.id)) agg.set(h.id, { id: h.id, par: h.par, order: i, nu: leeg(), toen: leeg() });
+      const kant = recent ? agg.get(h.id).nu : agg.get(h.id).toen;
+      kant.sumDiff += h.score - h.par;
+      kant.sum += h.score; kant.n++;
+      if (h.score < kant.best) kant.best = h.score;
+      if (h.score > kant.worst) kant.worst = h.score;
+    });
+  });
+  const holesCa = [...agg.values()].sort((a, b) => a.order - b.order).filter(h => h.nu.n + h.toen.n > 0);
+  return holesCa.length ? { holes: holesCa } : null;
+}
+
+// SVG-staafjes per hole in rijen van maximaal 9. Bij splitsing twee smalle
+// staafjes per hole: 'toen' links als niet-gevulde (omlijnde) balk, 'nu' rechts gevuld.
+// Zit alle data van een hole aan één kant, dan alleen dát staafje op volle
+// breedte (visueel duidelijker dan een half leeg paar) — omlijnd als het de
+// toen-kant is.
+function courseAnalysisSvg(caData, blockId) {
+  const holesCa = caData.holes;
+  const avgOf = k => k.n ? k.sumDiff / k.n : null;
+  const alleAvgs = [];
+  holesCa.forEach(h => { [avgOf(h.nu), avgOf(h.toen)].forEach(a => { if (a != null) alleAvgs.push(Math.abs(a)); }); });
+  const maxAbs = Math.max(1, ...alleAvgs);
+  const rows = [];
+  for (let s = 0; s < holesCa.length; s += 9) rows.push(holesCa.slice(s, s + 9));
+  return rows.map((row, ri) => {
+    const startIdx = ri * 9;
+    const w = 320, h = 84, base = 38, maxBar = 26, slotW = w / 9;
+    let out = `<line x1="0" y1="${base}" x2="${w}" y2="${base}" stroke="var(--muted)" stroke-width="1" opacity=".5"/>`;
+    // open = 'toen' (ouder dan 2 jaar): niet-gevulde balk met alleen een omlijning;
+    // gevuld = laatste 2 jaar. De omlijning ligt 0,75 naar binnen zodat de buitenmaat
+    // gelijk blijft aan die van een gevulde balk.
+    const barRect = (x, breedte, avgDiff, open) => {
+      if (Math.abs(avgDiff) < 0.05) {
+        return open
+          ? `<rect x="${x.toFixed(1)}" y="${base - 1.5}" width="${breedte}" height="3" fill="none" stroke="var(--muted)" stroke-width="1" rx="1"/>`
+          : `<rect x="${x.toFixed(1)}" y="${base - 1}" width="${breedte}" height="2" fill="var(--muted)"/>`;
+      }
+      const barH = Math.abs(avgDiff) / maxAbs * maxBar;
+      const kleur = avgDiff > 0 ? 'var(--red)' : 'var(--green-light)';
+      const y = avgDiff > 0 ? base - barH : base + 1;
+      if (open) {
+        return `<rect x="${(x + 0.75).toFixed(1)}" y="${(y + 0.75).toFixed(1)}" width="${(breedte - 1.5).toFixed(1)}" height="${Math.max(0.8, barH - 1.5).toFixed(1)}" fill="none" stroke="${kleur}" stroke-width="1.5" rx="1"/>`;
+      }
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${breedte}" height="${barH.toFixed(1)}" fill="${kleur}" rx="1"/>`;
+    };
+    row.forEach((hc, k) => {
+      const idx = startIdx + k;
+      const cx = k * slotW + slotW / 2;
+      const aNu = avgOf(hc.nu), aToen = avgOf(hc.toen);
+      if (aNu != null && aToen != null) {
+        out += barRect(cx - 9.5, 8.5, aToen, true);
+        out += barRect(cx + 1, 8.5, aNu, false);
+      } else {
+        out += barRect(cx - 9, 18, aNu != null ? aNu : aToen, aNu == null);
+      }
+      out += `<text x="${cx.toFixed(1)}" y="${h - 4}" font-size="11" fill="var(--muted)" text-anchor="middle">${escapeHtml(String(hc.id))}</text>`;
+      out += `<rect x="${(k * slotW).toFixed(1)}" y="0" width="${slotW.toFixed(1)}" height="${h}" fill="transparent" style="cursor:pointer" onclick="caShowHole('${blockId}', ${idx})"/>`;
+    });
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${out}</svg>`;
+  }).join('');
+}
+
+// Tik op het grafiek-icoontje achter een baan: analyse-blok direct onder de rij
+// uitklappen (nogmaals tikken klapt het weer in). stopPropagation overal, want de
+// omliggende banenlijst klapt zichzelf in bij een klik.
+function toggleCourseAnalysis(ev, club, track, btn) {
+  ev.stopPropagation();
+  const row = btn.closest('div');
+  if (!row) return;
+  const next = row.nextElementSibling;
+  if (next && next.classList.contains('ca-block')) {
+    const det = next.querySelector('[id^="caDetail_"]');
+    if (det && window._caBlocks) delete window._caBlocks[det.id.replace('caDetail_', '')];
+    next.remove();
+    return;
+  }
+  const data = courseAnalysisData(club, track);
+  if (!data) return;
+  const blockId = 'b' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+  window._caBlocks = window._caBlocks || {};
+  window._caBlocks[blockId] = data;
+  // Legenda-regeltje alleen als er echt twee kanten te zien zijn
+  const heeftToen = data.holes.some(h => h.toen.n > 0);
+  const heeftNu = data.holes.some(h => h.nu.n > 0);
+  const legenda = (heeftToen && heeftNu)
+    ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">omlijnd = ouder dan 2 jaar · gevuld = laatste 2 jaar</div>`
+    : (heeftToen && !heeftNu ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">alle rondes ouder dan 2 jaar</div>` : '');
+  row.insertAdjacentHTML('afterend',
+    `<div class="ca-block" onclick="event.stopPropagation()" style="padding:4px 0 4px 12px;border-left:2px solid rgba(255,255,255,.15);cursor:default">`
+    + courseAnalysisSvg(data, blockId)
+    + legenda
+    + `<div id="caDetail_${blockId}" style="font-size:15px;color:var(--muted);margin-top:2px;min-height:20px">Tik op een hole voor details.</div>`
+    + `</div>`);
+}
+function caShowHole(blockId, idx) {
+  const blok = window._caBlocks && window._caBlocks[blockId];
+  const d = blok && blok.holes && blok.holes[idx];
+  const el = document.getElementById('caDetail_' + blockId);
+  if (!d || !el) return;
+  const gem = k => fmt1(Math.round((k.sum / k.n) * 10) / 10);
+  const kop = `Hole <b>${escapeHtml(String(d.id))}</b> (par ${d.par}): `;
+  if (d.nu.n && d.toen.n) {
+    el.innerHTML = kop + `toen gem. <b>${gem(d.toen)}</b> (${d.toen.n}×) → nu gem. <b>${gem(d.nu)}</b> (${d.nu.n}×)`;
+    return;
+  }
+  const kant = d.nu.n ? d.nu : d.toen;
+  const suffix = d.nu.n ? ' (laatste 2 jaar)' : ' · ouder dan 2 jaar';
+  el.innerHTML = kop + `gem. <b>${gem(kant)}</b> · beste ${kant.best} · slechtste ${kant.worst} · ${kant.n}× gespeeld${suffix}`;
+}
+
+// ── Agenda-export (.ics) voor een geplande ronde ──
+// Eénrichtingsverkeer: maakt een los agenda-item aan via het deelmenu (of als
+// download); wijzigen/verwijderen gebeurt daarna in de agenda-app zelf. Tijden
+// als 'zwevende' lokale tijd (geen TZID/Z), zodat 14:30 ook 14:30 blijft.
+// Duur: 4u30 bij 18 holes, anders 2u30.
+async function exportRoundIcs(roundId) {
+  const r = loadSavedRounds().find(x => String(x.id) === String(roundId));
+  if (!r || !r.date) return;
+  const [hh, mm] = (r.time || '09:00').split(':').map(x => parseInt(x, 10) || 0);
+  const start = new Date(+r.date.slice(0, 4), +r.date.slice(5, 7) - 1, +r.date.slice(8, 10), hh, mm);
+  const duurMin = (r.holesCount ?? (r.holes || []).length) >= 18 ? 270 : 150;
+  const eind = new Date(start.getTime() + duurMin * 60000);
+  const fmtLocal = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
+  const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  // Eventtitel: korte clubnaam (indien ingesteld); LOCATION houdt de volledige naam
+  const clubKort = (typeof CLUBS === 'object' && r.club && CLUBS[r.club] && CLUBS[r.club].shortName) ? CLUBS[r.club].shortName : (r.club || '');
+  const titel = 'Golf — ' + clubKort + (r.track ? ' · ' + r.track : '');
+  const dtstamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GolfScore//NL',
+    'BEGIN:VEVENT',
+    `UID:golfscore-${r.id}@local`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${fmtLocal(start)}`,
+    `DTEND:${fmtLocal(eind)}`,
+    `SUMMARY:${esc(titel)}`,
+    `LOCATION:${esc(r.club || '')}`,
+    'END:VEVENT', 'END:VCALENDAR', ''
+  ].join('\r\n');
+  const bestandsnaam = `golf-${r.date}.ics`;
+  try {
+    const file = new File([ics], bestandsnaam, { type: 'text/calendar' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: titel });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // deelmenu weggetikt: geen download-terugval
+  }
+  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = bestandsnaam;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 function renderScore() {
@@ -4726,7 +5318,194 @@ function buildScoreText(round) {
     const s = h.score;
     lines.push(h.id + ': Par: ' + h.par + ', PPar: ' + h.ppar + ', Score: ' + (s ?? '-') + ', Stb: ' + stbFor(h));
   });
+  if (round.note) { lines.push(''); lines.push('Notitie: ' + round.note); }
   return lines.join('\n');
+}
+
+// ── Scorekaart als afbeelding (PNG) delen ──
+// Rendert een ronde naar een canvas in de app-stijl (kleuren via de CSS-variabelen,
+// dus licht/donker volgt vanzelf de gekozen modus), maakt er een PNG-bestand van en
+// deelt dat via het systeemdeelmenu (navigator.share met files). Kan het toestel geen
+// bestanden delen, dan wordt de PNG gedownload. Zelfde gegevens als de tekst-export:
+// kop met speler/club/baan/datum/tee/Chcp, scoretabel per hole (bij 18 holes twee
+// blokken van 9 naast elkaar) en de totalen onderaan.
+async function shareScoreImage(round) {
+  try {
+    const cssVar = (name, fb) => (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fb;
+    const C = {
+      bg:    cssVar('--green-deep', '#0b3d2e'),
+      text:  cssVar('--white', '#f5f2e8'),
+      gold:  cssVar('--gold', '#c9a84c'),
+      green: cssVar('--green-light', '#7fbf7f'),
+      red:   cssVar('--red', '#c0392b'),
+      muted: cssVar('--muted', '#9aa79f'),
+    };
+    const holes = round.holes || [];
+    const played = holes.filter(h => h.score !== null);
+    const total = played.reduce((s, h) => s + h.score, 0);
+    const totalAgs = holes.reduce((s, h) => s + agsFor(h), 0);
+    const totalStb = holes.reduce((s, h) => s + stbFor(h), 0);
+    const clubName = round.club || COURSE_CLUBS[round.track] || 'Onbekende club';
+    let sdText = '—';
+    if (round.sdFinal != null && round.sdFinal !== '' && isFinite(parseFloat(round.sdFinal))) {
+      sdText = parseFloat(round.sdFinal).toFixed(1);
+    } else {
+      const c = computeSD({ holes: round.holes, CR: round.CR, SR: round.SR, hcp: round.hcp, pcc: round.pcc });
+      if (c) sdText = (c.approx ? '≈ ' : '') + c.value.toFixed(1);
+    }
+
+    // ── Geometrie ──
+    const W = 800, pad = 36, scale = 2;
+    const twoCol = holes.length === 18;
+    const rowH = 36, headRowH = 42;
+    const nRows = twoCol ? 9 : holes.length;
+    const headerH = 160;
+    const tableH = headRowH + nRows * rowH;
+    const totalsH = 78;
+    const H = pad + headerH + tableH + 20 + totalsH + pad;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    const F = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+    // ── Achtergrond en kader ──
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(8, 8, W - 16, H - 16);
+
+    // ── Kop ──
+    let y = pad + 10;
+    ctx.fillStyle = C.gold;
+    ctx.font = `800 17px ${F}`;
+    ctx.fillText('SCOREKAART', pad, y);
+    y += 34;
+    ctx.fillStyle = C.text;
+    ctx.font = `800 30px ${F}`;
+    ctx.fillText(String(round.player || '—'), pad, y);
+    y += 30;
+    ctx.fillStyle = C.green;
+    ctx.font = `700 21px ${F}`;
+    ctx.fillText(`${clubName} — ${round.track || '—'}`, pad, y);
+    y += 27;
+    ctx.fillStyle = C.muted;
+    ctx.font = `400 18px ${F}`;
+    ctx.fillText(`${formatFullDate(round.date)}${round.time ? ' om ' + round.time : ''}`, pad, y);
+    y += 25;
+    ctx.fillText(`Tee ${round.tee || '—'} · Chcp ${round.chcp ?? '—'}${round.qualifying ? ' · Qualifying' : ''}`, pad, y);
+
+    // ── Scoretabel ──
+    const tableTop = pad + headerH;
+    const gap = twoCol ? 28 : 0;
+    const colW = twoCol ? (W - 2 * pad - gap) / 2 : (W - 2 * pad);
+    const cols = [0.30, 0.22, 0.26, 0.22]; // Hole | Par | Score | Stb (fracties van colW)
+    const colX = (blockX, ci) => blockX + cols.slice(0, ci).reduce((s, f) => s + f, 0) * colW + (cols[ci] * colW) / 2;
+
+    const drawBlock = (blockHoles, blockX) => {
+      // Koprij
+      ctx.fillStyle = C.gold;
+      ctx.font = `800 16px ${F}`;
+      ctx.textAlign = 'center';
+      ['HOLE', 'PAR', 'SCORE', 'STB'].forEach((t, ci) => ctx.fillText(t, colX(blockX, ci), tableTop + 26));
+      // Rijen met subtiele zebra
+      blockHoles.forEach((h, ri) => {
+        const rowTop = tableTop + headRowH + ri * rowH;
+        if (ri % 2 === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,.05)';
+          ctx.fillRect(blockX, rowTop, colW, rowH);
+        }
+        const ty = rowTop + rowH / 2 + 6;
+        ctx.font = `700 18px ${F}`;
+        ctx.fillStyle = C.green;
+        ctx.fillText(String(h.id), colX(blockX, 0), ty);
+        ctx.fillStyle = C.text;
+        ctx.fillText(String(h.par), colX(blockX, 1), ty);
+        // Score: groen onder par, rood erboven, wit op par
+        if (h.score == null) {
+          ctx.fillStyle = C.muted;
+          ctx.fillText('—', colX(blockX, 2), ty);
+        } else {
+          ctx.fillStyle = h.score < h.par ? C.green : (h.score > h.par ? C.red : C.text);
+          ctx.font = `800 19px ${F}`;
+          ctx.fillText(String(h.score), colX(blockX, 2), ty);
+          ctx.font = `700 18px ${F}`;
+        }
+        ctx.fillStyle = C.muted;
+        ctx.fillText(String(stbFor(h)), colX(blockX, 3), ty);
+      });
+      ctx.textAlign = 'left';
+    };
+
+    if (twoCol) {
+      drawBlock(holes.slice(0, 9), pad);
+      drawBlock(holes.slice(9, 18), pad + colW + gap);
+      // Dunne scheidslijn tussen de blokken
+      ctx.strokeStyle = 'rgba(255,255,255,.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad + colW + gap / 2, tableTop + 8);
+      ctx.lineTo(pad + colW + gap / 2, tableTop + tableH - 4);
+      ctx.stroke();
+    } else {
+      drawBlock(holes, pad);
+    }
+
+    // ── Totalen ──
+    const totY = tableTop + tableH + 20;
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pad, totY);
+    ctx.lineTo(W - pad, totY);
+    ctx.stroke();
+    const totals = [
+      ['Str', played.length ? String(total) : '—'],
+      ['AGS', played.length ? String(totalAgs) : '—'],
+      ['Stb', played.length ? String(totalStb) : '—'],
+      ['Sd', sdText],
+    ];
+    const slot = (W - 2 * pad) / totals.length;
+    totals.forEach(([lab, val], i) => {
+      const cx = pad + i * slot + slot / 2;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.muted;
+      ctx.font = `700 15px ${F}`;
+      ctx.fillText(lab.toUpperCase(), cx, totY + 26);
+      ctx.fillStyle = C.gold;
+      ctx.font = `800 26px ${F}`;
+      ctx.fillText(val, cx, totY + 58);
+    });
+    ctx.textAlign = 'left';
+
+    // ── Delen of downloaden ──
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) throw new Error('canvas.toBlob leverde niets op');
+    const fileName = `scorekaart-${round.date || 'ronde'}.png`;
+    const file = new File([blob], fileName, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Scorekaart' });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // gebruiker brak het deelmenu zelf af
+        // Delen mislukt om een andere reden: val terug op downloaden
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e) {
+    showInfoModal('Afbeelding delen', 'Er ging iets mis bij het maken van de afbeelding.');
+  }
 }
 
 function lockSiblingButtons(btn) {
@@ -4895,6 +5674,7 @@ function confirmExportModal() {
 
   switch (_exportModalFormat) {
     case 'txt':    shareScore(null, round, null); closeExportModal(); return;
+    case 'png':    shareScoreImage(round); closeExportModal(); return;
     case 'csv':    exportCsv(round);          break;
     case 'backup': exportBackup(_exportModalIdx); break;
   }
@@ -5061,7 +5841,7 @@ function buildImportEntry(r, existingIds, skipImportFlag) {
   return entry;
 }
 
-function doImportRound(r, saved, skipImportFlag = false) {
+function doImportRound(r, saved, skipImportFlag = false, deferSave = false) {
   const entry = buildImportEntry(r, new Set(saved.map(s => s.id)), skipImportFlag);
 
   // Boven aan archief, maar onder de actieve ronde
@@ -5069,6 +5849,9 @@ function doImportRound(r, saved, skipImportFlag = false) {
   const activeIdx = saved.findIndex(s => String(s.id) === activeId);
   const insertAt = activeIdx >= 0 ? activeIdx + 1 : 0;
   saved.splice(insertAt, 0, entry);
+  // deferSave (batch-import): de aanroeper slaat na de hele batch één keer op en
+  // rendert één keer — per ronde opslaan + volledig renderen maakte grote imports traag.
+  if (deferSave) return;
   storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
   loadSaved();
 }
@@ -5079,16 +5862,23 @@ function doImportRound(r, saved, skipImportFlag = false) {
 function doAdditiveImport(parsed) {
   let imported = 0, exactDup = 0, slotFull = 0;
   const coupledPartners = [];
+  // Archief één keer laden; doImportRound muteert deze lijst in-place (deferSave),
+  // zodat de duplicaatcontrole ook zojuist geïmporteerde rondes ziet. Na de lus volgt
+  // één opslag en één render, i.p.v. per ronde (dat schaalde kwadratisch mee).
+  const current = loadSavedRounds();
   parsed.forEach(r => {
-    const current = loadSavedRounds();
     const sameSlot = current.filter(s => (s.date || '') === (r.date || '') && (s.time || '') === (r.time || ''));
     const exactMatch = sameSlot.find(s => s.player === r.player);
     if (exactMatch) { exactDup++; return; }
     if (sameSlot.length >= 2) { slotFull++; return; }
     if (sameSlot.length === 1) coupledPartners.push(sameSlot[0].player);
-    doImportRound(r, current, true);
+    doImportRound(r, current, true, true);
     imported++;
   });
+  if (imported > 0) {
+    storage.setItem('golf_rounds', JSON.stringify(current.slice(0, getRoundStorageLimit())));
+    loadSaved();
+  }
   // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
   // (die immers al ergens vandaan kwamen, dus per definitie al een keer geëxporteerd
   // zijn geweest) — alleen écht nieuw gespeelde rondes na dit moment tellen weer mee.
@@ -5300,6 +6090,7 @@ function saveActiveRound(skipLoadSaved = false) {
     total, totalStb, playedCount: played.length, holesCount: game.holes.length,
     currentHole,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
+    note: game.note || undefined,
     holes: game.holes.map(h => ({ ...h })),
   };
 
@@ -5858,6 +6649,16 @@ function archiveSearchBlur() {
   if (p.dateIncomplete) msg.classList.remove('hidden');
 }
 
+// Wisknopje (×) in een zoekveld: veld leegmaken, lijst verversen en focus terugzetten
+// zodat je meteen een nieuwe zoekopdracht kunt typen.
+function clearSearchField(inputId, refresh) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.value = '';
+  refresh();
+  inp.focus();
+}
+
 function loadSaved() {
   const saved = loadSavedRounds();
   // Rondedata kan op veel manieren wijzigen (import, koppelen, bewerken, vaststellen) —
@@ -5877,6 +6678,9 @@ function loadSaved() {
   // van het veld alsnog af.
   const dateErrMsg = document.getElementById('archiveDateErrMsg');
   if (dateErrMsg) dateErrMsg.classList.toggle('hidden', !parsedSearch.dateError);
+  // Wisknopje (×) alleen tonen als er iets in het zoekveld staat
+  const archClearBtn = document.getElementById('archiveSearchClear');
+  if (archClearBtn) archClearBtn.classList.toggle('hidden', !rawSearch);
 
   // Lazy render van de platte lijst (geen groepering): begin bij een nieuwe
   // zoekopdracht altijd weer met de standaardlimiet, niet met een eerder
@@ -5889,6 +6693,12 @@ function loadSaved() {
 
   // WHS-set: alleen voor de speler bovenin Start (nooit speler 2 of andere spelers)
   window._whsUsedIds = new Set();
+  // Volgordenummers voor de meetellende (beste 8) rondes: 1 = oudste
+  window._whsUsedOrder = {};
+  // Ronde die de Low HI opleverde — alleen bij een afgeleide Low HI; een handmatig
+  // ingevulde Low HI heeft geen aanwijsbare ronde (zelfde logica als het driehoekje
+  // in de grafiek).
+  window._lowHiRoundId = null;
   {
     const actId = storage.getItem('golf_active_id');
     const nameEl = document.getElementById('iName');
@@ -5896,7 +6706,15 @@ function loadSaved() {
     if (startPlayer) {
       const last20 = last20Qualifying(startPlayer, saved, actId, game2Id);
       const whs = whsHandicap(last20, effectiveLowHi(startPlayer, saved), esrMapFor(startPlayer, saved));
-      if (whs) whs.usedIds.forEach(id => window._whsUsedIds.add(id));
+      if (whs) {
+        whs.usedIds.forEach(id => window._whsUsedIds.add(id));
+        last20.filter(r => whs.usedIds.has(r.id))
+          .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`))
+          .forEach((r, k) => { window._whsUsedOrder[r.id] = k + 1; });
+      }
+      if (getManualLowHi() == null) {
+        window._lowHiRoundId = derivedLowHiDetailed(startPlayer, saved).roundId;
+      }
     }
   }
 
@@ -5931,7 +6749,8 @@ function loadSaved() {
           const club = r.club || '';
           const textMatch = (r.track || '').toLowerCase().includes(query) ||
                  club.toLowerCase().includes(query) ||
-                 (r.player || '').toLowerCase().includes(query);
+                 (r.player || '').toLowerCase().includes(query) ||
+                 (r.note || '').toLowerCase().includes(query);
           if (!textMatch) return false;
         }
         if (parsedSearch.recurring) {
@@ -6087,7 +6906,8 @@ function loadSaved() {
         <span>${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
           ${done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
-          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? '<span class="tee-badge badge-whs">WHS</span>' : ''}
+          ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi">L</span>' : ''}
+          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q">Q</span>' : ''}
         </span>
       </div>`;
@@ -6127,7 +6947,7 @@ function loadSaved() {
     const actionsBlock = `
       <div class="hidden orange-msg" data-round-save-msg="${r.id}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="saved-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
-        <button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+        <button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>${(!done && new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now()) ? `<button class="btn-secondary" style="padding:8px 14px" onclick="exportRoundIcs('${r.id}')" title="Zet in agenda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg></button>` : ''}
         <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundInfoModal(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
         <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundResultModal(${saved.indexOf(r)})" title="Ronde resultaat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></button>
         ${isActive
@@ -6147,6 +6967,7 @@ function loadSaved() {
       ${dateLine}
       ${strLine}
       ${stbHcpLine}
+      ${r.note ? `<div style="font-size:15px;color:var(--muted);font-style:italic;margin-top:2px;overflow-wrap:break-word">${escapeHtml(r.note)}</div>` : ''}
       ${actionsBlock}
     </div>`;
     }
@@ -8027,6 +8848,7 @@ function doOpenRoundInfoModal(idx) {
   const isActive = activeId && String(round.id) === activeId;
   const qSrc = isActive ? (game.qualifying ?? round.qualifying) : round.qualifying;
   document.getElementById('editQualifyToggle').checked = !!qSrc;
+  document.getElementById('editNoteInput').value = (isActive ? (game.note ?? round.note) : round.note) || '';
   document.getElementById('roundInfoModal').classList.remove('hidden');
 }
 
@@ -8072,6 +8894,7 @@ function doOpenRoundResultModal(idx) {
   document.getElementById('editPccBtn').textContent = formatPcc(_editPccVal);
   const sdSrc = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
   setValidatedInput(document.getElementById('editSdInput'), (sdSrc != null && sdSrc !== '') ? String(sdSrc) : '');
+  document.getElementById('resultNoteInput').value = (isActive ? (game.note ?? round.note) : round.note) || '';
   updateEditSdHint(round);
   document.getElementById('roundResultModal').classList.remove('hidden');
 }
@@ -8163,6 +8986,9 @@ function fmt1(v) {
 // ══ WAT ALS...? ═════════════════════════════════════════════════════════
 function onWatIfInput(input) {
   const v = handleRangeInput(input, 'watIfRangeMsg');
+  // Wisknopje (×) alleen tonen als er iets in het veld staat
+  const watIfClearBtn = document.getElementById('watIfClear');
+  if (watIfClearBtn) watIfClearBtn.classList.toggle('hidden', !input.value);
   const resultEl = document.getElementById('watIfResult');
   if (!resultEl) return;
   const n = v === '' || v === '-' ? null : parseFloat(v);
@@ -8277,6 +9103,8 @@ function applyRoundInfo(saved, round, date, time) {
   round.time = time;
   round.player = player;
   round.qualifying = document.getElementById('editQualifyToggle').checked;
+  const noteVal = document.getElementById('editNoteInput').value.trim();
+  if (noteVal) round.note = noteVal; else delete round.note;
   if (hcpVal !== null && !isNaN(hcpVal)) round.hcp = hcpVal;
   const activeId = storage.getItem('golf_active_id');
   storage.setItem('golf_rounds', JSON.stringify(saved));
@@ -8285,6 +9113,7 @@ function applyRoundInfo(saved, round, date, time) {
     game.time = time;
     game.player = player;
     game.qualifying = round.qualifying;
+    game.note = round.note;
     if (hcpVal !== null && !isNaN(hcpVal)) game.hcp = hcpVal;
     storage.setItem('golf_rounds', JSON.stringify(saved));
     setHeaderInfo(game.track, game.tee, game.chcp);
@@ -8325,10 +9154,13 @@ function confirmRoundResult() {
   const pccNum = parseFloat(pccRaw.replace(',', '.'));
   round.pcc = pccRaw === '' || !isFinite(pccNum) ? 0 : Math.max(lo, Math.min(hi, pccNum));
   round.sdFinal = (sdRaw === '' || isNaN(parseFloat(sdRaw))) ? null : Math.round(parseFloat(sdRaw) * 10) / 10;
+  const resNoteVal = document.getElementById('resultNoteInput').value.trim();
+  if (resNoteVal) round.note = resNoteVal; else delete round.note;
   const activeId = storage.getItem('golf_active_id');
   if (activeId && String(round.id) === activeId) {
     game.pcc = round.pcc;
     game.sdFinal = round.sdFinal;
+    game.note = round.note;
   }
   storage.setItem('golf_rounds', JSON.stringify(saved));
   if (activeId && String(round.id) === activeId) {
@@ -8513,7 +9345,10 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
+   'golf_round_limit','golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
+   'golf_lowhi_graph','golf_chart_jump',
+   'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
    'golf_low_hi','golf_backup_reminder_shown','golf_theme','golf_scorecard_symbols','golf_home_club']
     .forEach(k => storage.removeItem(k));
   // Dynamische per-speler sleutels (bv. golf_seen_low_hi_<speler>, voor de gouden
@@ -8586,9 +9421,26 @@ function buildClubList() {
   if (!el) return;
   const searchInput = document.getElementById('clubSearch');
   const query = (searchInput?.value || '').trim().toLowerCase();
+  // Wisknopje (×) alleen tonen als er iets in het zoekveld staat
+  const clubClearBtn = document.getElementById('clubSearchClear');
+  if (clubClearBtn) clubClearBtn.classList.toggle('hidden', !(searchInput?.value));
 
   const favs = getFavClubs();
   const homeClub = storage.getItem('golf_home_club');
+  // Per baan tellen of de hoofdspeler er afgeronde rondes heeft — bepaalt of de
+  // baanrij een baananalyse-icoontje krijgt (geen rondes = geen dode knop).
+  const caCounts = new Map();
+  {
+    const caPlayer = startPlayerName();
+    if (caPlayer) {
+      const isDoneCa = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+      loadSavedRounds().forEach(r => {
+        if (r.player !== caPlayer || !isDoneCa(r) || !r.club || !r.track) return;
+        const k = r.club + '||' + r.track;
+        caCounts.set(k, (caCounts.get(k) || 0) + 1);
+      });
+    }
+  }
   let allClubNames = Object.keys(CLUBS).sort((a, b) => a.localeCompare(b, 'nl'));
 
   const filteredClubs = query ? allClubNames.filter(c => c.toLowerCase().includes(query)) : allClubNames;
@@ -8638,8 +9490,12 @@ function buildClubList() {
       const n = (data.holes || []).length;
       (n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
     });
-    const courseRowHtml = ([name, data]) =>
-      `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap">${(data.holes||[]).length}h</span></div>`;
+    const courseRowHtml = ([name, data]) => {
+      const caBtn = caCounts.get(club + '||' + name)
+        ? `<button class="btn-secondary" style="padding:4px 9px;flex:0 0 auto" onclick="toggleCourseAnalysis(event, '${escapeJsString(club)}', '${escapeJsString(name)}', this)" title="Baananalyse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>`
+        : '';
+      return `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:8px">${caBtn}${(data.holes||[]).length}h</span></div>`;
+    };
     const courseSubGroupHtml = (key, label) => {
       if (!courseGroups[key].length) return '';
       const gid = `courseSubGroup_${clubKey}_${key}`;
@@ -9291,6 +10147,8 @@ function nav(id) {
     updateStorageSettingsUI();
     updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
+    updateChartJumpToggle();
+    updateHandicapAlwaysToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
     window.scrollTo(0, 0);
@@ -9678,6 +10536,36 @@ function confirmDeleteOtherPlayers(btn) {
 // betekent dat de knoppenbalk pas verschijnt na een tik op het rondeblok.
 function actionsAlwaysVisible() {
   return storage.getItem('golf_actions_always_visible') !== 'off'; // afwezig = aan
+}
+
+// Tik-op-grafiek-springen: standaard UIT ('=== on'), anders dan de altijd-aan-instellingen —
+// bewuste keuze, zodat niemand per ongeluk vanuit de grafiek in het archief belandt.
+function chartJumpEnabled() {
+  return storage.getItem('golf_chart_jump') === 'on'; // afwezig = uit
+}
+function updateChartJumpToggle() {
+  const cb = document.getElementById('chartJumpToggle');
+  if (cb) cb.checked = chartJumpEnabled();
+}
+function toggleChartJump() {
+  const cb = document.getElementById('chartJumpToggle');
+  const on = cb ? cb.checked : !chartJumpEnabled();
+  storage.setItem('golf_chart_jump', on ? 'on' : 'off');
+}
+
+// Handicap-groep altijd uitgeklapt: standaard AAN, dus het gebruikelijke
+// '!== off'-patroon van de altijd-aan-instellingen.
+function handicapAlwaysOpen() {
+  return storage.getItem('golf_stats_handicap_always') !== 'off'; // afwezig = aan
+}
+function updateHandicapAlwaysToggle() {
+  const cb = document.getElementById('handicapAlwaysToggle');
+  if (cb) cb.checked = handicapAlwaysOpen();
+}
+function toggleHandicapAlways() {
+  const cb = document.getElementById('handicapAlwaysToggle');
+  const on = cb ? cb.checked : !handicapAlwaysOpen();
+  storage.setItem('golf_stats_handicap_always', on ? 'on' : 'off');
 }
 function updateActionsAlwaysVisibleToggle() {
   const cb = document.getElementById('actionsAlwaysVisibleToggle');
@@ -10306,6 +11194,10 @@ document.addEventListener('focusin', (e) => {
       <label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="editQualifyToggle"><span class="slider"></span></label>
     </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Notitie</label>
+      <textarea id="editNoteInput" maxlength="200" rows="2" placeholder="bijv. harde wind, nieuwe driver" style="resize:vertical;font-family:inherit"></textarea>
+    </div>
     <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch">
       <button class="btn-secondary" id="deleteRoundBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteRoundFromInfoModal(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
@@ -10344,6 +11236,10 @@ document.addEventListener('focusin', (e) => {
         </td>
       </tr>
     </table>
+    <div class="fg" style="margin:4px 0 14px">
+      <label>Notitie</label>
+      <textarea id="resultNoteInput" maxlength="200" rows="2" placeholder="bijv. harde wind, nieuwe driver" style="resize:vertical;font-family:inherit"></textarea>
+    </div>
     <div style="display:flex;gap:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeRoundResultModal()">Annuleren</button>
       <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="confirmRoundResult()">Opslaan</button>
@@ -10379,6 +11275,7 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="txt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Tekst delen (TXT)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
+      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
     </div>
     <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
