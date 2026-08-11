@@ -332,7 +332,7 @@
     @keyframes pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
     /* Wisknopje (×) rechts in een zoekveld */
     .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:26px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
-    /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en controlekaart */
+    /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
     .saved-item.round-flash { animation: roundFlash 1.6s ease; }
@@ -1104,6 +1104,7 @@
     </div>
   </div>
   </div>
+  <div style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 4px">Versie 11-8d</div>
 </div>
 
 <script>
@@ -1279,7 +1280,11 @@ function roundHasWarning(r) {
   const qualifying = isCurrentPlayerR ? (game.qualifying ?? r.qualifying) : r.qualifying;
   const sd = isCurrentPlayerR ? (game.sdFinal ?? r.sdFinal) : r.sdFinal;
   const hasValidSd = sd != null && sd !== '' && isFinite(parseFloat(sd));
-  return !!(qualifying && !hasValidSd);
+  // Alleen waarschuwen als de ronde qua scores af is: bij geplande en lopende rondes
+  // is een ontbrekend dagresultaat vanzelfsprekend, geen probleem.
+  const holesW = isCurrentPlayerR ? (game.holes || []) : (r.holes || []);
+  const isDoneW = holesW.length > 0 && holesW.every(h => h.score !== null);
+  return !!(isDoneW && qualifying && !hasValidSd);
 }
 const warningIconSmall = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
@@ -4389,9 +4394,9 @@ function renderPlayerStats() {
   const bestTrackPerf = allTrackPerf[0];
   const worstTrackPerf = allTrackPerf[allTrackPerf.length - 1];
   const trackPerfName = s => `${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
-  let trackPerfSentence = '';
+  let trackBaanSentence = '', trackTeeSentence = '';
   if (bestTrackPerf && allTrackPerf.length > 1) {
-    trackPerfSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste baan is <span style="font-weight:700">${trackPerfName(bestTrackPerf)}</span>, je lastigste is <span style="font-weight:700">${trackPerfName(worstTrackPerf)}</span>.</div>`;
+    trackBaanSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste baan is <span style="font-weight:700">${trackPerfName(bestTrackPerf)}</span>, je lastigste is <span style="font-weight:700">${trackPerfName(worstTrackPerf)}</span>.</div>`;
   }
   // Zelfde vergelijking, maar dan op tee-niveau — bewust een APARTE zin i.p.v. samen met
   // de baan-vergelijking in één lijst, want een baan-totaal en een tee-binnen-die-baan
@@ -4411,7 +4416,7 @@ function renderPlayerStats() {
   const worstTeePerf = allTeePerf[allTeePerf.length - 1];
   const teePerfName = s => `${escapeHtml(s.tee)} op ${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
   if (bestTeePerf && allTeePerf.length > 1) {
-    trackPerfSentence += `<div style="font-size:16px;margin-bottom:8px">Je beste tee is <span style="font-weight:700">${teePerfName(bestTeePerf)}</span>, je lastigste is <span style="font-weight:700">${teePerfName(worstTeePerf)}</span>.</div>`;
+    trackTeeSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste tee is <span style="font-weight:700">${teePerfName(bestTeePerf)}</span>, je lastigste is <span style="font-weight:700">${teePerfName(worstTeePerf)}</span>.</div>`;
   }
   window._statClubCollapsed = window._statClubCollapsed || {};
   const clubNames = Object.keys(byClub).sort((a, b) => {
@@ -4464,7 +4469,8 @@ function renderPlayerStats() {
   // De vroegere interne inklapkop ("Banen en tees per club") is vervangen door de
   // Banen & tees-hoofdgroep eromheen; binnen de kaart staan de clubblokken dus altijd.
   const trackCard = clubBlocks
-    ? `<div class="card">${cardHeadStatic('Beste baan en beste tee')}${trackPerfSentence}${cardHeadStatic('Banen en tees per club')}${clubBlocks}</div>`
+    ? `<div class="card">${trackBaanSentence ? cardHeadStatic('Beste baan') + trackBaanSentence : ''}${trackTeeSentence ? `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0"><span style="flex:1">Beste tee</span></h2>` + trackTeeSentence : ''}`
+      + `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0;cursor:pointer" onclick="togglePerClubList()"><span style="flex:1">Banen en tees per club</span><span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">${clubCount}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${window._perClubOpen ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 6 15 12 9 18"/>'}</svg></h2>${window._perClubOpen ? clubBlocks : ''}</div>`
     : '';
 
   // Vorm & consistentie
@@ -4553,7 +4559,7 @@ function renderPlayerStats() {
       + extra
       + `<span style="display:inline-block;font-size:15px;transform:rotate(${open ? 90 : 0}deg);transition:transform .15s">▶</span></div>`;
   };
-  // ── EXPERIMENT: controlekaart voor de dagresultaten (zonder cap) ──
+  // ── Regelkaart voor de dagresultaten (zonder cap) ──
   // XmR-opzet (zoals de Trends-app voor dagelijkse metingen): centerlijn x̄, limieten
   // x̄ ± 2,66·mR̄ (3σ-equivalent, rood gestippeld) en ± 1,77·mR̄ (2σ-equivalent,
   // oranje), met mR̄ = gemiddelde absolute verschil tussen opeenvolgende punten.
@@ -4600,7 +4606,7 @@ function renderPlayerStats() {
     const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
     const filled = filledIdx.map(i => buckets[i].v);
     const inner = (() => {
-      if (filled.length < 2) return `<div style="font-size:17px;color:var(--muted)">Te weinig rondes in deze periode voor een controlekaart.</div>`;
+      if (filled.length < 2) return `<div style="font-size:17px;color:var(--muted)">Te weinig rondes in deze periode voor een regelkaart.</div>`;
       const n = filled.length;
       const mean = filled.reduce((s, v) => s + v, 0) / n;
       const sdInfo = Math.sqrt(filled.reduce((s, v) => s + (v - mean) * (v - mean), 0) / (n - 1));
@@ -4673,7 +4679,7 @@ function renderPlayerStats() {
         const kleur = flag === 2 ? 'var(--red)' : (flag === 1 ? 'var(--orange)' : 'var(--green-light)');
         svg += `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
         window._ccData.push(aggMode === 'ronde'
-          ? `Ronde <b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · dagresultaat <b>${fmt1(b.v)}</b>`
+          ? `<b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · dagresultaat <b>${fmt1(b.v)}</b>`
           : `<b>${b.label}</b>: gem. <b>${fmt1(b.v)}</b> · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
         svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
       });
@@ -4688,13 +4694,13 @@ function renderPlayerStats() {
   el.innerHTML = kpiRow
     + stickyPeriodBar
     + grpHeader('handicap', 'Handicap')
-    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Controlekaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-7px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', 'Prestaties')
     + (grpOpen('prestaties') ? distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
-    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--muted)">${clubCount}</span>`)
+    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`)
     + (grpOpen('banen') ? trackCard : '');
 
   // Grafiek tekenen (na invoegen in DOM)
@@ -4974,7 +4980,7 @@ function jumpToArchiveRound(roundId) {
   }, 60);
 }
 
-// Detailregel onder de controlekaart: toont het aangetikte punt (window._ccData
+// Detailregel onder de regelkaart: toont het aangetikte punt (window._ccData
 // wordt bij elke render van de kaart opnieuw gevuld).
 function ccShowPoint(idx) {
   const el = document.getElementById('ccDetail');
@@ -4995,23 +5001,35 @@ function ccSwapView() {
   b.classList.toggle('hidden', !naarControle);
   window._sdChartView = naarControle ? 'controle' : 'verloop';
   const title = document.getElementById('sdChartTitle');
-  if (title) title.textContent = naarControle ? 'Controlekaart dagresultaat' : 'Dagresultaat en handicapverloop';
+  if (title) title.textContent = naarControle ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop';
   const oogWrap = document.getElementById('sdLowHiBtnWrap');
   if (oogWrap) oogWrap.classList.toggle('hidden', naarControle);
 }
 // Horizontale swipe op de grafiekzone detecteren (ruime marge zodat verticaal
 // scrollen niet per ongeluk wisselt).
 function initSdSwipe() {
-  const wrap = document.getElementById('sdSwipeWrap');
-  if (!wrap) return;
-  wrap.ontouchstart = e => { window._sdSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
-  wrap.ontouchend = e => {
+  // Op de hele grafiekkaart (niet alleen de grafiekzone): dan valt ook een veeg die
+  // op de titelregel begint binnen de kaart. stopPropagation op beide events is
+  // essentieel — anders bereikt de veeg óók de document-brede hoofdtab-swipe en
+  // wisselt er naast de kaartweergave een hoofdtab.
+  const kaart = document.getElementById('sdChartCard') || document.getElementById('sdSwipeWrap');
+  if (!kaart) return;
+  kaart.ontouchstart = e => { e.stopPropagation(); window._sdSwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  kaart.ontouchend = e => {
+    e.stopPropagation();
     const t = window._sdSwipe; window._sdSwipe = null;
     if (!t || !e.changedTouches.length) return;
     const dx = e.changedTouches[0].clientX - t.x;
     const dy = e.changedTouches[0].clientY - t.y;
     if (Math.abs(dx) > 50 && Math.abs(dy) < 60) ccSwapView();
   };
+}
+
+// In-/uitklappen van de clublijsten onder "Banen en tees per club" (sessie-toestand,
+// standaard ingeklapt — het aantal clubs is onvoorspelbaar en de lijst kan lang zijn).
+function togglePerClubList() {
+  window._perClubOpen = !window._perClubOpen;
+  renderPlayerStats();
 }
 
 // In-/uitklappen van de Wat als-kaart op Statistieken (sessie-toestand, geen storage).
@@ -5147,16 +5165,9 @@ function toggleCourseAnalysis(ev, club, track, btn) {
   const blockId = 'b' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
   window._caBlocks = window._caBlocks || {};
   window._caBlocks[blockId] = data;
-  // Legenda-regeltje alleen als er echt twee kanten te zien zijn
-  const heeftToen = data.holes.some(h => h.toen.n > 0);
-  const heeftNu = data.holes.some(h => h.nu.n > 0);
-  const legenda = (heeftToen && heeftNu)
-    ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">omlijnd = ouder dan 2 jaar · gevuld = laatste 2 jaar</div>`
-    : (heeftToen && !heeftNu ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">alle rondes ouder dan 2 jaar</div>` : '');
   row.insertAdjacentHTML('afterend',
     `<div class="ca-block" onclick="event.stopPropagation()" style="padding:4px 0 4px 12px;border-left:2px solid rgba(255,255,255,.15);cursor:default">`
     + courseAnalysisSvg(data, blockId)
-    + legenda
     + `<div id="caDetail_${blockId}" style="font-size:15px;color:var(--muted);margin-top:2px;min-height:20px">Tik op een hole voor details.</div>`
     + `</div>`);
 }
@@ -5205,12 +5216,18 @@ async function exportRoundIcs(roundId) {
     `LOCATION:${esc(r.club || '')}`,
     'END:VEVENT', 'END:VCALENDAR', ''
   ].join('\r\n');
-  const bestandsnaam = `golf-${r.date}.ics`;
+  const bestandsnaam = `golf-${r.date}${r.time ? '-' + r.time.replace(':', '') : ''}.ics`;
   try {
-    const file = new File([ics], bestandsnaam, { type: 'text/calendar' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: titel });
-      return;
+    // Chrome (Android) deelt alleen bestanden van een vaste typelijst; text/calendar
+    // staat daar niet op. Daarom eerst als text/calendar proberen (voor browsers die
+    // het wél kunnen) en anders als text/plain met .ics-naam — dan opent het deelmenu
+    // alsnog. Pas als beide niet gedeeld kunnen worden, volgt de download.
+    for (const mime of ['text/calendar', 'text/plain']) {
+      const file = new File([ics], bestandsnaam, { type: mime });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: titel });
+        return;
+      }
     }
   } catch (e) {
     if (e && e.name === 'AbortError') return; // deelmenu weggetikt: geen download-terugval
@@ -6947,7 +6964,7 @@ function loadSaved() {
     const actionsBlock = `
       <div class="hidden orange-msg" data-round-save-msg="${r.id}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="saved-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
-        <button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>${(!done && new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now()) ? `<button class="btn-secondary" style="padding:8px 14px" onclick="exportRoundIcs('${r.id}')" title="Zet in agenda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg></button>` : ''}
+        ${(!done && new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now()) ? `<button class="btn-secondary" style="padding:8px 14px" onclick="exportRoundIcs('${r.id}')" title="Zet in agenda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg></button>` : ''}<button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundInfoModal(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
         <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundResultModal(${saved.indexOf(r)})" title="Ronde resultaat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></button>
         ${isActive
@@ -6986,6 +7003,7 @@ function loadSaved() {
       ${strLine}
       ${stbHcpLine}
       <div style="margin-top:8px">${flatChartHtml(r.holes)}</div>
+      ${r.note ? `<div style="font-size:15px;color:var(--muted);font-style:italic;margin-top:4px;overflow-wrap:break-word">${escapeHtml(r.note)}</div>` : ''}
       ${actionsBlock}
     </div>`;
   };
@@ -11196,7 +11214,7 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div class="fg" style="margin-bottom:14px">
       <label>Notitie</label>
-      <textarea id="editNoteInput" maxlength="200" rows="2" placeholder="bijv. harde wind, nieuwe driver" style="resize:vertical;font-family:inherit"></textarea>
+      <textarea id="editNoteInput" maxlength="200" rows="2" placeholder="bijv. Clubcompetitie" style="resize:vertical;font-family:inherit"></textarea>
     </div>
     <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch">
@@ -11238,7 +11256,7 @@ document.addEventListener('focusin', (e) => {
     </table>
     <div class="fg" style="margin:4px 0 14px">
       <label>Notitie</label>
-      <textarea id="resultNoteInput" maxlength="200" rows="2" placeholder="bijv. harde wind, nieuwe driver" style="resize:vertical;font-family:inherit"></textarea>
+      <textarea id="resultNoteInput" maxlength="200" rows="2" placeholder="bijv. Clubcompetitie" style="resize:vertical;font-family:inherit"></textarea>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeRoundResultModal()">Annuleren</button>
