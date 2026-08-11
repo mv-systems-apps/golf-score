@@ -207,8 +207,8 @@
     .screen { display: none; padding: 12px 12px 90px; }
     .screen.active { display: block; animation: screenFadeIn .25s ease; }
     @keyframes screenFadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
 
     .card { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
@@ -332,6 +332,8 @@
     @keyframes pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
     /* Wisknopje (×) rechts in een zoekveld */
     .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:26px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
+    /* Plakkende jaarkop in het archief (blijft bovenin hangen tijdens scrollen) */
+    .year-sep { position: sticky; top: var(--header-h, 60px); z-index: 90; background: var(--green-deep); color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: .7px; line-height: 1; padding: 12px 2px 8px; }
     /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
@@ -520,6 +522,7 @@
   </div>
 </header>
 
+<div id="updateBanner" class="hidden" style="position:fixed;left:12px;right:12px;bottom:76px;z-index:200;background:var(--gold);color:var(--green-deep);font-size:17px;font-weight:700;padding:12px 14px;border-radius:10px;text-align:center;cursor:pointer" onclick="location.reload()"></div>
 <div class="tabs">
   <button class="tab"        onclick="nav('club')"    id="tab-club"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg></button>
   <button class="tab active" onclick="nav('setup')"   id="tab-setup"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg></button>
@@ -1001,10 +1004,16 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Backup</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Status</div>
+  <div class="card" id="dataHealthCard" onclick="dataHealthClick()" style="cursor:pointer">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Controle</div>
+    <div id="dataHealthLine" style="font-size:16px;color:var(--muted)">&hellip;</div>
+    <div id="dataHealthDupLine" class="hidden" style="font-size:16px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthDupClick()"></div>
+    <div id="lastBackupInfo" style="font-size:16px;color:var(--muted);margin-top:4px">Nog nooit geëxporteerd</div>
+  </div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
-    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:8px">Nog nooit geëxporteerd</div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
@@ -1012,6 +1021,9 @@
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    </div>
+    <div style="display:flex;margin-bottom:12px">
+      <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportDagresultaten()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg><b>Dagresultaten</b></button>
     </div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
@@ -1023,13 +1035,6 @@
         <div style="display:flex;gap:10px">
           <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
           <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
-        </div>
-      </div>
-      <div class="subpanel" style="margin-top:12px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
-        <div style="display:flex;gap:10px">
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
@@ -1051,7 +1056,15 @@
     </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
+    <div class="card">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
+    <div style="display:flex;gap:10px">
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
+          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
+        </div>
+  </div>
+
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opschonen</div>
   <div class="card">
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
@@ -1104,7 +1117,8 @@
     </div>
   </div>
   </div>
-  <div style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 4px">Versie 11-8d</div>
+  <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-8q</div>
 </div>
 
 <script>
@@ -5025,6 +5039,163 @@ function initSdSwipe() {
   };
 }
 
+// ── Datacontrole (Instellingen): telt afgeronde qualifying rondes zonder geldig
+// dagresultaat — dezelfde bron als de oranje driehoekjes. Tik opent het archief met
+// een tijdelijk waarschuwingsfilter (programmatische toestand, het zoekveld blijft leeg).
+function refreshDataHealth() {
+  const el = document.getElementById('dataHealthLine');
+  if (!el) return;
+  const probleem = loadSavedRounds().filter(roundHasWarning);
+  window._dataHealthCount = probleem.length;
+  if (!probleem.length) {
+    el.innerHTML = '<span style="color:var(--green-light);font-weight:700">Alles compleet &#10003;</span>';
+    return;
+  }
+  const clubs = new Set(probleem.map(r => r.club || '?'));
+  el.innerHTML = `<span style="color:var(--orange);font-weight:700">${probleem.length} afgeronde qualifying ronde${probleem.length === 1 ? '' : 's'} zonder vastgesteld dagresultaat</span> (bij ${clubs.size} club${clubs.size === 1 ? '' : 's'}) — tik om te bekijken`;
+}
+// Aparte functie: de duplicaatregel hoort óók bij "Alles compleet" gevuld te worden
+function refreshDataHealthDup() {
+  const el = document.getElementById('dataHealthDupLine');
+  if (!el) return;
+  const ids = findDuplicateRounds();
+  if (!ids.size) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.innerHTML = `<span style="color:var(--orange);font-weight:700">${ids.size} mogelijke duplicaten</span> (zelfde datum, tijd en speler) — tik om te bekijken`;
+  el.style.cursor = 'pointer';
+  el.classList.remove('hidden');
+}
+function dataHealthClick() {
+  if (!window._dataHealthCount) return;
+  window._warnFilterActive = 'warn';
+  nav('archive');
+  loadSaved();
+}
+// Mogelijke duplicaten: zelfde datum, tijd én speler. Komt normaal niet voor (de
+// import houdt ze al tegen), dus de regel verschijnt alleen als er echt iets is.
+function findDuplicateRounds() {
+  const groepen = new Map();
+  loadSavedRounds().forEach(r => {
+    if (!r.date) return;
+    const k = (r.date || '') + '|' + (r.time || '') + '|' + (r.player || '');
+    if (!groepen.has(k)) groepen.set(k, []);
+    groepen.get(k).push(String(r.id));
+  });
+  const ids = new Set();
+  groepen.forEach(lijst => { if (lijst.length > 1) lijst.forEach(id => ids.add(id)); });
+  return ids;
+}
+function dataHealthDupClick() {
+  const ids = findDuplicateRounds();
+  if (!ids.size) return;
+  window._dupIds = ids;
+  window._warnFilterActive = 'dup';
+  nav('archive');
+  loadSaved();
+}
+function clearWarnFilter() {
+  window._warnFilterActive = false;
+  loadSaved();
+}
+
+// ── Dagresultaten-export (voor de Trends-app): platte tekst, één regel per
+// qualifying ronde met een dagresultaat, chronologisch oplopend, formaat
+// "datum;waarde" (ISO-datum, komma als decimaalteken — het puntkomma-gescheiden
+// formaat van Marks ecosysteem). Deelt als text/plain (staat op de Chrome-
+// deellijst, dus het deelmenu opent gewoon), anders download.
+async function exportDagresultaten() {
+  const player = startPlayerName();
+  if (!player) return;
+  const regels = loadSavedRounds()
+    .filter(r => r.player === player && r.qualifying && r.date)
+    .map(r => { const e = effectiveSD(r); return e == null ? null : { d: r.date, t: r.time || '', v: e.value }; })
+    .filter(x => x != null)
+    .sort((a, b) => (a.d + a.t).localeCompare(b.d + b.t))
+    .map(x => x.d + ';' + String(Math.round(x.v * 10) / 10).replace('.', ','));
+  if (!regels.length) return;
+  const tekst = regels.join('\n') + '\n';
+  const bestandsnaam = 'dagresultaten-golf.txt';
+  try {
+    const file = new File([tekst], bestandsnaam, { type: 'text/plain' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Dagresultaten golf' });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(new Blob([tekst], { type: 'text/plain' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = bestandsnaam;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ── App-badge (Badging API): cijfertje op het app-icoon met het aantal geplande
+// rondes (niet afgerond, datum/tijd in de toekomst — zelfde definitie als de
+// Gepland-categorie). Werkt alleen als geïnstalleerde PWA en niet op elk toestel;
+// faalt overal stil.
+function updateAppBadge() {
+  if (!('setAppBadge' in navigator)) return;
+  try {
+    const nu = Date.now();
+    const isDoneB = r => ((r.playedCount ?? (r.holes || []).filter(h => h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
+    const n = loadSavedRounds().filter(r => !isDoneB(r) && r.date && new Date(`${r.date}T${r.time || '00:00'}`).getTime() > nu).length;
+    const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) { /* stil */ }
+}
+setTimeout(updateAppBadge, 1500);
+
+// ── Nieuwe-versie-melding: de service worker ververst golf-score.html op de
+// achtergrond (stale-while-revalidate). Loopt die cache-kopie vóór op de versie
+// die nu draait, dan is één herlaad genoeg — dit balkje maakt dat zichtbaar en
+// bespaart het "twee keer openen"-ritueel. Geen netwerkverkeer: leest alleen de
+// cache. Buiten de PWA-context (lokaal bestand, geen cache) doet dit stil niets.
+async function checkAppUpdate() {
+  try {
+    if (!('caches' in window)) return;
+    const eigenEl = document.getElementById('appVersionStamp');
+    const eigen = eigenEl && eigenEl.textContent.match(/Versie ([0-9]+-[0-9]+[a-z]*)/);
+    if (!eigen) return;
+    const res = await caches.match('./golf-score.html');
+    if (!res) return;
+    const cacheVersie = (await res.text()).match(/Versie ([0-9]+-[0-9]+[a-z]*)/);
+    if (cacheVersie && cacheVersie[1] !== eigen[1]) {
+      const b = document.getElementById('updateBanner');
+      if (b) {
+        b.textContent = 'Nieuwe versie (' + cacheVersie[1] + ') beschikbaar — tik om te verversen';
+        b.classList.remove('hidden');
+      }
+    }
+  } catch (e) { /* stil: puur informatief */ }
+}
+setTimeout(checkAppUpdate, 4000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkAppUpdate, 2500); });
+
+// ── Opslagbescherming: vraag de browser de site-opslag als blijvend te markeren,
+// zodat Android hem niet stilletjes mag opruimen bij ruimtegebrek. Geen backup-
+// vervanger: handmatig wissen of de-installeren verwijdert nog steeds alles.
+async function refreshStorageStatus() {
+  const el = document.getElementById('storageStatusLine');
+  if (!el) return;
+  if (!navigator.storage || !navigator.storage.persisted) {
+    el.textContent = 'Opslagbescherming niet beschikbaar in deze browser';
+    return;
+  }
+  try {
+    const persisted = await navigator.storage.persisted();
+    let tekst = 'Opslag beschermd: ' + (persisted ? 'ja' : 'nee');
+    if (navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      if (est && est.usage != null) tekst += ' \u00b7 ' + (est.usage / 1048576).toFixed(1).replace('.', ',') + ' MB gebruikt';
+    }
+    el.textContent = tekst;
+  } catch (e) { /* status is informatief; stil falen is prima */ }
+}
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {}).finally(() => refreshStorageStatus());
+}
+
 // In-/uitklappen van de clublijsten onder "Banen en tees per club" (sessie-toestand,
 // standaard ingeklapt — het aantal clubs is onvoorspelbaar en de lijst kan lang zijn).
 function togglePerClubList() {
@@ -6760,8 +6931,11 @@ function loadSaved() {
   const activeId = storage.getItem('golf_active_id');
 
   const hasDateCriteria = !!(parsedSearch.dateFrom || parsedSearch.dateTo || parsedSearch.recurring);
+  const bron = window._warnFilterActive
+    ? saved.filter(r => window._warnFilterActive === 'dup' ? (window._dupIds && window._dupIds.has(String(r.id))) : roundHasWarning(r))
+    : saved;
   const filtered = (!parsedSearch.dateError && (query || hasDateCriteria))
-    ? saved.filter(r => {
+    ? bron.filter(r => {
         if (query) {
           const club = r.club || '';
           const textMatch = (r.track || '').toLowerCase().includes(query) ||
@@ -6796,7 +6970,7 @@ function loadSaved() {
         }
         return true;
       })
-    : saved;
+    : bron;
 
   if (!filtered.length) {
     el.innerHTML = '<span class="archive-empty-msg info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen rondes gevonden</span>';
@@ -7183,7 +7357,19 @@ function loadSaved() {
     // eerste FLAT_LIST_PAGE_SIZE, met een knop om de rest desgewenst te laden.
     const limit = window._flatListLimit || FLAT_LIST_PAGE_SIZE;
     const shown = rest.slice(0, limit);
-    html += shown.map(r => makeCard(r)).join('');
+    // Plakkende jaarkoppen bij elke jaarovergang — alleen in de gewone datumweergave
+    // (zoeken heeft zijn eigen resultaatregel en het waarschuwingsfilter is klein).
+    const toonJaarkoppen = !query && !hasDateCriteria && !window._warnFilterActive;
+    let vorigJaar = null;
+    html += shown.map(r => {
+      let kop = '';
+      const jaar = (r.date || '').slice(0, 4);
+      if (toonJaarkoppen && jaar && jaar !== vorigJaar) {
+        kop = `<div class="year-sep">${jaar}</div>`;
+        vorigJaar = jaar;
+      }
+      return kop + makeCard(r);
+    }).join('');
     const remaining = rest.length - shown.length;
     if (remaining > 0) {
       html += `<div style="text-align:center;padding:16px 0">`
@@ -7194,7 +7380,11 @@ function loadSaved() {
   if (query || hasDateCriteria) {
     html = `<div class="info-msg" style="font-size:17px;color:var(--muted);font-weight:700;margin-bottom:8px">${filtered.length} ronde${filtered.length !== 1 ? 's' : ''} gevonden</div>` + html;
   }
+  if (window._warnFilterActive) {
+    html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:var(--orange);font-weight:700;margin-bottom:8px"><span style="flex:1">Gefilterd op ${window._warnFilterActive === 'dup' ? 'mogelijke duplicaten' : 'waarschuwingen'} (${filtered.length})</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
+  }
   el.innerHTML = html;
+  updateAppBadge();
 }
 
 
@@ -9816,10 +10006,10 @@ function updateLastBackupDisplay() {
   const roundsValEl = document.getElementById('backupReminderRoundsVal');
   if (roundsValEl) roundsValEl.textContent = getBackupReminderRounds();
   const overdue = isBackupOverdue();
-  el.style.color = overdue ? 'var(--orange)' : '';
+  el.style.color = ''; // kleur zit in het kernbericht-span (zelfde patroon als de andere Controle-regels)
   const label = 'Backup Rondes';
   const lastDate = storage.getItem('golf_last_backup_date');
-  if (!lastDate) { el.innerHTML = `${label}: geen`; return; }
+  if (!lastDate) { el.innerHTML = overdue ? `<span style="color:var(--orange);font-weight:700">${label}: geen</span>` : `${label}: geen`; return; }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
   const daysText = daysSince <= 0 ? 'vandaag' : daysSince === 1 ? 'gisteren' : `${daysSince} dagen geleden`;
   // Bij oranje (drempel overschreden) ook het aantal nieuwe rondes tonen — anders lijkt
@@ -9830,9 +10020,10 @@ function updateLastBackupDisplay() {
     const total = loadSavedRounds().length;
     const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
     const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+    const kern = `<span style="color:var(--orange);font-weight:700">${label}: ${daysText}</span>`;
     el.innerHTML = newRounds > 0
-      ? `${label}: ${daysText} · ${newRounds} nieuwe ronde${newRounds !== 1 ? 's' : ''}`
-      : `${label}: ${daysText}`;
+      ? `${kern} · ${newRounds} nieuwe ronde${newRounds !== 1 ? 's' : ''}`
+      : kern;
   } else {
     el.innerHTML = `${label}: ${daysText}`;
   }
@@ -10101,6 +10292,7 @@ function nav(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
+  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshStorageStatus(); updateLastBackupDisplay(); }
   if (id === 'score' && game.started) renderScore();
   if (id === 'setup') {
     window.scrollTo(0, 0);
