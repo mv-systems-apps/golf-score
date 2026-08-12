@@ -40,6 +40,9 @@
       --surface:        rgba(255,255,255,.07);
       --border-strong:  rgba(255,255,255,.12);
       /* Semantische thema-variabelen (donker = standaard) */
+      /* Effen equivalent van de kaartachtergrond (--bg met --surface erover): nodig waar
+         een SVG-vorm de lijn eronder moet afdekken; rgba zou de lijn laten doorschijnen. */
+      --card-solid:     #2a4839;
       --bg:             #1a3a2a;
       --bg-gradient-2:  #2d6a4f;
       --text:           #ffffff;
@@ -51,6 +54,7 @@
     }
     /* Licht palet: overschrijft alleen de semantische variabelen */
     html.light-mode {
+      --card-solid:     #f5f2eb;
       --bg:             #f4f1ea;
       --bg-gradient-2:  #e4ddcd;
       --green-deep:     #f4f1ea;
@@ -795,15 +799,6 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
-        <div style="font-size:20px;font-weight:700;color:var(--white)">Tik op grafiek springt naar ronde</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: een tik op de handicapgrafiek (Statistieken) springt naar de bijbehorende ronde in het Archief.</div>
-      </div>
-      <label class="switch"><input type="checkbox" id="chartJumpToggle" onchange="toggleChartJump()"><span class="slider"></span></label>
-    </div>
-  </div>
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Handicap-groep altijd uitgeklapt</div>
         <div style="font-size:17px;color:var(--muted)">Aan: de Handicap-groep op Statistieken start altijd uitgeklapt; inklappen geldt dan per sessie. Uit: de stand wordt onthouden, net als bij de andere groepen.</div>
       </div>
@@ -1117,7 +1112,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-9o</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10b</div>
 </div>
 
 <script>
@@ -3856,7 +3851,7 @@ function renderPlayerStats() {
       const oldestLabel = `de ronde op <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
       const counts = whs && whs.usedIds.has(oldest.id);
       if (!counts) {
-        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} uit je laatste 20. Die telt niet mee — je hcp verandert niet.</div>`;
+        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} uit je laatste 20. Die telt niet mee — je hcp verandert daardoor niet.</div>`;
       } else {
         const remaining = last20.slice(0, last20.length - 1);
         const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
@@ -4609,7 +4604,7 @@ function renderPlayerStats() {
   // limieten indicatief (melding onder de kaart). Tik op een punt voor details.
   // Staat bewust helemaal onderaan, buiten de groepen — plek volgt na beoordeling.
   const controlChartInner = (() => {
-    const pairs = periodRounds.map((r, i) => ({ date: (r && r.date) || null, time: (r && r.time) || '', v: sdView[i] }))
+    const pairs = periodRounds.map((r, i) => ({ date: (r && r.date) || null, time: (r && r.time) || '', v: sdView[i], id: (r && r.id) != null ? r.id : null }))
       .filter(p => p.v != null && p.date);
     const aggMode = period === 'l20' ? 'ronde' : (period === 'jaar' ? 'maand' : 'kwartaal');
     const maandNamen = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -4617,7 +4612,7 @@ function renderPlayerStats() {
     // Buckets: { v, n, label, jaarStart } — v null = leeg (lijnbreuk + leeg plekje)
     let buckets = [];
     if (aggMode === 'ronde') {
-      buckets = pairs.map(p => ({ v: p.v, n: 1, label: dmOf(p.date) + '-' + p.date.slice(0, 4), tijd: p.time, jaarStart: null }));
+      buckets = pairs.map(p => ({ v: p.v, n: 1, label: dmOf(p.date) + '-' + p.date.slice(0, 4), tijd: p.time, id: p.id, jaarStart: null }));
     } else if (pairs.length) {
       const perY = aggMode === 'maand' ? 12 : 4;
       const keyOf = d => {
@@ -4627,8 +4622,11 @@ function renderPlayerStats() {
       const sums = new Map();
       pairs.forEach(p => {
         const k = keyOf(p.date);
-        if (!sums.has(k)) sums.set(k, { s: 0, n: 0 });
+        if (!sums.has(k)) sums.set(k, { s: 0, n: 0, firstDate: null, firstTime: '', id: null });
         const b = sums.get(k); b.s += p.v; b.n++;
+        // Oudste ronde van de bucket onthouden: daar springt de detailregel heen.
+        const nieuwerVroeger = b.firstDate == null || (p.date + p.time) < (b.firstDate + b.firstTime);
+        if (nieuwerVroeger) { b.firstDate = p.date; b.firstTime = p.time; b.id = p.id; }
       });
       const keys = [...sums.keys()];
       const kMin = Math.min(...keys), kMax = Math.max(...keys);
@@ -4637,7 +4635,11 @@ function renderPlayerStats() {
         const label = aggMode === 'maand'
           ? `${maandNamen[k % 12]} ${Math.floor(k / 12)}`
           : `Q${(k % 4) + 1} ${Math.floor(k / 4)}`;
-        buckets.push({ v: b ? b.s / b.n : null, n: b ? b.n : 0, label, jaarStart: (k % perY === 0) ? String(Math.floor(k / perY)) : null });
+        // Aslabel compact: mm-yyyy bij maanden, yyyyQn bij kwartalen (alleen eerste/laatste)
+        const axisLabel = aggMode === 'maand'
+          ? `${String((k % 12) + 1).padStart(2, '0')}-${Math.floor(k / 12)}`
+          : `${Math.floor(k / 4)}-Q${(k % 4) + 1}`;
+        buckets.push({ v: b ? b.s / b.n : null, n: b ? b.n : 0, label, axisLabel, id: b ? b.id : null, jaarStart: (k % perY === 0) ? String(Math.floor(k / perY)) : null });
       }
     }
     const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
@@ -4681,8 +4683,8 @@ function renderPlayerStats() {
       let svg = limLine(mean + lim3, 'var(--red)') + limLine(mean - lim3, 'var(--red)')
         + limLine(mean + lim2, 'var(--orange)') + limLine(mean - lim2, 'var(--orange)')
         + `<line x1="${padL}" y1="${yOf(mean).toFixed(1)}" x2="${w - padR}" y2="${yOf(mean).toFixed(1)}" stroke="var(--gold)" stroke-width="1.5"/>`
-        + labelFor(mean + lim3, '+3σ') + labelFor(mean + lim2, '+2σ') + labelFor(mean, 'x̄')
-        + labelFor(mean - lim2, '-2σ') + labelFor(mean - lim3, '-3σ');
+        + labelFor(mean + lim3, '+3σ̂') + labelFor(mean + lim2, '+2σ̂') + labelFor(mean, 'x̄')
+        + labelFor(mean - lim2, '-2σ̂') + labelFor(mean - lim3, '-3σ̂');
       // X-as-labels: bij aggregatie de jaargrenzen (jan / Q1); zonder jaargrens in
       // beeld, en bij losse rondes, alleen het eerste en laatste punt.
       const axisY = h - 4;
@@ -4690,12 +4692,9 @@ function renderPlayerStats() {
       if (aggMode === 'ronde') {
         svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
       } else {
-        const jaarIdx = buckets.map((b, i) => b.jaarStart ? i : null).filter(i => i != null);
-        if (jaarIdx.length) {
-          jaarIdx.forEach(i => { svg += axisText(i, buckets[i].jaarStart, i === 0 ? 'start' : (i === m - 1 ? 'end' : 'middle')); });
-        } else {
-          svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
-        }
+        // Alleen de eerste en laatste periode, compact: mm-yyyy of yyyyQn (Marks keuze;
+        // verving de jaargrens-labels, die niet lieten zien wélke maand/kwartaal het was).
+        svg += axisText(0, buckets[0].axisLabel, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].axisLabel, 'end') : '');
       }
       // Lijn met breuken: alleen segmenten tussen direct opeenvolgende gevulde buckets
       let d = '', prevFilled = false;
@@ -4704,34 +4703,44 @@ function renderPlayerStats() {
         d += `${prevFilled ? 'L' : 'M'}${xOf(i).toFixed(1)} ${yOf(b.v).toFixed(1)} `;
         prevFilled = true;
       });
-      svg += `<path d="${d.trim()}" fill="none" stroke="var(--green-light)" stroke-width="1.5" opacity=".8"/>`;
-      // Punten + tik-vlakken; dunne buckets (1 ronde bij aggregatie) een kleiner stipje
+      svg += `<path d="${d.trim()}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`; // gelijk aan de verloopgrafiek
+      // Punten + tik-vlakken; dunne buckets (minder rondes dan de ingestelde drempel)
+      // krijgen een OPEN stip van dezelfde grootte — zelfde idioom als de omlijnde
+      // staafjes in de baananalyse, en beter zichtbaar/aantikbaar dan een klein stipje
       window._ccData = [];
+      window._ccJump = []; // ronde-id per punt (alleen bij losse rondes; bij maand/kwartaal null)
       const slotHalf = m > 1 ? (w - padL - padR) / (m - 1) / 2 : (w - padL - padR) / 2;
       filledIdx.forEach((bi, fi) => {
         const b = buckets[bi];
         const flag = flags[fi];
-        const dun = aggMode !== 'ronde' && b.n === 1;
-        const r = flag === 2 ? 4 : (flag === 1 ? 3.5 : (dun ? 1.7 : 2.5));
+        const dun = aggMode !== 'ronde' && b.n < getMinRoundsStat();
+        const r = 3.5; // één grootte voor alle punten: kleur en positie t.o.v. de grenzen
+        // maken een signaal al duidelijk (Marks keuze), en groter leest/tikt prettiger
         const kleur = flag === 2 ? 'var(--red)' : (flag === 1 ? 'var(--orange)' : 'var(--green-light)');
-        svg += `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
+        // Open punt: gevuld met de effen kaartkleur zodat de lijn er niet doorheen loopt
+        // (met fill="none" liep de lijn er dwars doorheen — Marks leesbaarheidsmelding).
+        svg += dun
+          ? `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="var(--card-solid)" stroke="${kleur}" stroke-width="1.5"/>`
+          : `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
+        const groen = v => `<b style="color:var(--green-light)">${fmt1(v)}</b>`;
         window._ccData.push(aggMode === 'ronde'
-          ? `<b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · dagresultaat <b>${fmt1(b.v)}</b>`
-          : `<b>${b.label}</b>: gem. <b>${fmt1(b.v)}</b> · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
+          ? `<b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · ${groen(b.v)}`
+          : `<b>${b.label}</b>: gem. ${groen(b.v)} · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
+        window._ccJump.push(b.id != null ? b.id : null); // bij maand/kwartaal: de oudste ronde uit die periode
         svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
       });
-      const aggLabel = aggMode === 'ronde' ? 'per ronde' : (aggMode === 'maand' ? 'per maand' : 'per kwartaal');
-      const stats = `<div style="font-size:15px;color:var(--muted);margin-bottom:4px">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}&nbsp;&nbsp;·&nbsp;&nbsp;${aggLabel}</div>`;
+      const stats = `<div style="font-size:15px;color:var(--muted);margin-bottom:4px;text-align:center">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
       const detail = `<div id="ccDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
+      const grensUitleg = `<div style="font-size:15px;color:var(--muted);margin-top:2px">Grenzen gebaseerd op σ̂ = r̄/1,128.</div>`;
       const indicatief = n < 10 ? `<div style="font-size:15px;color:var(--muted);margin-top:2px">Limieten zijn indicatief bij minder dan 10 punten.</div>` : '';
-      return stats + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg>` + detail + indicatief;
+      return stats + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg>` + detail + grensUitleg + indicatief;
     })();
     return inner;
   })();
   el.innerHTML = kpiRow
     + stickyPeriodBar
     + grpHeader('handicap', 'Handicap')
-    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div id="sdDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
@@ -4920,6 +4929,18 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     };
     lowHiBadges = badge(yLow, low, 'var(--purple, #9b7fd4)') + badge(ySoft, soft, 'var(--orange)') + badge(yHard, hard, 'var(--red)');
   }
+  // Actuele officiële handicap als gouden badge op de y-as (zelfde vorm en plek als de
+  // Low HI-badges). Vervalt zodra de Low HI-lijnen getoond worden: die brengen al drie
+  // badges mee en dan wordt de as te vol (Marks afweging).
+  let hcpBadge = '';
+  const hcpNow = capPts.length ? capPts[capPts.length - 1].v : (hiPts.length ? hiPts[hiPts.length - 1].v : null);
+  if (hcpNow != null && !(lowHiDetail && lowHiDetail.value != null)) {
+    const t = fmt1(hcpNow);
+    const bw = t.length * 5.2 + 6;
+    const yb = yOf(hcpNow);
+    hcpBadge = `<rect x="0" y="${(yb - 6).toFixed(1)}" width="${bw.toFixed(0)}" height="12" rx="3" fill="var(--gold)"/>`
+      + `<text x="3" y="${(yb + 3).toFixed(1)}" font-size="9" font-weight="700" fill="#fff">${t}</text>`;
+  }
   // Paars driehoekje net boven de 'laatste 20'-balk dat omhoog wijst naar de ronde die
   // de Low HI opleverde (het punt zelf viel visueel weg tussen de andere markeringen).
   // Alleen bij een uit de historie afgeleide Low HI: een handmatig ingevulde Low HI
@@ -4946,14 +4967,15 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     + capIconsOf(capTypeSeries)
     + esrIconsOf()
     + lowHiBadges
+    + hcpBadge
     + lowHiMarker
     + `</svg>`;
-  // Tik op de grafiek: spring naar de bijbehorende ronde in het archief. De tik hoeft
-  // het stipje niet precies te raken — de ronde die op x-positie het dichtstbij ligt
-  // wint, dus ook een tik ernaast of erboven komt goed terecht. Alleen actief als de
-  // schakelaar 'Tik op grafiek springt naar ronde' (Instellingen > Weergave) aanstaat.
+  // Tik op de grafiek vult de detailregel eronder. De tik hoeft het stipje niet precies
+  // te raken — de ronde die op x-positie het dichtstbij ligt wint, dus ook een tik
+  // ernaast of erboven komt goed terecht. Springen naar het archief gebeurt bewust via
+  // een klik op die detailregel (de oude schakelaar in Weergave is vervallen).
   const svgEl = host.querySelector('svg');
-  if (svgEl && periodRoundsView && periodRoundsView.length && chartJumpEnabled()) {
+  if (svgEl && periodRoundsView && periodRoundsView.length) {
     svgEl.style.cursor = 'pointer';
     svgEl.onclick = ev => {
       const rect = svgEl.getBoundingClientRect();
@@ -4964,8 +4986,22 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
         const dist = Math.abs(xOf(i) - vx);
         if (dist < bestDist) { bestDist = dist; best = i; }
       }
-      const roundId = best != null ? periodRoundsView[best]?.id : null;
-      if (roundId != null) jumpToArchiveRound(roundId);
+      const r = best != null ? periodRoundsView[best] : null;
+      const roundId = r ? r.id : null;
+      // Detailregel onder de grafiek vullen (zelfde opzet als de regelkaart): datum,
+      // tijd, dagresultaat in groen en de handicap van dat moment; de regel zelf is
+      // de knop naar het archief.
+      const el = document.getElementById('sdDetail');
+      if (el && r) {
+        const dt = r.date ? `${+r.date.slice(8, 10)}-${+r.date.slice(5, 7)}-${r.date.slice(0, 4)}` : '';
+        const sd = sdSeries[best], hcp = (capSeries && capSeries[best] != null) ? capSeries[best] : null;
+        el.innerHTML = `<b>${dt}</b>${r.time ? ` om <b>${r.time}</b>` : ''}`
+          + (sd != null ? ` · <b style="color:var(--green-light)">${fmt1(sd)}</b>` : '')
+          + (hcp != null ? ` · hcp <b style="color:var(--gold)">${fmt1(hcp)}</b>` : '')
+          + (roundId != null ? ' <span style="color:var(--muted)">›</span>' : '');
+        el.style.cursor = roundId != null ? 'pointer' : '';
+        el.onclick = roundId != null ? () => jumpToArchiveRound(roundId) : null;
+      }
     };
   }
 }
@@ -5022,7 +5058,20 @@ function jumpToArchiveRound(roundId) {
 function ccShowPoint(idx) {
   const el = document.getElementById('ccDetail');
   const d = window._ccData && window._ccData[idx];
-  if (el && d) el.innerHTML = d;
+  if (!el || !d) return;
+  // De detailregel is zelf de knop naar het archief: bij losse rondes naar die ronde,
+  // bij maand-/kwartaalpunten naar de OUDSTE ronde uit die periode (Marks keuze) — zo
+  // land je aan het begin van het blok en scrol je vanzelf door de rest.
+  const rid = window._ccJump && window._ccJump[idx];
+  if (rid != null) {
+    el.innerHTML = d + ' <span style="color:var(--muted)">›</span>';
+    el.style.cursor = 'pointer';
+    el.onclick = () => jumpToArchiveRound(rid);
+  } else {
+    el.innerHTML = d;
+    el.style.cursor = '';
+    el.onclick = null;
+  }
 }
 
 // Wisselen tussen verloopgrafiek en controlekaart binnen dezelfde kaart (zoals de
@@ -9258,7 +9307,7 @@ function onWatIfInput(input) {
   if (hypo.capped) signals.push(hypo.capType === 'hard' ? 'hardcap' : 'softcap');
   if (hypo.esrApplied) signals.push('ESR');
   const signalText = signals.length ? ` <span style="color:var(--muted);font-weight:400">(${signals.join(' + ')})</span>` : '';
-  resultEl.innerHTML = `<div style="font-size:20px;font-weight:700">${fmt1(hypo.value)}${signalText}</div>`
+  resultEl.innerHTML = `<div style="font-size:20px">Hcp wordt: <b>${fmt1(hypo.value)}</b>${signalText}</div>`
     + (diff != null ? `<div style="font-size:15px;color:${col};font-weight:700">${arrow} ${fmtSignedLocal(diff)} t.o.v. nu (${fmt1(current.value)})</div>` : '');
 }
 
@@ -9604,7 +9653,7 @@ async function doResetAll() {
    'golf_quick_grouping',
    'golf_round_limit','golf_min_rounds_stat', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
-   'golf_lowhi_graph','golf_chart_jump',
+   'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
    'golf_low_hi','golf_backup_reminder_shown','golf_theme','golf_scorecard_symbols','golf_home_club']
     .forEach(k => storage.removeItem(k));
@@ -10425,7 +10474,6 @@ function nav(id) {
     updateStorageSettingsUI();
     updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
-    updateChartJumpToggle();
     updateHandicapAlwaysToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
@@ -10770,21 +10818,6 @@ function confirmDeleteOtherPlayers(btn) {
 // betekent dat de knoppenbalk pas verschijnt na een tik op het rondeblok.
 function actionsAlwaysVisible() {
   return storage.getItem('golf_actions_always_visible') !== 'off'; // afwezig = aan
-}
-
-// Tik-op-grafiek-springen: standaard UIT ('=== on'), anders dan de altijd-aan-instellingen —
-// bewuste keuze, zodat niemand per ongeluk vanuit de grafiek in het archief belandt.
-function chartJumpEnabled() {
-  return storage.getItem('golf_chart_jump') === 'on'; // afwezig = uit
-}
-function updateChartJumpToggle() {
-  const cb = document.getElementById('chartJumpToggle');
-  if (cb) cb.checked = chartJumpEnabled();
-}
-function toggleChartJump() {
-  const cb = document.getElementById('chartJumpToggle');
-  const on = cb ? cb.checked : !chartJumpEnabled();
-  storage.setItem('golf_chart_jump', on ? 'on' : 'off');
 }
 
 // Handicap-groep altijd uitgeklapt: standaard AAN, dus het gebruikelijke
