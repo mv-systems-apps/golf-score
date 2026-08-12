@@ -551,7 +551,7 @@
     <div class="fg" id="hcpField">
       <label>Handicap</label>
       <div id="computedHcpRow" style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
-      <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="iHcp" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayerProfile(); this.blur();}" />
@@ -579,7 +579,7 @@
     </div>
     <div class="fg">
       <label>Handicap</label>
-      <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="iHcp2" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayer2Profile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayer2Profile(); this.blur();}" />
@@ -880,7 +880,7 @@
       <div class="more-full">Het World Handicap System begrenst hoe snel je handicap mag stijgen ten opzichte van je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Vul die hier in voor een exacte berekening. Laat je het leeg, dan leidt de app de waarde af uit je opgeslagen rondes (kan afwijken als je historie onvolledig is).</div>
     </div>
     <div class="fg" style="margin-bottom:0">
-      <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
       <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);font-weight:700;margin-top:6px"><span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span>Low HI <span id="derivedLowHiVal" style="color:var(--green-light)">—</span><span id="derivedLowHiDate"></span></div>
       <div id="derivedLowHiSpan" style="font-size:15px;color:var(--muted);margin-top:2px"></div>
@@ -908,12 +908,12 @@
         <div class="more-full">Met minder dan 20 rondes wordt niet zomaar het gemiddelde van al je scores genomen: WHS gebruikt steeds een vaste, kleinere selectie van je beste dagresultaten, soms met een extra aftrek erbovenop.
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:8px;row-gap:4px;margin-top:10px;font-size:15px;color:var(--muted)">
             <span style="font-weight:700;color:var(--white)">Rondes</span><span style="font-weight:700;color:var(--white)">Beste scores</span><span style="font-weight:700;color:var(--white)">Aftrek</span>
-            <span>1</span><span>1 (je enige)</span><span>2,0</span>
-            <span>2</span><span>1</span><span>2,0</span>
-            <span>3</span><span>1</span><span>2,0</span>
-            <span>4</span><span>1</span><span>1,0</span>
+            <span>1</span><span>1 (je enige)</span><span>2.0</span>
+            <span>2</span><span>1</span><span>2.0</span>
+            <span>3</span><span>1</span><span>2.0</span>
+            <span>4</span><span>1</span><span>1.0</span>
             <span>5</span><span>1</span><span>&mdash;</span>
-            <span>6</span><span>2</span><span>1,0</span>
+            <span>6</span><span>2</span><span>1.0</span>
             <span>7&ndash;8</span><span>2</span><span>&mdash;</span>
             <span>9&ndash;11</span><span>3</span><span>&mdash;</span>
             <span>12&ndash;14</span><span>4</span><span>&mdash;</span>
@@ -922,7 +922,7 @@
             <span>19</span><span>7</span><span>&mdash;</span>
             <span>20+</span><span>8</span><span>&mdash;</span>
           </div>
-          <div style="margin-top:10px">Bij bijvoorbeeld 4 rondes wordt dus alleen je beste dagresultaat gebruikt, met 1,0 eraf — niet het gemiddelde van alle 4.</div>
+          <div style="margin-top:10px">Bij bijvoorbeeld 4 rondes wordt dus alleen je beste dagresultaat gebruikt, met 1.0 eraf — niet het gemiddelde van alle 4.</div>
         </div>
       </div>
     </div>
@@ -933,9 +933,9 @@
       <div>
         <div style="font-size:17px;color:var(--muted)">Een losse 9-holes-ronde wordt door WHS omgerekend naar een 18-holes-equivalent, met een formule die de 'verwachte score' voor de niet-gespeelde 9 holes benadert.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Je 9-holes dagresultaat wordt aangevuld met een 'verwachte score' voor de niet-gespeelde 9 holes, gebaseerd op je huidige handicap: verwachte score = 0,52 × je handicap + 1,2. Bij bijvoorbeeld een handicap van 20,0 is dat 0,52 × 20 + 1,2 = 11,6 — dat wordt bij je 9-holes dagresultaat opgeteld tot een volledig 18-holes-equivalent, dat vervolgens meetelt als één van je laatste 20 qualifying-rondes.
+        <div class="more-full">Je 9-holes dagresultaat wordt aangevuld met een 'verwachte score' voor de niet-gespeelde 9 holes, gebaseerd op je huidige handicap: verwachte score = 0.52 × je handicap + 1.2. Bij bijvoorbeeld een handicap van 20.0 is dat 0.52 × 20 + 1.2 = 11.6 — dat wordt bij je 9-holes dagresultaat opgeteld tot een volledig 18-holes-equivalent, dat vervolgens meetelt als één van je laatste 20 qualifying-rondes.
           <div style="margin-top:10px">Daarom heeft een hcp-correctie achteraf (via 'Ronde bewerken') alleen bij een 9-holes-ronde invloed op het dagresultaat — bij 18 holes gebruikt de berekening namelijk je handicap zoals die tíjdens het spelen gold, niet de eventueel later gecorrigeerde waarde.</div>
-          <div style="margin-top:10px">De exacte, officiële coëfficiënten van deze 'verwachte score'-formule zijn niet openbaar gemaakt door USGA/R&amp;A — 0,52 en 1,2 zijn een veelgebruikte, teruggerekende benadering die heel dicht bij de officiële uitkomst zit (bijvoorbeeld: bij handicap 14,0 geeft de officiële USGA-uitleg zelf een verwachte score van 8,5, deze formule geeft 8,48). Bij hogere handicaps kan dit kleine verschil iets groter uitvergroot worden, waardoor het dagresultaat van een 9-holes-ronde soms 0,1&ndash;0,2 kan afwijken van een app die de echte, geheime formule gebruikt (zoals een officiële federatie-app). Bij 18-holes-rondes speelt dit niet: daar is de formule wél volledig openbaar en exact.</div>
+          <div style="margin-top:10px">De exacte, officiële coëfficiënten van deze 'verwachte score'-formule zijn niet openbaar gemaakt door USGA/R&amp;A — 0.52 en 1.2 zijn een veelgebruikte, teruggerekende benadering die heel dicht bij de officiële uitkomst zit (bijvoorbeeld: bij handicap 14.0 geeft de officiële USGA-uitleg zelf een verwachte score van 8.5, deze formule geeft 8.48). Bij hogere handicaps kan dit kleine verschil iets groter uitvergroot worden, waardoor het dagresultaat van een 9-holes-ronde soms 0.1&ndash;0.2 kan afwijken van een app die de echte, geheime formule gebruikt (zoals een officiële federatie-app). Bij 18-holes-rondes speelt dit niet: daar is de formule wél volledig openbaar en exact.</div>
         </div>
       </div>
     </div>
@@ -944,9 +944,9 @@
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="5" y1="6" x2="19" y2="6"/><line x1="12" y1="19" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">Softcap: stijgt je index meer dan <b>3,0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
+        <div style="font-size:17px;color:var(--muted)">Softcap: stijgt je index meer dan <b>3.0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3,0-grens maar voor de helft mee. Speel je bijvoorbeeld 4,0 boven je Low HI, dan wordt dat 3,0 + (1,0 × 0,5) = 3,5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
+        <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3.0-grens maar voor de helft mee. Speel je bijvoorbeeld 4.0 boven je Low HI, dan wordt dat 3.0 + (1.0 × 0.5) = 3.5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
@@ -954,9 +954,9 @@
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="5" y1="4" x2="19" y2="4"/><line x1="5" y1="8" x2="19" y2="8"/><line x1="12" y1="19" x2="12" y2="12"/><polyline points="8 16 12 12 16 16"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">Hardcap: je index kan nooit meer dan <b>5,0 boven je Low HI</b> uitkomen.</div>
+        <div style="font-size:17px;color:var(--muted)">Hardcap: je index kan nooit meer dan <b>5.0 boven je Low HI</b> uitkomen.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Ook mét de softcap kan je index maar tot een bepaalde grens stijgen: nooit meer dan 5,0 boven je Low HI. Dit is de absolute bovengrens die WHS hanteert, ongeacht hoe slecht je gespeeld hebt. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
+        <div class="more-full">Ook mét de softcap kan je index maar tot een bepaalde grens stijgen: nooit meer dan 5.0 boven je Low HI. Dit is de absolute bovengrens die WHS hanteert, ongeacht hoe slecht je gespeeld hebt. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
@@ -966,7 +966,7 @@
       <div>
         <div style="font-size:17px;color:var(--muted)">ESR (Exceptional Score Reduction): speel je een <b>uitzonderlijk goede ronde</b>? Dan telt die extra zwaar mee, en trekt WHS je index automatisch verder omlaag.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Speel je een dagresultaat dat 7,0 tot 9,9 slagen beter is dan je handicap op dat moment, dan gaat er 1,0 extra van je index af. Is het 10,0 slagen of beter, dan gaat er 2,0 extra af. Die aftrek geldt niet alleen voor die ene ronde, maar voor <b>elk van je op dát moment recentste 20 dagresultaten</b> — en blijft gelden zolang een ronde binnen die recentste 20 valt. Speel je meerdere uitzonderlijke rondes, dan stapelen de aftrekken op.
+        <div class="more-full">Speel je een dagresultaat dat 7.0 tot 9.9 slagen beter is dan je handicap op dat moment, dan gaat er 1.0 extra van je index af. Is het 10.0 slagen of beter, dan gaat er 2.0 extra af. Die aftrek geldt niet alleen voor die ene ronde, maar voor <b>elk van je op dát moment recentste 20 dagresultaten</b> — en blijft gelden zolang een ronde binnen die recentste 20 valt. Speel je meerdere uitzonderlijke rondes, dan stapelen de aftrekken op.
           <div style="margin-top:10px">De gedachte erachter: een uitzonderlijk goede ronde is vaak een teken dat je handicap eigenlijk al lager had moeten zijn, dus WHS laat 'm meteen extra meewegen in plaats van pas na een paar rondes.</div>
         </div>
       </div>
@@ -1122,7 +1122,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10d</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10e</div>
 </div>
 
 <script>
@@ -2785,7 +2785,7 @@ function startRound() {
   if (!name) { showStartError('Voer een speler in'); return; }
   const hcp = getHcp();
   if (isNaN(hcp)) { showStartError('Vul handicap in'); return; }
-  if (hcp < -10 || hcp > 54) { showStartError('<span style="color:var(--red)">Hcp moet tussen -10,0 en 54,0 liggen</span>'); return; }
+  if (hcp < -10 || hcp > 54) { showStartError('<span style="color:var(--red)">Hcp moet tussen -10.0 en 54.0 liggen</span>'); return; }
 
   // Speler 2 validatie
   if (player2Visible) {
@@ -2793,7 +2793,7 @@ function startRound() {
     if (!name2) { showStartError('Voer een naam in voor speler 2'); return; }
     const hcp2 = parseFloat(document.getElementById('iHcp2').value.replace(',', '.'));
     if (isNaN(hcp2)) { showStartError('Vul handicap in voor speler 2'); return; }
-    if (hcp2 < -10 || hcp2 > 54) { showStartError('<span style="color:var(--red)">Hcp van speler 2 moet tussen -10,0 en 54,0 liggen</span>'); return; }
+    if (hcp2 < -10 || hcp2 > 54) { showStartError('<span style="color:var(--red)">Hcp van speler 2 moet tussen -10.0 en 54.0 liggen</span>'); return; }
   }
 
   // Check datum, tijd, club en baan
@@ -3907,7 +3907,7 @@ function renderPlayerStats() {
     + (watIfCollapsed ? '' :
       watIfSubHead('Fictief dagresultaat')
       + `<div class="fg" style="margin-bottom:0">`
-      + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>`
+      + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>`
       + `<div style="position:relative">`
       + `<input id="watIfInput" type="text" inputmode="decimal" placeholder="bijv. 18.4" oninput="onWatIfInput(this)" style="padding-right:40px">`
       + `<button id="watIfClear" class="search-clear hidden" onclick="clearSearchField('watIfInput', watIfClearRefresh)" title="Wissen">&times;</button>`
@@ -4741,7 +4741,7 @@ function renderPlayerStats() {
       });
       const stats = `<div style="font-size:15px;color:var(--muted);margin-bottom:4px;text-align:center">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
       const detail = `<div id="ccDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
-      const grensUitleg = `<div style="font-size:15px;color:var(--muted);margin-top:2px">Grenzen gebaseerd op σ̂ = r̄/1,128.</div>`;
+      const grensUitleg = `<div style="font-size:15px;color:var(--muted);margin-top:2px">Grenzen gebaseerd op σ̂ = r̄/1.128.</div>`;
       const indicatief = n < 10 ? `<div style="font-size:15px;color:var(--muted);margin-top:2px">Limieten zijn indicatief bij minder dan 10 punten.</div>` : '';
       return stats + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg>` + detail + grensUitleg + indicatief;
     })();
@@ -5290,7 +5290,7 @@ async function refreshStorageStatus() {
     let tekst = 'Opslag beschermd: ' + (persisted ? 'ja' : 'nee');
     if (navigator.storage.estimate) {
       const est = await navigator.storage.estimate();
-      if (est && est.usage != null) tekst += ' \u00b7 ' + (est.usage / 1048576).toFixed(1).replace('.', ',') + ' MB gebruikt';
+      if (est && est.usage != null) tekst += ' \u00b7 ' + (est.usage / 1048576).toFixed(1) + ' MB gebruikt';
     }
     el.textContent = tekst;
   } catch (e) { /* status is informatief; stil falen is prima */ }
@@ -11516,7 +11516,7 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div class="fg" style="margin-bottom:14px">
       <label>Hcp</label>
-      <div id="editHcpRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10,0 t/m 54,0</div>
+      <div id="editHcpRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="editHcpInput" class="field-input" type="text" inputmode="decimal" placeholder="—" style="text-align:left" oninput="onEditHcpInput(this)" onblur="onEditHcpBlur(this)">
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
@@ -11556,7 +11556,7 @@ document.addEventListener('focusin', (e) => {
         </td>
       </tr>
       <tr>
-        <td colspan="2" style="padding:0"><div id="editSdRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin:0 0 8px">-10,0 t/m 54,0</div></td>
+        <td colspan="2" style="padding:0"><div id="editSdRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin:0 0 8px">-10.0 t/m 54.0</div></td>
       </tr>
       <tr>
         <td style="padding:0;vertical-align:middle"><label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700"><span style="display:block;color:var(--green-light)">Vastgesteld</span> dagresultaat (Sd<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:2px"><polyline points="20 6 9 17 4 12"/></svg>)</label></td>
