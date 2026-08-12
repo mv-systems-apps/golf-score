@@ -811,6 +811,17 @@
     </div>
   </div>
 
+  <div class="card">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Minimum aantal rondes voor statistieken</div>
+    <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Statistieken die op te weinig rondes rusten zeggen vooral iets over toeval. Getallen met minder rondes dan dit worden verborgen (of tonen &mdash;).</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:17px;color:var(--muted);flex:1">Min. aantal rondes</span>
+      <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustMinRoundsStat(-1)">&minus;</button>
+      <span id="minRoundsStatVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:right">3</span>
+      <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustMinRoundsStat(1)">+</button>
+    </div>
+  </div>
+
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Tijdens de ronde <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>)</span></div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -1006,10 +1017,9 @@
   <div id="settingsTabData" class="hidden">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Status</div>
   <div class="card" id="dataHealthCard" onclick="dataHealthClick()" style="cursor:pointer">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Controle</div>
-    <div id="dataHealthLine" style="font-size:16px;color:var(--muted)">&hellip;</div>
-    <div id="dataHealthDupLine" class="hidden" style="font-size:16px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthDupClick()"></div>
-    <div id="lastBackupInfo" style="font-size:16px;color:var(--muted);margin-top:4px">Nog nooit geëxporteerd</div>
+    <div id="dataHealthLine" style="font-size:17px;color:var(--muted)">&hellip;</div>
+    <div id="dataHealthDupLine" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthDupClick()"></div>
+    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-top:4px">Nog nooit geëxporteerd</div>
   </div>
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
@@ -1091,17 +1101,6 @@
         <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
-      <div class="subpanel" style="margin-top:12px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Oudste rondes verwijderen</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-          <span style="font-size:17px;color:var(--muted)">Aantal:</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(-5)">−</button>
-          <span id="oldestDeleteCount" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">25</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustOldestDeleteCount(5)">+</button>
-        </div>
-        <div id="deleteOldestMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="deleteOldestBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOldest(this)">Verwijder de oudste rondes</button>
-      </div>
     </div>
   </div>
 
@@ -1118,7 +1117,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-8x</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-9m</div>
 </div>
 
 <script>
@@ -3749,11 +3748,16 @@ function renderPlayerStats() {
   })();
   const trendWarn = periodValidWarn.slice(-10).some(w => w);
 
-  // Spreiding (consistentie): standaarddeviatie van de dagresultaten (binnen de gekozen periode)
+  // Spreiding (consistentie): standaarddeviatie van de dagresultaten (binnen de gekozen
+  // periode). Steekproef-variant (n-1, Bessel): de rondes zijn een steekproef uit je spel
+  // als proces, niet de volledige populatie — delen door n onderschat de spreiding dan
+  // systematisch. Zelfde formule als de σₙ₋₁ op de regelkaart, zodat beide vergelijkbaar
+  // zijn; een resterend verschil komt dan alleen nog door de aggregatie daar
+  // (maand-/kwartaalgemiddelden i.p.v. losse rondes).
   const spread = (() => {
     if (periodValidSd.length < 3) return null;
     const m = periodValidSd.reduce((s, x) => s + x, 0) / periodValidSd.length;
-    const varc = periodValidSd.reduce((s, x) => s + (x - m) ** 2, 0) / periodValidSd.length;
+    const varc = periodValidSd.reduce((s, x) => s + (x - m) ** 2, 0) / (periodValidSd.length - 1);
     return Math.sqrt(varc);
   })();
   const spreadWarn = periodValidWarn.some(w => w);
@@ -4372,7 +4376,7 @@ function renderPlayerStats() {
   };
   // Statische variant zonder inklap-functie — voor kaarten waar een submenu de daadwerkelijke
   // in-/uitklap-taak overneemt (zie 'Club, baan & tees').
-  const cardHeadStatic = (title) => `<h2 style="display:flex;align-items:center;gap:8px"><span style="flex:1">${title}</span></h2>`;
+  const cardHeadStatic = (title) => `<h2 style="display:flex;align-items:center;gap:8px;margin:0 0 8px"><span style="flex:1">${title}</span></h2>`;
 
   // Uitsplitsing per club → banen (inklapbaar, standaard ingeklapt)
   const byClub = {};
@@ -4387,8 +4391,10 @@ function renderPlayerStats() {
     return sds.length ? sds.reduce((s, x) => s + x, 0) / sds.length : null;
   };
   // Gemiddeld dagresultaat minus handicap-op-dat-moment — negatief is beter dan je
-  // handicap. Alleen zinvol bij genoeg rondes (MIN_ROUNDS), anders te veel ruis.
-  const MIN_ROUNDS_PERF = 3;
+  // handicap. Drempel instelbaar in Instellingen > Weergave (standaard 3): deze kaart is
+  // voor spelanalyse, en met 1 of 2 rondes zegt een baan- of tee-gemiddelde vooral iets
+  // over toeval. Het aantal blijft er wel bij staan, ook in de beste/lastigste-zinnen.
+  const MIN_ROUNDS_PERF = getMinRoundsStat();
   const avgDiffOf = rs => {
     const diffs = rs.map(x => {
       const e = effectiveSD(x); const hcpVal = parseFloat(x.hcp);
@@ -4402,12 +4408,12 @@ function renderPlayerStats() {
   const allTrackPerf = [];
   Object.keys(byClub).forEach(club => Object.keys(byClub[club]).forEach(track => {
     const diff = avgDiffOf(byClub[club][track]);
-    if (diff != null) allTrackPerf.push({ club, track, diff });
+    if (diff != null) allTrackPerf.push({ club, track, diff, n: byClub[club][track].length });
   }));
   allTrackPerf.sort((a, b) => a.diff - b.diff);
   const bestTrackPerf = allTrackPerf[0];
   const worstTrackPerf = allTrackPerf[allTrackPerf.length - 1];
-  const trackPerfName = s => `${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
+  const trackPerfName = s => `${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp, ${s.n}×)</span>`;
   let trackBaanSentence = '', trackTeeSentence = '';
   if (bestTrackPerf && allTrackPerf.length > 1) {
     trackBaanSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste baan is <span style="font-weight:700">${trackPerfName(bestTrackPerf)}</span>, je lastigste is <span style="font-weight:700">${trackPerfName(worstTrackPerf)}</span>.</div>`;
@@ -4422,13 +4428,13 @@ function renderPlayerStats() {
     byClub[club][track].forEach(r => { const t = r.tee || 'Onbekend'; (byTeeGlobal[t] = byTeeGlobal[t] || []).push(r); });
     Object.keys(byTeeGlobal).forEach(tee => {
       const diff = avgDiffOf(byTeeGlobal[tee]);
-      if (diff != null) allTeePerf.push({ club, track, tee, diff });
+      if (diff != null) allTeePerf.push({ club, track, tee, diff, n: byTeeGlobal[tee].length });
     });
   }));
   allTeePerf.sort((a, b) => a.diff - b.diff);
   const bestTeePerf = allTeePerf[0];
   const worstTeePerf = allTeePerf[allTeePerf.length - 1];
-  const teePerfName = s => `${escapeHtml(s.tee)} op ${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp)</span>`;
+  const teePerfName = s => `${escapeHtml(s.tee)} op ${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp, ${s.n}×)</span>`;
   if (bestTeePerf && allTeePerf.length > 1) {
     trackTeeSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste tee is <span style="font-weight:700">${teePerfName(bestTeePerf)}</span>, je lastigste is <span style="font-weight:700">${teePerfName(worstTeePerf)}</span>.</div>`;
   }
@@ -4483,8 +4489,8 @@ function renderPlayerStats() {
   // De vroegere interne inklapkop ("Banen en tees per club") is vervangen door de
   // Banen & tees-hoofdgroep eromheen; binnen de kaart staan de clubblokken dus altijd.
   const trackCard = clubBlocks
-    ? `<div class="card">${trackBaanSentence ? cardHeadStatic('Beste baan') + trackBaanSentence : ''}${trackTeeSentence ? `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0"><span style="flex:1">Beste tee</span></h2>` + trackTeeSentence : ''}`
-      + `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0;cursor:pointer" onclick="togglePerClubList()"><span style="flex:1">Banen en tees per club</span><span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">${clubCount}</span><span style="display:inline-block;font-size:15px;transform:rotate(${window._perClubOpen ? 90 : 0}deg);transition:transform .15s">▶</span></h2>${window._perClubOpen ? clubBlocks : ''}</div>`
+    ? `<div class="card">${trackBaanSentence ? cardHeadStatic('Beste baan') + trackBaanSentence : ''}${trackTeeSentence ? `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0 8px"><span style="flex:1">Beste tee</span></h2>` + trackTeeSentence : ''}`
+      + `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;cursor:pointer" onclick="togglePerClubList()"><span style="flex:1">Banen en tees per club</span><span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">${clubCount}</span><span style="display:inline-block;font-size:15px;transform:rotate(${window._perClubOpen ? 90 : 0}deg);transition:transform .15s">▶</span></h2>${window._perClubOpen ? clubBlocks : ''}</div>`
     : '';
 
   // Vorm & consistentie
@@ -4531,7 +4537,8 @@ function renderPlayerStats() {
   // Gemiddeld dagresultaat per rondetype (9 vs 18 holes): de Sd normaliseert voor
   // baan en tee, dus de vergelijking is zuiver — maar het verschil meet niet puur
   // de rondelengte (tijdstip/banen spelen mee) en een 9-holes-Sd is van nature
-  // ruiziger. Daarom met de aantallen erbij, en pas zichtbaar vanaf 3 van elk type.
+  // ruiziger. Daarom staan de aantallen erbij; drempel is 1 van elk type (Marks keuze:
+  // het aantal staat er netjes bij, dus de lezer ziet zelf hoe hard het getal is).
   const typeAvg = (aantalHoles) => {
     const vals = periodRounds
       .filter(r => r.qualifying && ((r.holesCount ?? (r.holes || []).length) === aantalHoles))
@@ -4540,9 +4547,10 @@ function renderPlayerStats() {
     return vals.length ? { avg: vals.reduce((s, v) => s + v, 0) / vals.length, n: vals.length } : { avg: null, n: 0 };
   };
   const t9 = typeAvg(9), t18 = typeAvg(18);
-  const typeRow = (t9.n >= 3 && t18.n >= 3)
-    ? `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Gem. dagresultaat 9 / 18 holes</span><span style="font-size:17px;font-weight:700">${fmt1(t9.avg)} <span style="color:var(--muted);font-weight:400">(${t9.n}×)</span> · ${fmt1(t18.avg)} <span style="color:var(--muted);font-weight:400">(${t18.n}×)</span></span></div>`
-    : '';
+  // Eigen regel per rondetype (zebra-striping zoals de andere datarijen).
+  const typeLine = (label, t, zebra) => t.n < getMinRoundsStat() ? '' :
+    `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">${label}</span><span style="font-size:17px;font-weight:700">${fmt1(t.avg)} <span style="font-size:15px;color:var(--muted);font-weight:400">${t.n}×</span></span></div>`;
+  const typeRow = typeLine('Gem. dagresultaat 9 holes', t9, false) + typeLine('Gem. dagresultaat 18 holes', t18, true);
   const formBody = trendRow + spreadRow + typeRow + hdSubHead + hdBody + threeRow + nineRow;
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
@@ -5137,7 +5145,7 @@ async function exportDagresultaten() {
   const obj = {};
   [...perDag.keys()].sort().forEach(d => {
     const vals = perDag.get(d);
-    obj[d] = Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
+    obj[d.replace(/-/g, '')] = Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10; // yyyymmdd — Trends kent geen streepjes in datums
   });
   const tekst = JSON.stringify(obj, null, 2) + '\n';
   const voornaam = (player.split(/\s+/)[0] || '').replace(/[^\w-]/g, '');
@@ -9594,7 +9602,7 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
-   'golf_round_limit','golf_backup_reminder_days','golf_backup_reminder_rounds',
+   'golf_round_limit','golf_min_rounds_stat', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph','golf_chart_jump',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
@@ -10070,6 +10078,25 @@ function updateLastBackupDisplay() {
   }
 }
 
+// Minimum aantal rondes waarop een statistiek mag rusten (Instellingen > Weergave).
+// Bereik 1-10, standaard 3: onder de 3 zegt een gemiddelde vooral iets over toeval,
+// boven de 10 zou je in dit archief nauwelijks nog iets te zien krijgen.
+function getMinRoundsStat() {
+  const raw = parseInt(storage.getItem('golf_min_rounds_stat'), 10);
+  return (isFinite(raw) && raw >= 1 && raw <= 10) ? raw : 3;
+}
+function setMinRoundsStat(v) {
+  const clamped = Math.max(1, Math.min(10, Math.round(v)));
+  storage.setItem('golf_min_rounds_stat', String(clamped));
+  return clamped;
+}
+function adjustMinRoundsStat(delta) {
+  const newVal = setMinRoundsStat(getMinRoundsStat() + delta);
+  const el = document.getElementById('minRoundsStatVal');
+  if (el) el.textContent = newVal;
+  renderPlayerStats();
+}
+
 function adjustBackupReminderDays(delta) {
   const newVal = setBackupReminderDays(getBackupReminderDays() + delta);
   const el = document.getElementById('backupReminderDaysVal');
@@ -10333,7 +10360,7 @@ function nav(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
-  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshStorageStatus(); updateLastBackupDisplay(); }
+  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
   if (id === 'score' && game.started) renderScore();
   if (id === 'setup') {
     window.scrollTo(0, 0);
@@ -10578,17 +10605,6 @@ function updateStorageSettingsUI() {
   if (nonQEl) nonQEl.textContent = nonQCount;
   const purgeNonQBtn = document.getElementById('purgeNonQBtn');
   if (purgeNonQBtn) purgeNonQBtn.disabled = nonQCount === 0;
-  const oldestEl = document.getElementById('oldestDeleteCount');
-  const oldestBtn = document.getElementById('deleteOldestBtn');
-  if (saved.length === 0) {
-    if (oldestEl) oldestEl.textContent = 0;
-    if (oldestBtn) oldestBtn.disabled = true;
-  } else {
-    const floor = Math.min(5, saved.length);
-    _oldestDeleteCount = Math.max(floor, Math.min(saved.length, _oldestDeleteCount));
-    if (oldestEl) oldestEl.textContent = _oldestDeleteCount;
-    if (oldestBtn) oldestBtn.disabled = false;
-  }
   updateOtherPlayerCleanupUI();
 }
 
@@ -10668,50 +10684,6 @@ function confirmPurgeNonQ(btn) {
   );
 }
 
-let _oldestDeleteCount = 25;
-function adjustOldestDeleteCount(delta) {
-  const total = loadSavedRounds().length;
-  if (total === 0) return;
-  const floor = Math.min(5, total);
-  _oldestDeleteCount = Math.max(floor, Math.min(total, _oldestDeleteCount + delta));
-  const el = document.getElementById('oldestDeleteCount');
-  if (el) el.textContent = _oldestDeleteCount;
-}
-
-function confirmDeleteOldest(btn) {
-  const msg = document.getElementById('deleteOldestMsg');
-  if (btn.dataset.confirm !== '1') {
-    if (loadSavedRounds().length === 0) return;
-    btn.dataset.confirm = '1';
-    msg?.classList.remove('hidden');
-    _reflowMoreFull(btn);
-    clearTimeout(btn._confirmTimeout);
-    btn._confirmTimeout = setTimeout(() => {
-      btn.dataset.confirm = '0';
-      msg?.classList.add('hidden');
-      _reflowMoreFull(btn);
-    }, 2000);
-    return;
-  }
-  clearTimeout(btn._confirmTimeout);
-  btn.dataset.confirm = '0';
-  msg?.classList.add('hidden');
-  _reflowMoreFull(btn);
-  const n = Math.min(_oldestDeleteCount, loadSavedRounds().length);
-  showDangerModal(
-    'Oudste rondes verwijderen',
-    `De oudste ${n} ${n === 1 ? 'ronde wordt' : 'rondes worden'} definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
-    'Verwijderen',
-    () => {
-      const saved = loadSavedRounds();
-      // Nieuwste eerst in de opslag, dus de oudste staan aan het eind — de laatste n
-      // rondes zijn dus precies de oudste n.
-      storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, Math.max(0, saved.length - n))));
-      loadSaved();
-      updateStorageSettingsUI();
-    }
-  );
-}
 
 // Rondes van elke andere speler dan de hoofdspeler (Start-scherm) verwijderen. Toont de
 // betrokken naam/namen expliciet in de bevestiging — juist om te voorkomen dat per
