@@ -807,6 +807,16 @@
   </div>
 
   <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Oudere jaren in archief inklappen</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: alleen dit en vorig jaar staan open, oudere jaren beginnen ingeklapt. Uit: alle jaren staan open. Tikken op een jaarkop klapt altijd in of uit.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="archiveYearsClosedToggle" onchange="toggleArchiveYearsClosed()"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Minimum aantal rondes voor statistieken</div>
     <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Statistieken die op te weinig rondes rusten zeggen vooral iets over toeval. Getallen met minder rondes dan dit worden verborgen (of tonen &mdash;).</div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1112,7 +1122,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10b</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10d</div>
 </div>
 
 <script>
@@ -5011,6 +5021,12 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
 // wat er in het archief ook aan stond; daarna scrollen naar de kaart en die kort
 // goud laten oplichten.
 function jumpToArchiveRound(roundId) {
+  // Doeljaar openklappen: anders spring je naar een kaart die in een ingeklapt jaar zit.
+  {
+    const doel = loadSavedRounds().find(r => r.id === roundId);
+    const jaar = doel && doel.date ? doel.date.slice(0, 4) : null;
+    if (jaar) { window._flatYearCollapsed = window._flatYearCollapsed || {}; window._flatYearCollapsed[jaar] = false; }
+  }
   window._groupByPlayer = false;
   window._groupByCategory = false;
   window._groupByTrack = false;
@@ -7447,21 +7463,35 @@ function loadSaved() {
     // Lazy render: bij veel rondes niet in één keer alles opbouwen — alleen de
     // eerste FLAT_LIST_PAGE_SIZE, met een knop om de rest desgewenst te laden.
     const limit = window._flatListLimit || FLAT_LIST_PAGE_SIZE;
-    const shown = rest.slice(0, limit);
     // Plakkende jaarkoppen bij elke jaarovergang — alleen in de gewone datumweergave
     // (zoeken heeft zijn eigen resultaatregel en het waarschuwingsfilter is klein).
     const toonJaarkoppen = !query && !hasDateCriteria && !window._warnFilterActive;
+    const jaarVan = r => (r.date || '').slice(0, 4);
+    // Ingeklapte jaren tellen NIET mee voor de paginering: anders zou een dichtgeklapt
+    // jaar stilletjes de zichtbare vijftig opeten. Hun kop blijft wel altijd staan,
+    // ook voorbij de limiet — anders zou zo'n jaar onbereikbaar worden.
+    const zichtbaar = toonJaarkoppen ? rest.filter(r => !isArchiveYearCollapsed(jaarVan(r))) : rest;
+    const shown = zichtbaar.slice(0, limit);
+    const shownIds = new Set(shown.map(r => String(r.id)));
+    const jaarTotaal = {};
+    if (toonJaarkoppen) rest.forEach(r => { const j = jaarVan(r); if (j) jaarTotaal[j] = (jaarTotaal[j] || 0) + 1; });
     let vorigJaar = null;
-    html += shown.map(r => {
+    html += (toonJaarkoppen ? rest : shown).map(r => {
+      if (!toonJaarkoppen) return makeCard(r);
       let kop = '';
-      const jaar = (r.date || '').slice(0, 4);
-      if (toonJaarkoppen && jaar && jaar !== vorigJaar) {
-        kop = `<div class="year-sep">${jaar}</div>`;
+      const jaar = jaarVan(r);
+      const dicht = jaar ? isArchiveYearCollapsed(jaar) : false;
+      if (jaar && jaar !== vorigJaar) {
+        kop = `<div class="year-sep" onclick="toggleArchiveYear('${jaar}')" style="cursor:pointer;display:flex;align-items:center;gap:8px">`
+          + `<span style="flex:1">${jaar}</span>`
+          + `<span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
+          + `<span style="display:inline-block;font-size:15px;transform:rotate(${dicht ? 0 : 90}deg);transition:transform .15s">▶</span>`
+          + `</div>`;
         vorigJaar = jaar;
       }
-      return kop + makeCard(r);
+      return kop + (dicht || !shownIds.has(String(r.id)) ? '' : makeCard(r));
     }).join('');
-    const remaining = rest.length - shown.length;
+    const remaining = zichtbaar.length - shown.length;
     if (remaining > 0) {
       html += `<div style="text-align:center;padding:16px 0">`
         + `<button class="btn-secondary" style="padding:10px 20px" onclick="window._flatListLimit=(window._flatListLimit||${FLAT_LIST_PAGE_SIZE})+${FLAT_LIST_PAGE_SIZE};loadSaved();">Toon meer (${remaining} resterend)</button>`
@@ -9651,7 +9681,7 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
-   'golf_round_limit','golf_min_rounds_stat', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
+   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
@@ -10475,6 +10505,7 @@ function nav(id) {
     updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
     updateHandicapAlwaysToggle();
+    updateArchiveYearsClosedToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
     window.scrollTo(0, 0);
@@ -10818,6 +10849,37 @@ function confirmDeleteOtherPlayers(btn) {
 // betekent dat de knoppenbalk pas verschijnt na een tik op het rondeblok.
 function actionsAlwaysVisible() {
   return storage.getItem('golf_actions_always_visible') !== 'off'; // afwezig = aan
+}
+
+// Oudere jaren in het archief standaard inklappen: standaard UIT (alles open), dus het
+// '=== on'-patroon van de bewust-uit-instellingen. Aan: alleen het huidige en vorige
+// jaar starten open — verder terugkijken doe je zelden (Marks redenering).
+function archiveYearsClosedDefault() {
+  return storage.getItem('golf_archive_years_closed') === 'on'; // afwezig = uit
+}
+function updateArchiveYearsClosedToggle() {
+  const cb = document.getElementById('archiveYearsClosedToggle');
+  if (cb) cb.checked = archiveYearsClosedDefault();
+}
+function toggleArchiveYearsClosed() {
+  const cb = document.getElementById('archiveYearsClosedToggle');
+  const on = cb ? cb.checked : !archiveYearsClosedDefault();
+  storage.setItem('golf_archive_years_closed', on ? 'on' : 'off');
+  window._flatYearCollapsed = {}; // eigen tikken vervallen: de nieuwe standaard geldt
+  loadSaved();
+}
+// Effectieve stand per jaar: een eigen tik (window._flatYearCollapsed, per sessie) wint
+// van de standaard uit de instelling.
+function isArchiveYearCollapsed(jaar) {
+  const eigen = window._flatYearCollapsed || {};
+  if (Object.prototype.hasOwnProperty.call(eigen, jaar)) return eigen[jaar];
+  if (!archiveYearsClosedDefault()) return false;
+  return +jaar < new Date().getFullYear() - 1; // dit en vorig jaar blijven open
+}
+function toggleArchiveYear(jaar) {
+  window._flatYearCollapsed = window._flatYearCollapsed || {};
+  window._flatYearCollapsed[jaar] = !isArchiveYearCollapsed(jaar);
+  loadSaved();
 }
 
 // Handicap-groep altijd uitgeklapt: standaard AAN, dus het gebruikelijke
