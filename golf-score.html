@@ -817,7 +817,7 @@
     <div style="display:flex;align-items:center;gap:12px">
       <span style="font-size:17px;color:var(--muted);flex:1">Min. aantal rondes</span>
       <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustMinRoundsStat(-1)">&minus;</button>
-      <span id="minRoundsStatVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:right">3</span>
+      <span id="minRoundsStatVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">3</span>
       <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustMinRoundsStat(1)">+</button>
     </div>
   </div>
@@ -1081,7 +1081,7 @@
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-          <input type="range" id="roundLimitSlider" min="20" max="500" step="20" value="300" style="flex:1" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)">
+          <input type="range" id="roundLimitSlider" min="20" max="500" step="20" value="300" style="flex:1;touch-action:pan-y" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
           <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
         </div>
         <div style="font-size:17px;color:var(--muted)">Je hebt <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
@@ -1117,7 +1117,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-9m</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-9o</div>
 </div>
 
 <script>
@@ -10598,6 +10598,7 @@ function updateStorageSettingsUI() {
   if (slider) slider.value = limit;
   if (val) val.textContent = limit;
   const saved = loadSavedRounds();
+  window._savedRoundCount = saved.length; // cache voor onRoundLimitSlide (geen parse per sleepstap)
   const countEl = document.getElementById('roundLimitCurrentCount');
   if (countEl) countEl.textContent = saved.length;
   const nonQEl = document.getElementById('nonQCount');
@@ -10613,6 +10614,16 @@ function updateStorageSettingsUI() {
 function onRoundLimitSlide(v) {
   const val = document.getElementById('roundLimitVal');
   if (val) val.textContent = v;
+  // Verhogen kan nooit rondes kosten: meteen vastleggen, zodat de waarde blijft staan
+  // ook als het change-event niet aankomt (bv. loslaten buiten de slider). Verlagen
+  // gebeurt bewust NIET hier — dat loopt via de bevestiging in onRoundLimitChange.
+  // Het aantal rondes komt uit een teller die updateStorageSettingsUI bijhoudt, zodat
+  // er tijdens het slepen niet telkens het hele archief geparseerd wordt.
+  const requested = parseInt(v, 10);
+  const count = window._savedRoundCount;
+  if (isFinite(requested) && typeof count === 'number' && requested >= count && requested >= getRoundStorageLimit()) {
+    setRoundStorageLimit(requested);
+  }
 }
 
 function onRoundLimitChange(v) {
