@@ -1013,7 +1013,7 @@
   </div>
   <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in Archief</div>
-    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
+    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam, of van een notitie. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">Volgorde: dag-maand(-jaar). <b>@8-8-2026</b> exact, <b>@8-2026</b> maand, <b>@2026</b> jaar, <b>@8-8</b> elk jaar. Periode: <b>@1-1-2026:30-6-2026</b>; open kant mag (<b>@2025:</b> of <b>@:2026</b>); <b>@8-8:15-8</b> geldt voor elk jaar. Combineren: <b>heelsum@2026</b>.</div>
   </div>
@@ -1122,7 +1122,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10g</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10k</div>
 </div>
 
 <script>
@@ -4776,7 +4776,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
   if (sdPts.length < 2) { host.innerHTML = '<div style="font-size:17px;color:var(--muted)">Te weinig rondes voor een grafiek.</div>'; return; }
   const hiPts = (hiSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
   const capPts = (capSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
-  const w = 320, h = 154, padL = 36, padR = 8, padT = 10, padB = 32;
+  const w = 320, h = 154, padL = 36, padR = 8, padT = 10, padB = 32; // padR = padL: de gouden hcp-badge rechts krijgt zo dezelfde marge als de Low HI-badges links
   const allY = [...sdPts.map(p => p.v), ...hiPts.map(p => p.v), ...capPts.map(p => p.v)];
   if (lowHiDetail && lowHiDetail.value != null) allY.push(lowHiDetail.value, lowHiDetail.value + 3, lowHiDetail.value + 5);
   const minY = Math.floor(Math.min(...allY)) - 1, maxY = Math.ceil(Math.max(...allY)) + 1;
@@ -4941,7 +4941,8 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
   }
   // Actuele officiële handicap als gouden badge op de y-as (zelfde vorm en plek als de
   // Low HI-badges). Vervalt zodra de Low HI-lijnen getoond worden: die brengen al drie
-  // badges mee en dan wordt de as te vol (Marks afweging).
+  // badges mee en dan wordt de as te vol. Rechts geprobeerd als tweede y-as (met padR
+  // = padL) en op Marks verzoek weer teruggedraaid.
   let hcpBadge = '';
   const hcpNow = capPts.length ? capPts[capPts.length - 1].v : (hiPts.length ? hiPts[hiPts.length - 1].v : null);
   if (hcpNow != null && !(lowHiDetail && lowHiDetail.value != null)) {
