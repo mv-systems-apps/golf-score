@@ -1122,7 +1122,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10f</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10g</div>
 </div>
 
 <script>
@@ -5193,8 +5193,9 @@ function clearWarnFilter() {
 // werden die gemiddeld omdat een datumsleutel er maar één toeliet).
 // In Trends éénmalig een bron aanmaken die naar deze bestandsnaam wijst; daarna
 // is elke update: exporteren en het bestand in de werkmap overschrijven.
-// Deelt als json en anders als text/plain met .json-naam (Chrome-deellijst),
-// pas daarna een download.
+// Schrijft naar de ingestelde exportmap (zelfde route als de backups — duidelijker
+// dan delen/Downloads, Marks keuze); is er geen map ingesteld of mislukt het
+// schrijven, dan alsnog delen (json, anders text/plain met .json-naam) of downloaden.
 async function exportDagresultaten() {
   const player = startPlayerName();
   if (!player) return;
@@ -5221,6 +5222,15 @@ async function exportDagresultaten() {
   const tekst = JSON.stringify(obj, null, 2) + '\n';
   const voornaam = (player.split(/\s+/)[0] || '').replace(/[^\w-]/g, '');
   const bestandsnaam = `Dagresultaat_${voornaam || 'Golf'}.json`;
+  if (await tryWriteToExportFolder(bestandsnaam, tekst)) {
+    document.querySelectorAll('.export-rounds-success').forEach(m => {
+      m.textContent = `${rondes.length} dagresulta${rondes.length !== 1 ? 'ten' : 'at'} geëxporteerd`;
+      m.classList.remove('hidden');
+      clearTimeout(m._hideTimer);
+      m._hideTimer = setTimeout(() => m.classList.add('hidden'), 2000);
+    });
+    return;
+  }
   try {
     for (const mime of ['application/json', 'text/plain']) {
       const file = new File([tekst], bestandsnaam, { type: mime });
