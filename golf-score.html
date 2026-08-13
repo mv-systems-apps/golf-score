@@ -1122,7 +1122,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10e</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10f</div>
 </div>
 
 <script>
@@ -5186,31 +5186,37 @@ function clearWarnFilter() {
 }
 
 // ── Dagresultaten-export (voor de Trends-app): een bron-databestand in exact het
-// formaat dat Trends leest — een JSON-map van datum naar waarde, zoals
-// Gewicht_Mark.json. In Trends éénmalig een bron aanmaken die naar deze
-// bestandsnaam wijst; daarna is elke update: exporteren en het bestand in de
-// werkmap overschrijven (Trends zelf hoeft nergens voor aangepast). Meerdere
-// rondes op één datum worden gemiddeld (een datum-map kan één waarde per dag;
-// komt zelden voor, dus verwaarloosbaar effect op de analyse — Marks afweging).
+// formaat dat Trends leest — een JSON-map van sleutel naar waarde. Sleutel is
+// DyyyymmddThhmm (tijd-deel optioneel: Dyyyymmdd als de ronde geen tijd heeft),
+// het formaat waarmee Trends meerdere metingen per dag aankan. Elke qualifying
+// ronde krijgt dus een eigen regel — ook twee rondes op dezelfde dag (voorheen
+// werden die gemiddeld omdat een datumsleutel er maar één toeliet).
+// In Trends éénmalig een bron aanmaken die naar deze bestandsnaam wijst; daarna
+// is elke update: exporteren en het bestand in de werkmap overschrijven.
 // Deelt als json en anders als text/plain met .json-naam (Chrome-deellijst),
 // pas daarna een download.
 async function exportDagresultaten() {
   const player = startPlayerName();
   if (!player) return;
-  const perDag = new Map();
-  loadSavedRounds()
+  const rondes = loadSavedRounds()
     .filter(r => r.player === player && r.qualifying && r.date)
-    .forEach(r => {
-      const e = effectiveSD(r);
-      if (e == null) return;
-      if (!perDag.has(r.date)) perDag.set(r.date, []);
-      perDag.get(r.date).push(e.value);
-    });
-  if (!perDag.size) return;
+    .map(r => { const e = effectiveSD(r); return e == null ? null : { d: r.date, t: r.time || '', v: e.value }; })
+    .filter(x => x != null)
+    .sort((a, b) => (a.d + a.t).localeCompare(b.d + b.t));
+  if (!rondes.length) return;
   const obj = {};
-  [...perDag.keys()].sort().forEach(d => {
-    const vals = perDag.get(d);
-    obj[d.replace(/-/g, '')] = Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10; // yyyymmdd — Trends kent geen streepjes in datums
+  rondes.forEach(x => {
+    const dag = 'D' + x.d.replace(/-/g, ''); // geen streepjes in de sleutel
+    let sleutel = x.t ? dag + 'T' + x.t.replace(':', '') : dag;
+    // Twee tijdloze rondes op dezelfde dag zouden dezelfde sleutel krijgen; die
+    // onderscheiden we met een oplopende minuut vanaf T0000, zodat geen ronde wegvalt.
+    if (Object.prototype.hasOwnProperty.call(obj, sleutel)) {
+      for (let m = 0; m < 1440; m++) {
+        const kandidaat = dag + 'T' + String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0');
+        if (!Object.prototype.hasOwnProperty.call(obj, kandidaat)) { sleutel = kandidaat; break; }
+      }
+    }
+    obj[sleutel] = Math.round(x.v * 10) / 10;
   });
   const tekst = JSON.stringify(obj, null, 2) + '\n';
   const voornaam = (player.split(/\s+/)[0] || '').replace(/[^\w-]/g, '');
