@@ -1134,7 +1134,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-00F</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-011</div>
 </div>
 
 <script>
@@ -4797,7 +4797,7 @@ function renderPlayerStats() {
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', 'Prestaties')
     + (grpOpen('prestaties') ? distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
-    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
+    + grpHeader('banen', `Clubs${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
     + (grpOpen('banen') ? trackCard : '')
     // Analyseknop helemaal onderaan (Marks plaatsing): opent een modal met een
     // doorrekening van het hele archief plus concrete aanbevelingen.
@@ -5523,7 +5523,7 @@ function buildGameAnalysis() {
       .filter(p => p.n >= Math.max(minN, 3))
       .map(p => ({ ...p, gem: p.som / p.n }))
       .sort((a, b) => b.gem - a.gem)
-      .slice(0, 3);
+      .slice(0, 5); // zelfde aantal als in de prompt (Marks vraag: waarom verschilden die?)
     if (duurste.length) {
       secties.push({ kop: 'Duurste holes', regels: duurste.map(p =>
         `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par, ${p.n}\u00d7 gespeeld.`
@@ -5577,7 +5577,7 @@ function buildGameAnalysis() {
   // ── Banen en tees ──
   // Maat is het gemiddelde dagresultaat MINUS je handicap op dat moment: dat corrigeert
   // voor het feit dat je handicap in de loop van het jaar verandert, en het is dezelfde
-  // maat als in de kaart Clubs, Banen en Tees. Deze conclusies stonden eerder in die
+  // maat als in de kaart Clubs op Statistieken. Deze conclusies stonden eerder in die
   // kaart; ze horen hier omdat de app hier oordeelt in plaats van naslag geeft.
   {
     const diffOf = r => {
