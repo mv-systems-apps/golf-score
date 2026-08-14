@@ -155,7 +155,6 @@
     .tee-badge {
       display: inline-block; padding: 3px 11px; border-radius: 6px;
       font-size:13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
-      will-change: filter;
       background: repeating-linear-gradient(45deg, #c9a84c 0px, #c9a84c 3px, #a8863c 3px, #a8863c 6px); color: #1a1a1a;
     }
     .tee-badge.badge-q { background: var(--gold); color: var(--green-deep); }
@@ -339,6 +338,9 @@
     /* Plakkende jaarkop in het archief (blijft bovenin hangen tijdens scrollen) */
     .year-sep { position: sticky; top: var(--header-h, 60px); z-index: 90; background: var(--green-deep); color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: .7px; line-height: 1; padding: 12px 2px 8px; }
     /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
+    /* Blokje om de grafiek zelf: de swipe-pijltjes centreren hierop, zodat ze niet
+       meezakken als er onder de grafiek regels bij komen (detail, Low HI, legenda). */
+    .sd-chart-zone { position: relative; }
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
     .saved-item.round-flash { animation: roundFlash 1.6s ease; }
@@ -946,7 +948,7 @@
       <div>
         <div style="font-size:17px;color:var(--muted)">Softcap: stijgt je index meer dan <b>3.0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3.0-grens maar voor de helft mee. Speel je bijvoorbeeld 4.0 boven je Low HI, dan wordt dat 3.0 + (1.0 × 0.5) = 3.5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
+        <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3.0-grens maar voor de helft mee. Speel je bijvoorbeeld 4.0 boven je Low HI, dan wordt dat 3.0 + (1.0 × 0.5) = 3.5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
@@ -956,7 +958,7 @@
       <div>
         <div style="font-size:17px;color:var(--muted)">Hardcap: je index kan nooit meer dan <b>5.0 boven je Low HI</b> uitkomen.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Ook mét de softcap kan je index maar tot een bepaalde grens stijgen: nooit meer dan 5.0 boven je Low HI. Dit is de absolute bovengrens die WHS hanteert, ongeacht hoe slecht je gespeeld hebt. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen (groen pijltje) terwijl er tóch een cap actief was.</div>
+        <div class="more-full">Ook mét de softcap kan je index maar tot een bepaalde grens stijgen: nooit meer dan 5.0 boven je Low HI. Dit is de absolute bovengrens die WHS hanteert, ongeacht hoe slecht je gespeeld hebt. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
@@ -1002,20 +1004,30 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Actieknoppen altijd zichtbaar</div>
-        <div style="font-size:17px;color:var(--muted)">Uit: knoppenbalk pas zichtbaar na een tik op het club- of rondeblok.</div>
+        <div style="font-size:17px;color:var(--muted)">Uit: knoppenbalk pas zichtbaar na een tik op de club of ronde.</div>
       </div>
       <label class="switch"><input type="checkbox" id="actionsAlwaysVisibleToggle" onchange="toggleActionsAlwaysVisible()"><span class="slider"></span></label>
     </div>
   </div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
-    <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in Archief.</div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
+        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in het Archief.</div>
+      </div>
+    </div>
   </div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in Archief</div>
-    <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam, of van een notitie. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-    <div class="more-full">Volgorde: dag-maand(-jaar). <b>@8-8-2026</b> exact, <b>@8-2026</b> maand, <b>@2026</b> jaar, <b>@8-8</b> elk jaar. Periode: <b>@1-1-2026:30-6-2026</b>; open kant mag (<b>@2025:</b> of <b>@:2026</b>); <b>@8-8:15-8</b> geldt voor elk jaar. Combineren: <b>heelsum@2026</b>.</div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <div>
+      <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in rondes <span style="font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
+      <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam, of van een notitie. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
+      <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+      <div class="more-full">Volgorde: dag-maand(-jaar). <b>@8-8-2026</b> exact, <b>@8-2026</b> maand, <b>@2026</b> jaar, <b>@8-8</b> elk jaar. Periode: <b>@1-1-2026:30-6-2026</b>; open kant mag (<b>@2025:</b> of <b>@:2026</b>); <b>@8-8:15-8</b> geldt voor elk jaar. Combineren: <b>heelsum@2026</b>.</div>
+      </div>
+    </div>
   </div>
 
   </div>
@@ -1122,7 +1134,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 11-10k</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-00F</div>
 </div>
 
 <script>
@@ -3286,10 +3298,10 @@ function emptyStateHTML() {
   const setupIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>';
   const archiveIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>';
   const startTriangle = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:-2px"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
-  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Geen scores. Maak een nieuwe ronde aan, of start (${startTriangle}) een ronde in het archief.</div>`
+  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Geen scores. Maak een nieuwe ronde aan, of start (${startTriangle}) een ronde.</div>`
     + `<div style="display:flex;gap:8px">`
     + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('setup')">${setupIcon}Nieuwe ronde</button>`
-    + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('archive')">${archiveIcon}Archief</button>`
+    + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('archive')">${archiveIcon}Rondes</button>`
     + `</div>`;
 }
 
@@ -3858,10 +3870,10 @@ function renderPlayerStats() {
       body = `<div style="font-size:17px;color:var(--muted)">Je venster is nog niet vol (${last20.length} van 20) — er valt nog niets uit.</div>`;
     } else {
       const oldest = last20[last20.length - 1]; // last20 is nieuwste-eerst
-      const oldestLabel = `de ronde op <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
+      const oldestLabel = `Je ronde van <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
       const counts = whs && whs.usedIds.has(oldest.id);
       if (!counts) {
-        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} uit je laatste 20. Die telt niet mee — je hcp verandert daardoor niet.</div>`;
+        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} valt straks uit je laatste 20, maar telt niet mee — je hcp verandert daardoor niet.</div>`;
       } else {
         const remaining = last20.slice(0, last20.length - 1);
         const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
@@ -3880,7 +3892,7 @@ function renderPlayerStats() {
             scenarioLine = ` Je hcp blijft dan <b>${fmt1(scenario.value)}</b>.`;
           }
         }
-        body = `<div style="font-size:17px;color:var(--muted)">Bij je volgende qualifying ronde valt ${oldestLabel} <span class="tee-badge badge-whs">1</span> uit je laatste 20.${scenarioLine}</div>`;
+        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} <span class="tee-badge badge-whs">1</span> valt straks uit je laatste 20.${scenarioLine}</div>`;
       }
     }
     return body;
@@ -3902,10 +3914,10 @@ function renderPlayerStats() {
   const watIfCard = `<div class="card" id="watIfCard">`
     + `<div style="display:flex;align-items:center;cursor:pointer;line-height:1" onclick="toggleWatIfCard()">`
     + `<h2 style="margin:0;flex:1">Wat als...?</h2>`
-    + `<span style="font-size:14px;color:var(--gold);transition:transform .2s;display:inline-block${watIfCollapsed ? '' : ';transform:rotate(90deg)'}">▶</span>`
+    + `${arrowSvg(14, !watIfCollapsed, 'var(--gold)')}`
     + `</div>`
     + (watIfCollapsed ? '' :
-      watIfSubHead('Fictief dagresultaat')
+      watIfSubHead('Volgend dagresultaat')
       + `<div class="fg" style="margin-bottom:0">`
       + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>`
       + `<div style="position:relative">`
@@ -3931,23 +3943,26 @@ function renderPlayerStats() {
     else if (d === 2) dbl++;
     else worse++;
   }));
+  // Zelfde principe als bij "T.o.v. je handicap": kolommen zo breed als de langste
+  // waarde, dus alle balken even lang en niets valt weg.
   const distRow = (label, n, color) => {
     const pct = holesTot ? Math.round(n / holesTot * 100) : 0;
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">`
-      + `<span style="width:88px;flex:none;font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-      + `<div style="flex:1;min-width:0;background:var(--overlay-soft);border-radius:6px;overflow:hidden;height:18px"><div style="width:${pct}%;height:100%;background:${color}"></div></div>`
-      + `<span style="width:34px;flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
-      + `<span style="width:10px;flex:none;text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
-      + `<span style="width:38px;flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+    return `<div style="display:contents">`
+      + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+      + `<div style="min-width:0;height:18px;border-radius:9px;background:linear-gradient(to right, ${color} 0 ${pct}%, var(--overlay-soft) ${pct}% 100%)"></div>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
+      + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
   };
+  const distGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center;margin:2px 0">${binnen}</div>`;
   // Scoreverdeling-kleuren via CSS-vars (licht/donker). Par gebruikt het app-grijs --res-par.
   const distCard = `<div class="card"><h2>Scoreverdeling</h2>`
-    + distRow('Eagle+', eagle, 'var(--dist-eagle)')
+    + distGrid(distRow('Eagle+', eagle, 'var(--dist-eagle)')
     + distRow('Birdie', birdie, 'var(--dist-birdie)')
     + distRow('Par', par, 'var(--res-par)')
     + distRow('Bogey', bogey, 'var(--dist-bogey)')
     + distRow('Dubbel', dbl, 'var(--dist-double)')
-    + distRow('Slechter', worse, 'var(--dist-worse)')
+    + distRow('Slechter', worse, 'var(--dist-worse)'))
     + `<div style="font-size:15px;color:var(--muted);margin-top:6px">${holesTot} holes over ${periodRounds.length} rondes</div></div>`;
 
   // Gemiddelde per tee, gecorrigeerd voor baanmoeilijkheid (CR/SR) via Score Differential (WHS).
@@ -4351,23 +4366,34 @@ function renderPlayerStats() {
     else if (diff <= 5) distBuckets.boven3_5.push(entry);
     else distBuckets.boven5.push(entry);
   });
+  // Kolombreedtes worden vooraf bepaald op de langste waarde in dit blok (in ch, dus
+  // exact zo breed als de cijfers zelf) en het waarschuwingsicoon krijgt een eigen
+  // sleuf die in álle rijen bestaat. Daardoor is de balk in elke rij even lang en
+  // houdt hij links en rechts dezelfde tussenruimte; er valt nooit een cijfer weg.
+  const hdAlle = [distBuckets.onder, distBuckets.gelijk, distBuckets.boven1_3, distBuckets.boven3_5, distBuckets.boven5];
+  const hdWarnAny = hdAlle.some(arr => arr.some(entry => entry.uncertain));
   const hdRow = (label, arr) => {
     const n = arr.length;
     const pct = distTot ? Math.round(n / distTot * 100) : 0;
     const warn = arr.some(entry => entry.uncertain);
-    return `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
-      + `<span style="width:88px;flex:none;font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-      + `<div style="flex:1;min-width:0;background:var(--overlay-soft);border-radius:6px;overflow:hidden;height:18px"><div style="width:${pct}%;height:100%;background:var(--green-light)"></div></div>`
-      + `<span style="flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px">${warn ? warningIconSmall : ''}${n}</span>`
-      + `<span style="width:10px;flex:none;text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
-      + `<span style="width:38px;flex:none;text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+    return `<div style="display:contents">`
+      + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+      + `<div style="min-width:0;height:18px;border-radius:9px;background:linear-gradient(to right, var(--green-light) 0 ${pct}%, var(--overlay-soft) ${pct}% 100%)"></div>`
+      + (hdWarnAny ? `<span style="display:flex;align-items:center;justify-content:flex-end">${warn ? warningIconSmall : ''}</span>` : '')
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
+      + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
   };
+  // Eén raster om alle rijen: de labelkolom krijgt max-content, dus exact de breedte
+  // van het langste label — geen overtollig wit links van de balken. De balk zelf
+  // pakt de resterende ruimte (1fr), waardoor alle balken even lang zijn.
+  const hdGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr ${hdWarnAny ? '17px ' : ''}max-content 10px max-content;column-gap:14px;row-gap:6px;align-items:center;margin:2px 0">${binnen}</div>`;
   const hdBody = distTot
-    ? hdRow('Lager', distBuckets.onder)
+    ? hdGrid(hdRow('Lager', distBuckets.onder)
       + hdRow('Op index', distBuckets.gelijk)
       + hdRow('+0 tot +3', distBuckets.boven1_3)
       + hdRow('+3 tot +5', distBuckets.boven3_5)
-      + hdRow('Hoger', distBuckets.boven5)
+      + hdRow('Hoger', distBuckets.boven5))
       + `<div style="font-size:15px;color:var(--muted);margin-top:6px;margin-bottom:8px">${distTot} rondes t.o.v. voorgaande</div>`
     : '';
 
@@ -4377,7 +4403,7 @@ function renderPlayerStats() {
     const col = window._statCardCollapsed[key] !== false;
     return `<h2 onclick="window._statCardCollapsed['${key}']=window._statCardCollapsed['${key}']===false?true:false;renderPlayerStats()" style="cursor:pointer;display:flex;align-items:center;gap:8px">`
       + `<span style="flex:1;display:flex;align-items:center;gap:8px">${title}${hasWarning ? warningIconSmall : ''}</span>`
-      + `<span style="display:inline-block;font-size:15px;transform:rotate(${col ? 0 : 90}deg);transition:transform .15s">▶</span></h2>`;
+      + `${arrowSvg(15, !col)}</h2>`;
   };
   // Statische variant zonder inklap-functie — voor kaarten waar een submenu de daadwerkelijke
   // in-/uitklap-taak overneemt (zie 'Club, baan & tees').
@@ -4408,54 +4434,21 @@ function renderPlayerStats() {
     return diffs.length >= MIN_ROUNDS_PERF ? diffs.reduce((s, x) => s + x, 0) / diffs.length : null;
   };
   const fmtDiff = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
-  // Beste/lastigste baan over alle club→baan-combinaties heen (voor de highlight
-  // bovenaan de kaart) — zelfde MIN_ROUNDS-drempel als avgDiffOf zelf al hanteert.
-  const allTrackPerf = [];
-  Object.keys(byClub).forEach(club => Object.keys(byClub[club]).forEach(track => {
-    const diff = avgDiffOf(byClub[club][track]);
-    if (diff != null) allTrackPerf.push({ club, track, diff, n: byClub[club][track].length });
-  }));
-  allTrackPerf.sort((a, b) => a.diff - b.diff);
-  const bestTrackPerf = allTrackPerf[0];
-  const worstTrackPerf = allTrackPerf[allTrackPerf.length - 1];
-  const trackPerfName = s => `${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp, ${s.n}×)</span>`;
-  let trackBaanSentence = '', trackTeeSentence = '';
-  if (bestTrackPerf && allTrackPerf.length > 1) {
-    trackBaanSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste baan is <span style="font-weight:700">${trackPerfName(bestTrackPerf)}</span>, je lastigste is <span style="font-weight:700">${trackPerfName(worstTrackPerf)}</span>.</div>`;
-  }
-  // Zelfde vergelijking, maar dan op tee-niveau — bewust een APARTE zin i.p.v. samen met
-  // de baan-vergelijking in één lijst, want een baan-totaal en een tee-binnen-die-baan
-  // zijn geen onafhankelijke categorieën (de tee-rondes zitten al in het baan-totaal
-  // verwerkt); door elkaar zou tot verwarrende, dubbelop-tellende uitkomsten kunnen leiden.
-  const allTeePerf = [];
-  Object.keys(byClub).forEach(club => Object.keys(byClub[club]).forEach(track => {
-    const byTeeGlobal = {};
-    byClub[club][track].forEach(r => { const t = r.tee || 'Onbekend'; (byTeeGlobal[t] = byTeeGlobal[t] || []).push(r); });
-    Object.keys(byTeeGlobal).forEach(tee => {
-      const diff = avgDiffOf(byTeeGlobal[tee]);
-      if (diff != null) allTeePerf.push({ club, track, tee, diff, n: byTeeGlobal[tee].length });
-    });
-  }));
-  allTeePerf.sort((a, b) => a.diff - b.diff);
-  const bestTeePerf = allTeePerf[0];
-  const worstTeePerf = allTeePerf[allTeePerf.length - 1];
-  const teePerfName = s => `${escapeHtml(s.tee)} op ${escapeHtml(s.track)} <span style="font-weight:700">(${escapeHtml(s.club)}, ${fmtDiff(s.diff)} t.o.v. hcp, ${s.n}×)</span>`;
-  if (bestTeePerf && allTeePerf.length > 1) {
-    trackTeeSentence = `<div style="font-size:16px;margin-bottom:8px">Je beste tee is <span style="font-weight:700">${teePerfName(bestTeePerf)}</span>, je lastigste is <span style="font-weight:700">${teePerfName(worstTeePerf)}</span>.</div>`;
-  }
   window._statClubCollapsed = window._statClubCollapsed || {};
   const clubNames = Object.keys(byClub).sort((a, b) => {
     const ca = Object.values(byClub[a]).reduce((s, x) => s + x.length, 0);
     const cb = Object.values(byClub[b]).reduce((s, x) => s + x.length, 0);
     return cb - ca;
   });
-  const clubBlocks = clubNames.map(club => {
+  const clubBlock = club => {
     const tracks = byClub[club];
     const total = Object.values(tracks).reduce((s, x) => s + x.length, 0);
     const ck = club.replace(/\W/g, '_');
     const collapsed = window._statClubCollapsed[ck] !== false; // standaard ingeklapt
     window._statTrackCollapsed = window._statTrackCollapsed || {};
-    const trackRows = Object.keys(tracks).sort((a, b) => tracks[b].length - tracks[a].length).map(track => {
+    // Banen alfabetisch: terugvinden weegt hier zwaarder dan aantal rondes (Marks keuze).
+    // Tees blijven bewust op aantal gesorteerd — die volgorde zit er bij Mark in.
+    const trackRows = Object.keys(tracks).sort((a, b) => a.localeCompare(b, 'nl')).map(track => {
       const rs = tracks[track];
       const avg = avgSdOf(rs);
       const tk = ck + '_' + track.replace(/\W/g, '_');
@@ -4479,33 +4472,64 @@ function renderPlayerStats() {
         + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${avg != null ? avg.toFixed(1) : '—'}</span>`
         + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${trackDiff != null ? fmtDiff(trackDiff) : '—'}</span>`
         + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${rs.length}×</span>`
-        + `<span style="display:inline-block;font-size:13px;transform:rotate(${tCollapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
+        + `${arrowSvg(13, !tCollapsed)}</div>`;
       return trackHeader + (tCollapsed ? '' : teeRows);
     }).join('');
     const clubHasWarning = Object.values(tracks).some(arr => arr.some(roundHasWarning));
     const header = `<div onclick="window._statClubCollapsed['${ck}']=window._statClubCollapsed['${ck}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0">`
       + `<span style="flex:1;font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px">${escapeHtml(club)}${clubHasWarning ? warningIconSmall : ''}</span>`
       + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${total}×</span>`
-      + `<span style="display:inline-block;transform:rotate(${collapsed ? 0 : 90}deg);transition:transform .15s">▶</span></div>`;
+      + `${arrowSvg(15, !collapsed)}</div>`;
     return header + (collapsed ? '' : `<div>${trackRows}</div>`);
-  }).join('');
+  };
+  // Categorieën zoals op de Club-tab (thuisclub, favorieten, overig) zodat beide
+  // schermen dezelfde volgorde tonen; alleen clubs waarmee daadwerkelijk gespeeld is,
+  // en binnen een categorie alfabetisch. "Actief" hoort bij het startscherm en zegt
+  // niets over je historie, dus die categorie ontbreekt hier bewust.
+  window._statClubSectionCollapsed = window._statClubSectionCollapsed || {};
+  const statSectionHeader = (titel, aantal, key, eerste) => {
+    const dicht = window._statClubSectionCollapsed[key] === true; // standaard open
+    return `<div onclick="window._statClubSectionCollapsed['${key}']=window._statClubSectionCollapsed['${key}']!==true;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:${eerste ? '0' : '16px'} 0 8px">`
+      + `<span style="flex:1;font-size:17px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;line-height:1">${titel}</span>`
+      + `<span style="font-size:15px;color:var(--gold)">${aantal}</span>`
+      + `${arrowSvg(15, !dicht, 'var(--gold)')}</div>`;
+  };
+  const alfabetisch = arr => [...arr].sort((a, b) => a.localeCompare(b, 'nl'));
+  const homeClubNaam = storage.getItem('golf_home_club');
+  const favClubNamen = (typeof getFavClubs === 'function' ? getFavClubs() : []);
+  const thuisClubs = clubNames.filter(c => c === homeClubNaam);
+  const favClubs = alfabetisch(clubNames.filter(c => c !== homeClubNaam && favClubNamen.includes(c)));
+  const overigeClubs = alfabetisch(clubNames.filter(c => c !== homeClubNaam && !favClubNamen.includes(c)));
+  let eersteSectie = true;
+  const sectie = (titel, lijst, key) => {
+    if (!lijst.length) return '';
+    const kop = statSectionHeader(titel, lijst.length, key, eersteSectie);
+    eersteSectie = false;
+    return kop + (window._statClubSectionCollapsed[key] === true ? '' : lijst.map(clubBlock).join(''));
+  };
+  const clubBlocks = sectie('Thuisclub', thuisClubs, 'home') + sectie('Favorieten', favClubs, 'fav') + sectie('Overig', overigeClubs, 'other');
   const anyClubWarning = Object.values(byClub).some(tracks => Object.values(tracks).some(arr => arr.some(roundHasWarning)));
   const clubCount = Object.keys(byClub).length;
   // De vroegere interne inklapkop ("Banen en tees per club") is vervangen door de
   // Banen & tees-hoofdgroep eromheen; binnen de kaart staan de clubblokken dus altijd.
-  const trackCard = clubBlocks
-    ? `<div class="card">${trackBaanSentence ? cardHeadStatic('Beste baan') + trackBaanSentence : ''}${trackTeeSentence ? `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0 8px"><span style="flex:1">Beste tee</span></h2>` + trackTeeSentence : ''}`
-      + `<h2 style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;cursor:pointer" onclick="togglePerClubList()"><span style="flex:1">Banen en tees per club</span><span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none">${clubCount}</span><span style="display:inline-block;font-size:15px;transform:rotate(${window._perClubOpen ? 90 : 0}deg);transition:transform .15s">▶</span></h2>${window._perClubOpen ? clubBlocks : ''}</div>`
-    : '';
+  // De kaart bevat alleen nog de lijst: de conclusies over beste baan en tee zijn
+  // verhuisd naar "Analyseer mijn spel" (dat is waar de app oordeelt; deze kaart is
+  // naslag). Daardoor kon ook de interne kop vervallen — de groene groepskop met het
+  // aantal clubs eromheen zegt hetzelfde.
+  const trackCard = clubBlocks ? `<div class="card">${clubBlocks}</div>` : '';
 
   // Vorm & consistentie
   const fmtSigned = v => (v > 0 ? '+' : '') + v.toFixed(1);
   const trendRow = trend
     ? (() => {
+        // Tekstdriehoekjes, bewust NIET de SVG-pijl uit het archief: die is voorbehouden
+        // aan handicapveranderingen (Marks regel).
         const better = trend.diff < 0; // lager dagresultaat = beter
-        const arrow = Math.abs(trend.diff) < 0.05 ? '→' : (better ? '▼' : '▲');
+        // 0 graden = opzij (gelijk), 90 = omlaag (beter), -90 = omhoog (slechter);
+        // kleur volgt de regel zelf via currentColor.
+        const arrow = arrowSvgDeg(14, Math.abs(trend.diff) < 0.05 ? 0 : (better ? 90 : -90));
         const col = Math.abs(trend.diff) < 0.05 ? 'var(--muted)' : (better ? 'var(--green-light)' : 'var(--red)');
-        return `<div style="background:rgba(0,0,0,.04);display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Trend (laatste 5)</span><span style="font-size:17px;font-weight:700;color:${col};display:flex;align-items:center;gap:5px">${trendWarn ? warningIconSmall : ''}${arrow} ${fmtSigned(trend.diff)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`;
+        return `<div style="background:rgba(0,0,0,.04);display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">Trend (laatste 5)</span><span style="font-size:17px;font-weight:700;color:${col};display:flex;align-items:center;gap:4px">${trendWarn ? warningIconSmall : ''}${arrow}${fmtSigned(trend.diff)} <span style="color:var(--muted);font-weight:400">Sd</span></span></div>`;
       })()
     : '';
   const spreadRow = spread != null
@@ -4577,7 +4601,7 @@ function renderPlayerStats() {
     ? all.find(r => r.id === lowHiDetailForGraph.roundId)
     : null;
   const lowHiDateLine = lowHiDateRound
-    ? `<div style="font-size:14px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px;margin-bottom:8px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
+    ? `<div style="font-size:14px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
     : '';
   // ── Drie inklapbare hoofdgroepen (stand in storage, blijft dus staan tussen
   // sessies; standaard: Handicap open, Prestaties en Banen & tees dicht). De
@@ -4599,7 +4623,7 @@ function renderPlayerStats() {
     return `<div onclick="toggleStatsGroup('${key}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin:10px 2px 4px">`
       + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">${title}</span>`
       + extra
-      + `<span style="display:inline-block;font-size:15px;color:var(--green-light);transform:rotate(${open ? 90 : 0}deg);transition:transform .15s">▶</span></div>`;
+      + `${arrowSvg(15, open, 'var(--green-light)')}</div>`;
   };
   // ── Regelkaart voor de dagresultaten (zonder cap) ──
   // XmR-opzet (zoals de Trends-app voor dagelijkse metingen): centerlijn x̄, limieten
@@ -4655,7 +4679,7 @@ function renderPlayerStats() {
     const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
     const filled = filledIdx.map(i => buckets[i].v);
     const inner = (() => {
-      if (filled.length < 2) return `<div style="font-size:17px;color:var(--muted)">Te weinig rondes in deze periode voor een regelkaart.</div>`;
+      if (filled.length < 2) return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div style="font-size:17px;color:var(--muted);padding:12px 0">Te weinig rondes in deze periode voor een regelkaart.</div></div>`;
       const n = filled.length;
       const mean = filled.reduce((s, v) => s + v, 0) / n;
       const sdInfo = Math.sqrt(filled.reduce((s, v) => s + (v - mean) * (v - mean), 0) / (n - 1));
@@ -4680,7 +4704,7 @@ function renderPlayerStats() {
           if (beyond.length >= 2) beyond.forEach(j => { if (flags[j] < 1) flags[j] = 1; });
         });
       }
-      const w = 320, h = 184, padL = 34, padR = 8, padT = 10, padB = 26;
+      const w = 320, h = 184, padL = 34, padR = 8, padT = 10, padB = 32; // padB gelijk aan de verloopgrafiek: beide tekenvlakken lopen nu van y=10 tot y=152
       const chartBottom = h - padB;
       const lo = Math.min(mean - lim3, ...filled), hi = Math.max(mean + lim3, ...filled);
       const span = (hi - lo) || 1;
@@ -4739,25 +4763,47 @@ function renderPlayerStats() {
         window._ccJump.push(b.id != null ? b.id : null); // bij maand/kwartaal: de oudste ronde uit die periode
         svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
       });
-      const stats = `<div style="font-size:15px;color:var(--muted);margin-bottom:4px;text-align:center">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
-      const detail = `<div id="ccDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
-      const grensUitleg = `<div style="font-size:15px;color:var(--muted);margin-top:2px">Grenzen gebaseerd op σ̂ = r̄/1.128.</div>`;
-      const indicatief = n < 10 ? `<div style="font-size:15px;color:var(--muted);margin-top:2px">Limieten zijn indicatief bij minder dan 10 punten.</div>` : '';
-      return stats + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg>` + detail + grensUitleg + indicatief;
+      const stats = `<div style="font-size:15px;color:var(--muted);margin-top:4px">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
+      const detail = `<div id="ccDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
+      // Uitleg achter een "Legenda"-uitklapper, net als bij de verloopgrafiek: zo hebben
+      // beide weergaven exact dezelfde opbouw (grafiek → informatieblok → legendaknop)
+      // en verspringt de kaart niet meer bij het wisselen (Marks meting).
+      const legendaItem = (swatch, tekst) => `<span style="display:flex;align-items:center;gap:6px">${swatch}${tekst}</span>`;
+      const stip = (fill, stroke) => `<span style="width:9px;height:9px;border-radius:50%;background:${fill};border:1.5px solid ${stroke};display:inline-block;box-sizing:border-box"></span>`;
+      const streep = kleur => `<span style="width:14px;height:0;border-top:2px dashed ${kleur};display:inline-block"></span>`;
+      const ccLegenda = `<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>`
+        + `<div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap">`
+        + legendaItem(`<span style="width:14px;height:2px;background:var(--gold);display:inline-block;border-radius:2px"></span>`, 'x̄ (gem.)')
+        + legendaItem(streep('var(--red)'), '±3σ̂')
+        + legendaItem(streep('var(--orange)'), '±2σ̂ (σ̂ = r̄/1.128)')
+        + legendaItem(stip('var(--green-light)', 'var(--green-light)'), `${getMinRoundsStat()} of meer rondes`)
+        + legendaItem(stip('var(--card-solid)', 'var(--green-light)'), `Minder dan ${getMinRoundsStat()} ronde${getMinRoundsStat() === 1 ? '' : 's'}`)
+        + `</div>`
+        + (n < 10 ? `<div style="margin-top:8px;font-size:15px;color:var(--muted)">Bij minder dan 10 punten zijn de grenzen indicatief.</div>` : '')
+        + `</div>`;
+      // Volgorde onder de grafiek: detailregel, statregel, legendaknop. Boven de grafiek
+      // staat in geen van beide weergaven iets, dus die begint overal op dezelfde hoogte;
+      // de ruimte eronder is bewust NIET vastgezet (Marks keuze).
+      return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg></div>` + detail + stats + ccLegenda;
     })();
     return inner;
   })();
   el.innerHTML = kpiRow
     + stickyPeriodBar
     + grpHeader('handicap', 'Handicap')
-    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiDateLine}<div id="sdChart"></div><div id="sdDetail" style="font-size:15px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div><div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}><div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdChart"></div></div><div id="sdDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>${lowHiDateLine}<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', 'Prestaties')
     + (grpOpen('prestaties') ? distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
-    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`)
-    + (grpOpen('banen') ? trackCard : '');
+    + grpHeader('banen', `Clubs, Banen en Tees${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
+    + (grpOpen('banen') ? trackCard : '')
+    // Analyseknop helemaal onderaan (Marks plaatsing): opent een modal met een
+    // doorrekening van het hele archief plus concrete aanbevelingen.
+    + `<button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openGameAnalysis()">`
+    + `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`
+    + `<b>Analyseer mijn spel</b></button>`;
 
   // Grafiek tekenen (na invoegen in DOM)
   // Low HI voor de grafiek: handmatig heeft voorrang (net als overal elders), maar dan is
@@ -4776,7 +4822,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
   if (sdPts.length < 2) { host.innerHTML = '<div style="font-size:17px;color:var(--muted)">Te weinig rondes voor een grafiek.</div>'; return; }
   const hiPts = (hiSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
   const capPts = (capSeries || []).map((v, i) => ({ i, v })).filter(p => p.v != null);
-  const w = 320, h = 154, padL = 36, padR = 8, padT = 10, padB = 32; // padR = padL: de gouden hcp-badge rechts krijgt zo dezelfde marge als de Low HI-badges links
+  const w = 320, h = 184, padL = 36, padR = 8, padT = 10, padB = 32; // h gelijk aan de regelkaart, zodat de kaart niet verspringt bij het wisselen van weergave
   const allY = [...sdPts.map(p => p.v), ...hiPts.map(p => p.v), ...capPts.map(p => p.v)];
   if (lowHiDetail && lowHiDetail.value != null) allY.push(lowHiDetail.value, lowHiDetail.value + 3, lowHiDetail.value + 5);
   const minY = Math.floor(Math.min(...allY)) - 1, maxY = Math.ceil(Math.max(...allY)) + 1;
@@ -4883,7 +4929,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     if (idxs.length) {
       const minIdx = Math.min(...idxs), maxIdx = Math.max(...idxs);
       const xStart = xOf(minIdx), xEnd = xOf(maxIdx);
-      windowLine = `<line x1="${xStart.toFixed(1)}" y1="138" x2="${xEnd.toFixed(1)}" y2="138" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+      windowLine = `<line x1="${xStart.toFixed(1)}" y1="168" x2="${xEnd.toFixed(1)}" y2="168" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
       // Datums van de allereerste en de laatste (meest recente) kaart in de grafiek staan
       // altijd vast — dat zijn de twee randen van de hele weergegeven periode. Alleen de
       // startdatum van de balk zélf (waar het 'laatste 20'-venster begint) is optioneel:
@@ -4914,9 +4960,9 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
         if (showBarStart && barStartRight > w - padR) showBarStart = false;
       }
 
-      if (showChartFirst) windowDateLabels += `<text x="${padL}" y="150" font-size="10" fill="var(--muted)" text-anchor="start">${chartFirstDate}</text>`;
-      if (showBarStart) windowDateLabels += `<text x="${xStart.toFixed(1)}" y="150" font-size="10" fill="var(--muted)" text-anchor="start">${barStartDate}</text>`;
-      if (showLast) windowDateLabels += `<text x="${xEnd.toFixed(1)}" y="150" font-size="10" fill="var(--muted)" text-anchor="end">${lastDate}</text>`;
+      if (showChartFirst) windowDateLabels += `<text x="${padL}" y="180" font-size="10" fill="var(--muted)" text-anchor="start">${chartFirstDate}</text>`;
+      if (showBarStart) windowDateLabels += `<text x="${xStart.toFixed(1)}" y="180" font-size="10" fill="var(--muted)" text-anchor="start">${barStartDate}</text>`;
+      if (showLast) windowDateLabels += `<text x="${xEnd.toFixed(1)}" y="180" font-size="10" fill="var(--muted)" text-anchor="end">${lastDate}</text>`;
     }
   }
   // Low HI + de twee cap-drempels (softcap/hardcap): dunne, gestippelde referentielijnen,
@@ -4962,7 +5008,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
     const mIdx = periodRoundsView.findIndex(r => r && r.id === lowHiDetail.roundId);
     if (mIdx !== -1) {
       const mx = xOf(mIdx);
-      lowHiMarker = `<polygon points="${(mx - 4.5).toFixed(1)},136 ${(mx + 4.5).toFixed(1)},136 ${mx.toFixed(1)},129" fill="var(--purple, #9b7fd4)"/>`;
+      lowHiMarker = `<polygon points="${(mx - 4.5).toFixed(1)},166 ${(mx + 4.5).toFixed(1)},166 ${mx.toFixed(1)},159" fill="var(--purple, #9b7fd4)"/>`;
     }
   }
   host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`
@@ -5104,7 +5150,7 @@ function ccSwapView() {
   b.classList.toggle('hidden', !naarControle);
   window._sdChartView = naarControle ? 'controle' : 'verloop';
   const title = document.getElementById('sdChartTitle');
-  if (title) title.textContent = naarControle ? 'Regelkaart dagresultaat' : 'Dagresultaat en handicapverloop';
+  if (title) title.textContent = naarControle ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp';
   const oogWrap = document.getElementById('sdLowHiBtnWrap');
   if (oogWrap) oogWrap.classList.toggle('hidden', naarControle);
 }
@@ -5266,6 +5312,446 @@ function updateAppBadge() {
 }
 setTimeout(updateAppBadge, 1500);
 
+// ══ ANALYSE VAN JE SPEL ═══════════════════════════════════════════════════
+// Rekent het hele archief door voor de hoofdspeler en zet de bevindingen om in
+// leesbare constateringen plus concrete aanbevelingen. Bewust regelgebaseerd en
+// dus offline: alles komt uit dezelfde helpers als de statistieken zelf
+// (effectiveSD, avgDiffOf-achtige logica, SI-buckets), zodat de getallen niet
+// kunnen afwijken van wat elders in de app staat. De knop "Prompt voor AI"
+// zet dezelfde cijfers als platte tekst plus een vraag op het klembord, voor wie
+// wél een echt AI-gesprek wil — zonder API-sleutel in de app.
+function analysisRounds() {
+  const player = startPlayerName();
+  const isDoneA = r => ((r.playedCount ?? (r.holes || []).filter(h => h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
+  return loadSavedRounds()
+    .filter(r => r.player === player && r.qualifying && r.date && isDoneA(r))
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+}
+
+function buildGameAnalysis() {
+  const rondes = analysisRounds();
+  const secties = [];
+  const aanbev = [];
+  const minN = getMinRoundsStat();
+  if (rondes.length < 3) {
+    return { secties: [{ kop: 'Nog te weinig gegevens', regels: ['Er zijn minder dan 3 afgeronde qualifying rondes. Speel er een paar en kom terug.'] }], aanbev: [], leeg: true };
+  }
+
+  // fmtDiff bestaat alleen binnen renderPlayerStats, dus hier een eigen exemplaar
+  // (zelfde notatie: +0.8 / −0.3 / ±0).
+  const fmtDiff = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  const sdOf = r => { const e = effectiveSD(r); return e ? e.value : null; };
+  // Twee maten per hole: t.o.v. par (kale score) en t.o.v. de "persoonlijke par" — par
+  // plus de handicapslagen die je op die hole krijgt (h.phcp). Die laatste is de eerlijke
+  // maat om holes te vergelijken: op moeilijke holes krijg je meer slagen, dus t.o.v. par
+  // lijken ze duurder dan ze zijn. In de scorekaart heet dit "vs ppar".
+  const brutoOf = h => (h.score != null && h.par != null) ? h.score - h.par : null;
+  const nettoOf = h => (h.score != null && h.par != null && h.phcp != null) ? h.score - h.par - h.phcp : null;
+  const sds = rondes.map(sdOf).filter(v => v != null);
+  const gem = a => a.reduce((s, x) => s + x, 0) / a.length;
+  const sdev = a => a.length < 2 ? null : Math.sqrt(a.reduce((s, x) => s + (x - gem(a)) ** 2, 0) / (a.length - 1));
+
+  // ── Overzicht ──
+  {
+    const regels = [];
+    const eerste = rondes[0].date, laatste = rondes[rondes.length - 1].date;
+    regels.push(`${rondes.length} qualifying rondes van ${formatFullDate(eerste)} t/m ${formatFullDate(laatste)} \u2014 je hele archief.`);
+    const hcpNu = currentOfficialHcp();
+    if (hcpNu != null) regels.push(`Je handicap is nu <b>${fmt1(hcpNu)}</b>.`);
+    if (sds.length) {
+      regels.push(`Gemiddeld dagresultaat is <b>${fmt1(gem(sds))}</b>, beste dagresultaat is <b>${fmt1(Math.min(...sds))}</b>.`);
+      const sp = sdev(sds);
+      if (sp != null) regels.push(`Spreiding is <b>${fmt1(sp)}</b> \u2014 hoe lager, hoe voorspelbaarder je rondes.`);
+    }
+    secties.push({ kop: 'Overzicht', regels });
+  }
+
+  // ── Vorm: laatste 5 vs. de 5 daarvoor ──
+  if (sds.length >= 10) {
+    const l5 = sds.slice(-5), v5 = sds.slice(-10, -5);
+    const d = gem(l5) - gem(v5);
+    // Band van 0.5 Sd: kleinere verschillen zijn ruis. Bewust anders geformuleerd dan
+    // de trendregel op Statistieken (die kleurt al vanaf 0.05), zodat de twee elkaar
+    // niet tegenspreken.
+    const richting = d < -0.5 ? 'duidelijk beter' : (d > 0.5 ? 'duidelijk slechter' : 'geen duidelijk verschil');
+    secties.push({ kop: 'Vorm', regels: [
+      `Je laatste 5 rondes zijn gemiddeld <b>${fmt1(gem(l5))}</b> tegen <b>${fmt1(gem(v5))}</b> daarvoor \u2014 ${richting}.`
+    ] });
+    if (richting === 'duidelijk slechter') aanbev.push('Je laatste vijf rondes lopen achter op de vijf daarvoor. Kijk of er iets veranderd is in materiaal, baan of routine voordat je aan je techniek gaat sleutelen.');
+  }
+
+  // ── Sterke en zwakke holes op par-type ──
+  {
+    const perPar = {};
+    rondes.forEach(r => (r.holes || []).forEach(h => {
+      const b = brutoOf(h);
+      if (b == null) return;
+      const p = perPar[h.par] = perPar[h.par] || { bruto: [], netto: [], totaal: 0 };
+      p.bruto.push(b);
+      p.totaal += b;
+      const n = nettoOf(h);
+      if (n != null) p.netto.push(n);
+    }));
+    const regels = [];
+    const parKeys = Object.keys(perPar).map(Number).sort().filter(p => perPar[p].bruto.length >= 5);
+    const nettoDev = {};
+    parKeys.forEach(p => {
+      const q = perPar[p];
+      const nettoTxt = q.netto.length ? `, <b>${fmtDiff(gem(q.netto))}</b> t.o.v. je persoonlijke par` : '';
+      if (q.netto.length) nettoDev[p] = gem(q.netto);
+      regels.push(`Par ${p}: <b>${fmtDiff(gem(q.bruto))}</b> t.o.v. par${nettoTxt} (${q.bruto.length} holes).`);
+    });
+    if (regels.length >= 2) {
+      // Oordeel op netto: dat verrekent de handicapslagen die je op zware holes krijgt.
+      const basis = Object.keys(nettoDev).length >= 2 ? nettoDev : null;
+      if (basis) {
+        const gesorteerd = Object.keys(basis).sort((a, b) => basis[b] - basis[a]);
+        const zwak = gesorteerd[0], sterk = gesorteerd[gesorteerd.length - 1];
+        if (basis[zwak] - basis[sterk] >= 0.2) {
+          regels.push(`T.o.v. je persoonlijke par verlies je de meeste slagen op de <b>par ${zwak}</b>'s en de minste op de <b>par ${sterk}</b>'s.`);
+          aanbev.push(`Par ${zwak}'s kosten je t.o.v. je persoonlijke par het meest (${fmtDiff(basis[zwak])} per hole). ` + (zwak === '3' ? 'Dat wijst op de ijzers naar de green: oefen afstandscontrole met vaste doelen.' : (zwak === '5' ? 'Op lange holes telt de derde slag: oefen approaches vanaf 80-120 meter in plaats van langer slaan.' : 'Dat zijn de meeste holes van een baan, dus hier winst pakken heeft het grootste effect op je score.')));
+        }
+      }
+      // Grootste absolute kostenpost, altijd bruikbaar als er verder niets uitspringt.
+      const totaalZwak = parKeys.slice().sort((a, b) => perPar[b].totaal - perPar[a].totaal)[0];
+      if (totaalZwak != null) window._analyseTopKost = { par: totaalZwak, slagen: Math.round(perPar[totaalZwak].totaal) };
+      secties.push({ kop: 'Par-typen', regels });
+    }
+  }
+
+  // ── Moeilijke vs. makkelijke holes (stroke index, relatief per ronde) ──
+  {
+    const buckets = { hard: { bruto: [], netto: [] }, mid: { bruto: [], netto: [] }, easy: { bruto: [], netto: [] } };
+    rondes.forEach(r => {
+      const geldig = (r.holes || []).filter(h => h.score != null && h.si != null && h.par != null);
+      if (!geldig.length) return;
+      const opSi = [...geldig].sort((a, b) => a.si - b.si);
+      const derde = Math.ceil(opSi.length / 3);
+      opSi.forEach((h, i) => {
+        const b = i < derde ? 'hard' : (i < derde * 2 ? 'mid' : 'easy');
+        buckets[b].bruto.push(brutoOf(h));
+        const n = nettoOf(h);
+        if (n != null) buckets[b].netto.push(n);
+      });
+    });
+    if (buckets.hard.bruto.length >= 10 && buckets.easy.bruto.length >= 10) {
+      const nettoTxt = k => buckets[k].netto.length ? ` en <b>${fmtDiff(gem(buckets[k].netto))}</b> t.o.v. persoonlijke par` : '';
+      const regels = [
+        `Moeilijkste derde van de holes: per hole <b>${fmtDiff(gem(buckets.hard.bruto))}</b> t.o.v. par${nettoTxt('hard')}.`,
+        `Makkelijkste derde: per hole <b>${fmtDiff(gem(buckets.easy.bruto))}</b> t.o.v. par${nettoTxt('easy')}.`
+      ];
+      // Oordeel op netto: bruto lijken zware holes altijd duurder, maar daar krijg je
+      // ook meer slagen voor. Netto slechter scoren op de makkelijke holes is het
+      // patroon dat echt winst laat liggen.
+      if (buckets.hard.netto.length >= 10 && buckets.easy.netto.length >= 10) {
+        const nh = gem(buckets.hard.netto), ne = gem(buckets.easy.netto);
+        if (ne > nh + 0.1) {
+          regels.push('T.o.v. je persoonlijke par scoor je op de makkelijke holes juist slechter dan op de moeilijke.');
+          aanbev.push('T.o.v. je persoonlijke par laat je de meeste slagen liggen op de makkelijkste holes \u2014 juist waar je minder handicapslagen krijgt. Speel ze als bogey-hole: bal in het spel, tweede slag naar een prettige wedge-afstand, twee putts.');
+        } else if (nh > ne + 0.1) {
+          regels.push('Ook t.o.v. je persoonlijke par zijn de moeilijkste holes je duurste.');
+          aanbev.push('Je verliest de meeste slagen op de moeilijkste holes, ook al krijg je daar extra slagen voor. Speel die holes veiliger: mik op de ruime kant van de fairway, leg de tweede slag desnoods kort en neem het extra slagverlies voor lief.');
+        }
+      }
+      secties.push({ kop: 'Moeilijkheidsgraad', regels });
+    }
+  }
+
+  // ── Nullers: holes waar je 0 stablefordpunten haalt ──
+  // 0 punten = meer dan je persoonlijke par + 2, dus de hole levert niets op. Dit is de
+  // scherpste plek om winst te zoeken: één hole die structureel nul oplevert kost per
+  // ronde meteen een vol punt. Per hole geteld over álle rondes op die baan, zodat
+  // duidelijk wordt of het aan de hole ligt of aan de dag.
+  {
+    let holesTot = 0, nullersTot = 0;
+    const perHole = {};
+    rondes.forEach(r => {
+      (r.holes || []).forEach((h, i) => {
+        if (h.score == null || h.par == null || h.phcp == null) return;
+        holesTot++;
+        const punten = typeof stbFor === 'function' ? stbFor(h) : null;
+        if (punten == null) return;
+        const key = `${r.track || '?'}|${i + 1}`;
+        const p = perHole[key] = perHole[key] || { n: 0, nul: 0, club: r.club || '', track: r.track || '?', nr: i + 1 };
+        p.n++;
+        if (punten === 0) { p.nul++; nullersTot++; }
+      });
+    });
+    if (holesTot >= 18) {
+      const perRonde = nullersTot / rondes.length;
+      const per18 = nullersTot / holesTot * 18;
+      const regels = [
+        `Gemiddeld <b>${fmt1(perRonde)}</b> nullers per ronde, oftewel <b>${fmt1(per18)}</b> per 18 holes (${Math.round(nullersTot / holesTot * 100)}% van je holes).`
+      ];
+      // Alleen holes die je vaak genoeg speelde én waar het meer dan incidenteel gebeurt.
+      const kandidaten = Object.values(perHole)
+        .filter(p => p.n >= Math.max(minN, 3) && p.nul >= 2)
+        .map(p => ({ ...p, rate: p.nul / p.n }))
+        .sort((a, b) => b.rate - a.rate || b.nul - a.nul)
+        .slice(0, 3);
+      if (kandidaten.length) {
+        regels.push('Vaakst nul punten: ' + kandidaten
+          .map(p => `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (${p.nul} van ${p.n})`)
+          .join(', ') + '.');
+        const top = kandidaten[0];
+        if (top.rate >= 0.4) {
+          aanbev.push(`${top.track} hole ${top.nr} levert je in ${top.nul} van de ${top.n} keer 0 punten op. Zo'n vaste lekkage is de goedkoopste winst: speel die hole bewust defensief \u2014 kortere club van de tee, mik op het brede deel van de fairway, en accepteer dat je er een punt inlevert in plaats van er twee te verliezen.`);
+        }
+      } else {
+        regels.push('Geen enkele hole springt eruit: je nullers zijn verspreid, dus het is geen vaste zwakke plek.');
+      }
+      secties.push({ kop: 'Nullers (0 stablefordpunten)', regels });
+    }
+  }
+
+  // ── Duurste holes ──
+  // Waar lek je slagen weg, ook op holes waar je nog wel punten haalt? Gesorteerd op
+  // het GEMIDDELDE verlies per hole, niet op het totaal: anders komen holes die je
+  // vaak speelt vanzelf bovenaan. Overlap met de nullers is geen probleem — staat een
+  // hole in beide lijstjes, dan is dat juist het sterkste signaal.
+  {
+    const perHole = {};
+    rondes.forEach(r => (r.holes || []).forEach((h, i) => {
+      const n = nettoOf(h);
+      if (n == null) return;
+      const k = `${r.track || '?'}|${i + 1}`;
+      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
+      p.som += n;
+      p.n++;
+    }));
+    const duurste = Object.values(perHole)
+      .filter(p => p.n >= Math.max(minN, 3))
+      .map(p => ({ ...p, gem: p.som / p.n }))
+      .sort((a, b) => b.gem - a.gem)
+      .slice(0, 3);
+    if (duurste.length) {
+      secties.push({ kop: 'Duurste holes', regels: duurste.map(p =>
+        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par, ${p.n}\u00d7 gespeeld.`
+      ) });
+    } else if (Object.keys(perHole).length) {
+      secties.push({ kop: 'Duurste holes', regels: ['Nog te weinig herhaalde holes om betrouwbaar te vergelijken.'] });
+    }
+  }
+
+  // ── Verloop binnen de ronde ──
+  {
+    const eerste9 = [], tweede9 = [];
+    rondes.forEach(r => {
+      if ((r.holesCount ?? (r.holes || []).length) !== 18) return;
+      (r.holes || []).forEach((h, i) => {
+        if (h.score == null || h.par == null) return;
+        (i < 9 ? eerste9 : tweede9).push(h.score - h.par);
+      });
+    });
+    if (eerste9.length >= 18 && tweede9.length >= 18) {
+      const d1 = gem(eerste9), d2 = gem(tweede9);
+      const regels = [`Eerste negen: <b>${fmtDiff(d1)}</b> per hole, tweede negen: <b>${fmtDiff(d2)}</b>.`];
+      if (d2 - d1 >= 0.15) {
+        regels.push('Je zakt in de tweede helft.');
+        aanbev.push('De tweede negen kost je meer slagen dan de eerste. Denk aan eten en drinken onderweg, en aan een rustiger tempo in de eerste holes.');
+      } else if (d1 - d2 >= 0.15) {
+        regels.push('Je komt juist beter op gang naarmate de ronde vordert.');
+        aanbev.push('Je start trager dan je eindigt. Een langere warming-up voor de eerste tee kan die eerste holes goedkoper maken.');
+      }
+      secties.push({ kop: 'Verloop binnen de ronde', regels });
+    }
+  }
+
+  // ── 9 vs. 18 holes ──
+  {
+    const per = n => rondes.filter(r => (r.holesCount ?? (r.holes || []).length) === n).map(sdOf).filter(v => v != null);
+    const n9 = per(9), n18 = per(18);
+    if (n9.length >= minN && n18.length >= minN) {
+      // Duiding erbij: de kale getallen zeiden nog niets over wat het verschil betekent.
+      const dType = gem(n9) - gem(n18);
+      const typeDuiding = Math.abs(dType) < 0.5
+        ? 'Tussen beide rondetypes zit geen noemenswaardig verschil.'
+        : `Op ${dType < 0 ? '9' : '18'} holes lever je gemiddeld <b>${fmt1(Math.abs(dType))}</b> beter dagresultaat dan op ${dType < 0 ? '18' : '9'} holes.`;
+      secties.push({ kop: 'Rondetype', regels: [
+        `9 holes: gemiddeld <b>${fmt1(gem(n9))}</b> (${n9.length}\u00d7). 18 holes: <b>${fmt1(gem(n18))}</b> (${n18.length}\u00d7).`,
+        typeDuiding
+      ] });
+    }
+  }
+
+  // ── Banen en tees ──
+  // Maat is het gemiddelde dagresultaat MINUS je handicap op dat moment: dat corrigeert
+  // voor het feit dat je handicap in de loop van het jaar verandert, en het is dezelfde
+  // maat als in de kaart Clubs, Banen en Tees. Deze conclusies stonden eerder in die
+  // kaart; ze horen hier omdat de app hier oordeelt in plaats van naslag geeft.
+  {
+    const diffOf = r => {
+      const e = effectiveSD(r), h = parseFloat(r.hcp);
+      return (e && e.value != null && !isNaN(h)) ? e.value - h : null;
+    };
+    const groepeer = keyFn => {
+      const per = {};
+      rondes.forEach(r => {
+        const d = diffOf(r);
+        if (d == null) return;
+        const k = keyFn(r);
+        if (!k) return;
+        (per[k] = per[k] || []).push(d);
+      });
+      return Object.keys(per).filter(k => per[k].length >= minN)
+        .map(k => ({ k, gem: gem(per[k]), n: per[k].length }))
+        .sort((a, b) => a.gem - b.gem);
+    };
+    const banen = groepeer(r => r.track ? `${r.track}|${r.club || '?'}` : null);
+    const tees = groepeer(r => (r.tee && r.track) ? `${r.tee}|${r.track}|${r.club || '?'}` : null);
+    const regels = [];
+    if (banen.length >= 2) {
+      const b = banen[0], w = banen[banen.length - 1];
+      const naam = x => `${escapeHtml(x.k.split('|')[0])} (${escapeHtml(x.k.split('|')[1])})`;
+      regels.push(`Beste baan: <b>${naam(b)}</b> \u2014 ${fmtDiff(b.gem)} t.o.v. je handicap (${b.n}\u00d7).`);
+      regels.push(`Lastigste baan: <b>${naam(w)}</b> \u2014 ${fmtDiff(w.gem)} (${w.n}\u00d7).`);
+      if (w.gem - b.gem >= 2) aanbev.push(`Tussen je beste en lastigste baan zit ${fmt1(w.gem - b.gem)} slag verschil t.o.v. je handicap. Speel voor een oefenronde bewust de lastigste \u2014 daar leer je het meest.`);
+    }
+    if (tees.length >= 2) {
+      const b = tees[0], w = tees[tees.length - 1];
+      const naam = x => { const d = x.k.split('|'); return `${escapeHtml(d[0])} op ${escapeHtml(d[1])} (${escapeHtml(d[2])})`; };
+      regels.push(`Beste tee: <b>${naam(b)}</b> \u2014 ${fmtDiff(b.gem)} (${b.n}\u00d7).`);
+      regels.push(`Lastigste tee: <b>${naam(w)}</b> \u2014 ${fmtDiff(w.gem)} (${w.n}\u00d7).`);
+    }
+    if (regels.length) secties.push({ kop: 'Banen en tees', regels });
+  }
+
+  // ── Stabiliteit volgens de regelkaart (laatste 20 losse rondes) ──
+  if (sds.length >= 8) {
+    const laatste = sds.slice(-20);
+    const m = gem(laatste);
+    let mrSom = 0;
+    for (let i = 1; i < laatste.length; i++) mrSom += Math.abs(laatste[i] - laatste[i - 1]);
+    const mrBar = mrSom / (laatste.length - 1);
+    const lim3 = 2.66 * mrBar;
+    const buiten = laatste.filter(v => Math.abs(v - m) > lim3).length;
+    const regels = [`Op je laatste ${laatste.length} rondes past een dagresultaat tussen <b>${fmt1(m - lim3)}</b> en <b>${fmt1(m + lim3)}</b> bij je huidige spel. Alles daarbinnen is gewone variatie \u2014 geen vooruitgang, geen terugval.`];
+    regels.push(buiten === 0
+      ? 'Geen enkele ronde viel daarbuiten: je speelt voorspelbaar.'
+      : `${buiten} ronde${buiten === 1 ? '' : 's'} viel${buiten === 1 ? '' : 'en'} er wel buiten. Daar speelde dus echt iets bijzonders mee, geen toeval.`);
+    secties.push({ kop: 'Stabiliteit', regels });
+    if (buiten === 0 && sds.length >= 20) aanbev.push('Al je rondes vallen binnen je normale bandbreedte, dus er zijn geen uitschieters om weg te nemen. Lager uitkomen vraagt dan dat je hele niveau omhoog gaat: gericht oefenen levert meer op dan extra rondes spelen.');
+  }
+
+  if (!aanbev.length) {
+    const top = window._analyseTopKost;
+    aanbev.push(top
+      ? `Er springt geen duidelijke zwakke plek uit de cijfers. Geteld over al je rondes verlies je de meeste slagen op de par ${top.par}'s (${top.slagen} boven par bij elkaar), simpelweg omdat je die het vaakst speelt \u2014 daar levert oefenen dus het snelst iets op.`
+      : 'Er springen geen duidelijke zwakke plekken uit de cijfers. Blijf rondes vastleggen \u2014 met meer data worden patronen zichtbaarder.');
+  }
+  return { secties, aanbev, leeg: false };
+}
+
+function openGameAnalysis() {
+  const a = buildGameAnalysis();
+  const body = document.getElementById('analysisBody');
+  if (!body) return;
+  let html = '';
+  a.secties.forEach(s => {
+    html += `<div style="font-size:17px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px">${s.kop}</div>`;
+    s.regels.forEach(r => { html += `<div style="font-size:17px;color:var(--white);margin-bottom:4px;line-height:1.4">${r}</div>`; });
+  });
+  if (a.aanbev.length) {
+    html += `<div style="font-size:17px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 4px">Aanbevelingen</div>`;
+    a.aanbev.forEach(r => { html += `<div style="font-size:17px;color:var(--white);margin-bottom:6px;line-height:1.4">\u2022 ${r}</div>`; });
+  }
+  body.innerHTML = html;
+  const copyBtn = document.getElementById('analysisCopyBtn');
+  if (copyBtn) { copyBtn.textContent = 'Prompt voor AI'; copyBtn.disabled = !!a.leeg; }
+  document.getElementById('analysisModal').classList.remove('hidden');
+}
+
+// Zet de analyse plus een vraag als platte tekst op het klembord, om in een
+// AI-gesprek te plakken. Valt terug op het deelmenu als het klembord geweigerd
+// wordt (bijvoorbeeld buiten https).
+async function copyAnalysisForAi() {
+  const a = buildGameAnalysis();
+  const strip = s => String(s).replace(/<[^>]*>/g, '');
+  const hcpNu = currentOfficialHcp();
+  // Uitleg van het jargon vooraf: zonder die twee zinnen moet een AI raden wat Sd is en
+  // of hoger of lager beter is. Daarna de samenvattingen, en tot slot de ruwe rondes —
+  // zonder die laatste kan er alleen geïnterpreteerd worden en niet gerekend.
+  let tekst = 'Analyseer mijn golfspel grondig en geef concrete aanbevelingen om mijn handicap te verlagen. Stel gerust vragen als je iets mist.\n\n';
+  tekst += 'CONTEXT\n';
+  tekst += '- Ik speel volgens het WHS (World Handicap System).' + (hcpNu != null ? ` Mijn handicap is nu ${fmt1(hcpNu)}.` : '') + '\n';
+  tekst += '- Sd = Score Differential ofwel dagresultaat: de voor baan en tee gecorrigeerde score van één ronde. Lager is beter; mijn handicap is het gemiddelde van de beste 8 van mijn laatste 20.\n';
+  tekst += '- "T.o.v. par" is de kale score. "Mijn persoonlijke par" telt de handicapslagen mee die ik op die hole krijg (bij handicap 30 één slag, op de twaalf moeilijkste holes twee), dus op een par 4 met twee slagen is mijn persoonlijke par 6. Dat is de eerlijke maat om holes onderling te vergelijken.\n';
+  tekst += '- Stb = stablefordpunten (2 punten = mijn persoonlijke par op die hole, hoger is beter).\n';
+  tekst += '- CR/SR = Course Rating en Slope Rating van de gespeelde tee: hoe hoger, hoe zwaarder de baan.\n';
+  tekst += '- Ik houd GEEN putts, fairways-geraakt of greens-in-regulation bij, dus baseer je advies op wat hieronder staat.\n\n';
+  a.secties.forEach(s => {
+    tekst += s.kop.toUpperCase() + '\n';
+    s.regels.forEach(r => { tekst += '- ' + strip(r) + '\n'; });
+    tekst += '\n';
+  });
+  tekst += 'VOORLOPIGE CONCLUSIES\n';
+  a.aanbev.forEach(r => { tekst += '- ' + strip(r) + '\n'; });
+  // Duurste holes: per baan+holenummer het gemiddelde verlies t.o.v. de persoonlijke
+  // par, met par, stroke index en aantal keren gespeeld erbij. Dit is de brug tussen
+  // "par 4's kosten het meest" en een concreet advies per hole.
+  {
+    const perHole = {};
+    analysisRounds().forEach(r => (r.holes || []).forEach((h, i) => {
+      if (h.score == null || h.par == null || h.phcp == null) return;
+      const k = `${r.track || '?'}|${i + 1}`;
+      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
+      p.som += h.score - h.par - h.phcp;
+      p.n++;
+    }));
+    const duurste = Object.values(perHole)
+      .filter(p => p.n >= 3)
+      .map(p => ({ ...p, gem: p.som / p.n }))
+      .sort((a, b) => b.gem - a.gem)
+      .slice(0, 5);
+    if (duurste.length) {
+      tekst += '\nDUURSTE HOLES (t.o.v. mijn persoonlijke par, minimaal 3x gespeeld)\n';
+      tekst += 'baan | hole | par | SI | gemiddeld verlies | keer gespeeld\n';
+      duurste.forEach(p => {
+        tekst += `${p.track} | ${p.nr} | par ${p.par} | SI ${p.si != null ? p.si : '?'} | ${p.gem >= 0 ? '+' : ''}${fmt1(p.gem)} | ${p.n}\n`;
+      });
+    }
+  }
+
+  // Ruwe gegevens van de laatste 20 rondes, zodat er nagerekend kan worden.
+  const ruw = analysisRounds().slice(-20).reverse();
+  if (ruw.length) {
+    const telMee = window._whsUsedIds || new Set();
+    tekst += '\nLAATSTE ' + ruw.length + ' RONDES (nieuwste eerst)\n';
+    tekst += 'Een * betekent: deze ronde zit in de beste 8 die mijn handicap nu bepalen.\n';
+    tekst += 'datum | tijd | club | baan | tee | holes | par | CR | SR | Sd | Stb | telt mee\n';
+    ruw.forEach(r => {
+      const e = effectiveSD(r);
+      const stb = r.totalStb != null ? r.totalStb : (r.holes || []).reduce((s, h) => s + (typeof stbFor === 'function' ? stbFor(h) : 0), 0);
+      tekst += [
+        r.date || '?',
+        r.time || '-',
+        r.club || '?',
+        r.track || '?',
+        r.tee || '?',
+        (r.holesCount ?? (r.holes || []).length) + 'h',
+        r.PAR != null ? r.PAR : '-',
+        r.CR != null ? r.CR : '-',
+        r.SR != null ? r.SR : '-',
+        e && e.value != null ? fmt1(e.value) : '-',
+        stb != null ? stb : '-',
+        telMee.has(r.id) ? '*' : ''
+      ].join(' | ') + '\n';
+    });
+  }
+  const btn = document.getElementById('analysisCopyBtn');
+  try {
+    await navigator.clipboard.writeText(tekst);
+    if (btn) { btn.textContent = 'Gekopieerd \u2713'; setTimeout(() => { btn.textContent = 'Prompt voor AI'; }, 2000); }
+    return;
+  } catch (e) { /* klembord geweigerd: deelmenu proberen */ }
+  try {
+    if (navigator.share) { await navigator.share({ text: tekst, title: 'Analyse van mijn golfspel' }); return; }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+  }
+  if (btn) btn.textContent = 'Kopi\u00ebren lukt niet';
+}
+
 // ── Nieuwe-versie-melding: de service worker ververst golf-score.html op de
 // achtergrond (stale-while-revalidate). Loopt die cache-kopie vóór op de versie
 // die nu draait, dan is één herlaad genoeg — dit balkje maakt dat zichtbaar en
@@ -5275,11 +5761,14 @@ async function checkAppUpdate() {
   try {
     if (!('caches' in window)) return;
     const eigenEl = document.getElementById('appVersionStamp');
-    const eigen = eigenEl && eigenEl.textContent.match(/Versie ([0-9]+-[0-9]+[a-z]*)/);
+    // Versiestempel: hex van de datum (yyyymmdd) + volgnummer van drie hex-cijfers,
+    // bv. 13527CE-001 = 14-8-2026, eerste wijziging van die dag. Beide delen hebben een
+    // vaste lengte, dus gewone tekstvergelijking houdt de juiste volgorde aan.
+    const eigen = eigenEl && eigenEl.textContent.match(/Versie ([0-9A-F]+-[0-9A-F]+)/);
     if (!eigen) return;
     const res = await caches.match('./golf-score.html');
     if (!res) return;
-    const cacheVersie = (await res.text()).match(/Versie ([0-9]+-[0-9]+[a-z]*)/);
+    const cacheVersie = (await res.text()).match(/Versie ([0-9A-F]+-[0-9A-F]+)/);
     if (cacheVersie && cacheVersie[1] !== eigen[1]) {
       const b = document.getElementById('updateBanner');
       if (b) {
@@ -5314,13 +5803,6 @@ async function refreshStorageStatus() {
 }
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {}).finally(() => refreshStorageStatus());
-}
-
-// In-/uitklappen van de clublijsten onder "Banen en tees per club" (sessie-toestand,
-// standaard ingeklapt — het aantal clubs is onvoorspelbaar en de lijst kan lang zijn).
-function togglePerClubList() {
-  window._perClubOpen = !window._perClubOpen;
-  renderPlayerStats();
 }
 
 // In-/uitklappen van de Wat als-kaart op Statistieken (sessie-toestand, geen storage).
@@ -5472,13 +5954,13 @@ function caShowHole(blockId, idx) {
   // óók bij twee buckets te tonen — één formaat voor beide gevallen.
   const bereik = k => k.best === k.worst ? String(k.best) : `${k.best}–${k.worst}`;
   const deel = k => `<b>${gem(k)}</b> (${bereik(k)}, ${k.n}×)`;
-  const kop = `Hole <b>${escapeHtml(String(d.id))}</b> (par ${d.par}): `;
+  const kop = `<b>${escapeHtml(String(d.id))}</b> (par ${d.par}): `;
   if (d.nu.n && d.toen.n) {
     el.innerHTML = kop + `toen gem. ${deel(d.toen)} → nu gem. ${deel(d.nu)}`;
     return;
   }
   const kant = d.nu.n ? d.nu : d.toen;
-  const suffix = d.nu.n ? ' · laatste 2 jaar' : ' · ouder dan 2 jaar';
+  const suffix = d.nu.n ? ' · ≤ 2 jr' : ' · > 2 jr';
   el.innerHTML = kop + `gem. ${deel(kant)}${suffix}`;
 }
 
@@ -6971,6 +7453,47 @@ function clearSearchField(inputId, refresh) {
   inp.focus();
 }
 
+// Pijl tussen oude en nieuwe handicap: omlaag groen, omhoog rood, gelijk grijs.
+// Globaal, zodat het archief en de Vooruitblik op Statistieken hetzelfde beeld geven.
+// Inklap-driehoekje als SVG i.p.v. het teken ▶: dat teken heeft per lettertype andere
+// witruimte links/rechts, waardoor de optische grootte verschilt én het draaien om het
+// midden scheef oogt. De vorm hieronder ligt exact in het midden van zijn vakje, dus
+// 90° draaien gebeurt echt om het hart. Eén functie voor alle plekken, zodat ze niet
+// opnieuw uit elkaar gaan lopen; kleur volgt standaard de tekstkleur (currentColor).
+// open=true tekent hem gedraaid (uitgeklapt); geef rotate=false als de OUDER al draait
+// (de klasse-gestuurde pijltjes in de club- en editorlijsten doen dat zelf).
+// Vrije variant voor richtingen die niet 'open/dicht' zijn (trend: omlaag = beter,
+// omhoog = slechter, opzij = gelijk). Zelfde vorm en zelfde vakje, dus dezelfde
+// optische maat en uitlijning als de inklap-driehoekjes.
+function arrowSvgDeg(size, graden, kleur = 'currentColor') {
+  const box = Math.round(size);
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${box}px;height:${box}px;line-height:0;color:${kleur};vertical-align:middle">`
+    + `<svg width="${box}" height="${box}" viewBox="0 0 10 10" style="display:block;transform:rotate(${graden}deg)">`
+    + `<polygon points="2,1.5 2,8.5 8,5" fill="currentColor"/></svg></span>`;
+}
+
+function arrowSvg(size = 13, open = false, kleur = 'currentColor', rotate = true) {
+  const box = Math.round(size);
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${box}px;height:${box}px;line-height:0;color:${kleur};vertical-align:middle">`
+    + `<svg width="${box}" height="${box}" viewBox="0 0 10 10" style="display:block${rotate ? `;transform:rotate(${open ? 90 : 0}deg);transition:transform .15s` : ''}">`
+    + `<polygon points="2,1.5 2,8.5 8,5" fill="currentColor"/></svg></span>`;
+}
+
+function hcpArrowSvg(oldHcp, newHcp, size = 17) {
+  let arrowColor = 'var(--muted)';
+  let arrowPath = '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>'; // gelijk: rechts
+  if (oldHcp != null) {
+    if (newHcp > oldHcp) {
+      arrowColor = 'var(--red)';
+      arrowPath = '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>'; // hoger: omhoog
+    } else if (newHcp < oldHcp) {
+      arrowColor = 'var(--green-light)';
+      arrowPath = '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/>'; // lager: omlaag
+    }
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 2px">${arrowPath}</svg>`;
+}
+
 function loadSaved() {
   const saved = loadSavedRounds();
   // Rondedata kan op veel manieren wijzigen (import, koppelen, bewerken, vaststellen) —
@@ -7104,20 +7627,6 @@ function loadSaved() {
   // Gedeelde pijltje-SVG voor hcp-oud->nieuw-weergaves: grijs/rechts bij gelijk,
   // rood/omhoog bij stijging, groen/omlaag bij daling. Gebruikt op zowel de
   // spelernaam-regel als de losse Hcp-regel, zodat ze altijd hetzelfde pijltje tonen.
-  const hcpArrowSvg = (oldHcp, newHcp, size = 17) => {
-    let arrowColor = 'var(--muted)';
-    let arrowPath = '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>'; // gelijk: rechts
-    if (oldHcp != null) {
-      if (newHcp > oldHcp) {
-        arrowColor = 'var(--red)';
-        arrowPath = '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>'; // hoger: omhoog
-      } else if (newHcp < oldHcp) {
-        arrowColor = 'var(--green-light)';
-        arrowPath = '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/>'; // lager: omlaag
-      }
-    }
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 2px">${arrowPath}</svg>`;
-  };
 
   // Hcp-oud->nieuw per ronde, alleen voor de hoofdspeler (die bij Start is ingevuld) —
   // dat is de enige speler voor wie dit ooit getoond wordt (zie r.player ===
@@ -7218,7 +7727,7 @@ function loadSaved() {
     const dateLineInner = `
       ${importedLabel}
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span>${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}</span>
+        <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
           ${done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi">L</span>' : ''}
@@ -7227,11 +7736,11 @@ function loadSaved() {
         </span>
       </div>`;
     // Bij een kaart die tot het WHS-short-systeem behoort (verkort óf individueel
-    // uitgeklapt), is de datumregel klikbaar om te wisselen tussen verkort/uitgebreid
-    // (stopPropagation zodat dit niet ook de actieknoppen toont/verbergt).
-    const dateLine = (short || expandedFromShort)
-      ? `<div onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="cursor:pointer">${dateLineInner}</div>`
-      : dateLineInner;
+    // uitgeklapt) staat rechts in de datumregel een chevron om te wisselen tussen
+    // verkort en uitgebreid. Bewust een eigen knopje: de datumregel zelf doet nu
+    // hetzelfde als de rest van de kaart (actieknoppen tonen), zodat twee plekken die
+    // er identiek uitzien niet verschillend reageren (Marks consistentiepunt).
+    const dateLine = dateLineInner;
     const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${sdFrag}</div>`;
     const stbHcpLine = (() => {
       // Stb + Hcp samen als aparte, laatste regel, direct boven de par-grafiek.
@@ -7317,7 +7826,7 @@ function loadSaved() {
   const playerGroupHeader = (player, count, hasWarning = false) => {
     const key = 'pg_' + player.replace(/\W/g, '_');
     const collapsed = window._pgCollapsed && window._pgCollapsed[key];
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=!window._pgCollapsed?.['${key}'];loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=!window._pgCollapsed?.['${key}'];loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
 
   const actives    = filtered.filter(r => (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id));
@@ -7335,7 +7844,7 @@ function loadSaved() {
 
   const collapsibleHeader = (title, count, key, stateObj, hasWarning = false) => {
     const collapsed = window[stateObj]?.[key] !== false;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
   // Bouwt de kaarten van een sectie alleen op als die sectie daadwerkelijk is
   // uitgeklapt (zelfde key/stateObj als de bijbehorende collapsibleHeader). Bij een
@@ -7353,7 +7862,7 @@ function loadSaved() {
   // setWhsShort).
   const staticHeader = (title, count, hasWarning = false) => {
     const short = !!window._whsShort;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${short?0:90}deg)">▶</span></div><div>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !short)}</div><div>`;
   };
 
   let html = '';
@@ -7501,8 +8010,8 @@ function loadSaved() {
       if (jaar && jaar !== vorigJaar) {
         kop = `<div class="year-sep" onclick="toggleArchiveYear('${jaar}')" style="cursor:pointer;display:flex;align-items:center;gap:8px">`
           + `<span style="flex:1">${jaar}</span>`
-          + `<span style="font-size:15px;color:var(--muted);font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
-          + `<span style="display:inline-block;font-size:15px;transform:rotate(${dicht ? 0 : 90}deg);transition:transform .15s">▶</span>`
+          + `<span style="font-size:15px;font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
+          + `${arrowSvg(15, !dicht)}`
           + `</div>`;
         vorigJaar = jaar;
       }
@@ -7873,6 +8382,10 @@ function confirmEditClub(btn) {
 function openClubEditor(club) {
   editorClub = club;
   const data = CLUBS[club];
+  // createNewClub() maakt een tijdelijke sleutel __nieuw__<tijd>; daaraan herkennen we
+  // dat het om een nog niet opgeslagen club gaat en heet de modal "Nieuwe club".
+  const titelEl = document.getElementById('clubEditorTitle');
+  if (titelEl) titelEl.textContent = String(club).startsWith('__nieuw__') ? 'Nieuwe club' : 'Club bewerken';
   document.getElementById('editorClubName').value = data.club;
   document.getElementById('editorShortName').value = data.shortName || '';
   updateClubEditorHomeFavButtons();
@@ -7940,8 +8453,8 @@ function renderClubCourseList() {
     if (!groups[key].length) return '';
     return `<div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:10px" onclick="toggleClubCourseGroup('${key}')">
       <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">${label}</span>
-      <span style="font-size:17px;font-weight:700;color:var(--green-light);margin-left:8px">${groups[key].length}</span>
-      <span class="club-course-group-arrow" data-group="${key}" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+      <span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${groups[key].length}</span>
+      <span class="club-course-group-arrow" data-group="${key}" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
     </div>
     <div id="clubCourseGroup${key}" class="hidden">${groups[key].map(rowHtml).join('')}</div>`;
   };
@@ -8073,6 +8586,25 @@ function updateEditorSectionCounts() {
 }
 
 function openCourseEditor(courseName) {
+  // Een baan hangt onder een club: zonder ingevulde clubnaam én korte naam is er nog
+  // geen club om hem aan te hangen (en bij sluiten zou de tijdelijke club met banen en
+  // al verdwijnen). Daarom eerst die twee velden afdwingen.
+  const naamVeld = document.getElementById('editorClubName');
+  const kortVeld = document.getElementById('editorShortName');
+  const naam = naamVeld ? naamVeld.value.trim() : '';
+  const kort = kortVeld ? kortVeld.value.trim() : '';
+  if (!naam || !kort) {
+    const st = document.getElementById('clubEditorStatus');
+    if (st) {
+      st.textContent = !naam && !kort
+        ? 'Vul eerst de clubnaam en de korte naam in.'
+        : (!naam ? 'Vul eerst de clubnaam in.' : 'Vul eerst de korte naam in.');
+      st.style.display = '';
+      st.style.color = 'var(--orange)';
+    }
+    (!naam ? naamVeld : kortVeld)?.focus();
+    return;
+  }
   const data = CLUBS[editorClub];
   document.getElementById('courseEditorClubName').value = data?.club || editorClub;
   if (courseName === '__new__') {
@@ -9346,8 +9878,10 @@ function onWatIfInput(input) {
   const { current, hypo } = whatIf;
   const diff = current != null && hypo != null ? hypo.value - current.value : null;
   const fmtSignedLocal = v => (v > 0 ? '+' : '') + v.toFixed(1);
-  const arrow = diff == null || Math.abs(diff) < 0.05 ? '→' : (diff < 0 ? '▼' : '▲');
-  const col = diff == null || Math.abs(diff) < 0.05 ? 'var(--muted)' : (diff < 0 ? 'var(--green-light)' : 'var(--red)');
+  // Hier gaat het wél om een handicapverandering, dus de SVG-pijl uit het archief.
+  const gelijk = diff == null || Math.abs(diff) < 0.05;
+  const arrow = gelijk ? hcpArrowSvg(0, 0, 15) : hcpArrowSvg(current.value, hypo.value, 15);
+  const col = gelijk ? 'var(--muted)' : (diff < 0 ? 'var(--green-light)' : 'var(--red)');
   // Caps/ESR tellen al mee in de uitkomst zelf (hypo.value) — hier alleen signaleren dát
   // ze een rol speelden, zonder verdere toelichting (dat zou de kaart te druk maken).
   const signals = [];
@@ -9355,7 +9889,7 @@ function onWatIfInput(input) {
   if (hypo.esrApplied) signals.push('ESR');
   const signalText = signals.length ? ` <span style="color:var(--muted);font-weight:400">(${signals.join(' + ')})</span>` : '';
   resultEl.innerHTML = `<div style="font-size:20px">Hcp wordt: <b>${fmt1(hypo.value)}</b>${signalText}</div>`
-    + (diff != null ? `<div style="font-size:15px;color:${col};font-weight:700">${arrow} ${fmtSignedLocal(diff)} t.o.v. nu (${fmt1(current.value)})</div>` : '');
+    + (diff != null ? `<div style="font-size:15px;color:${col};font-weight:700;display:flex;align-items:center;margin:4px 0 0 -2px">${arrow}${fmtSignedLocal(diff)} t.o.v. nu (${fmt1(current.value)})</div>` : '');
 }
 
 // Rekent de handicap uit met één tijdelijke, alleen-in-het-geheugen ronde toegevoegd —
@@ -9854,8 +10388,8 @@ function buildClubList() {
       const gid = `courseSubGroup_${clubKey}_${key}`;
       return `<div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:6px" onclick="event.stopPropagation();toggleClubSubGroup('${gid}')">
         <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">${label}</span>
-        <span style="font-size:17px;font-weight:700;color:var(--green-light);margin-left:8px">${courseGroups[key].length}</span>
-        <span class="club-sub-group-arrow" data-gid="${gid}" style="font-size:12px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+        <span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${courseGroups[key].length}</span>
+        <span class="club-sub-group-arrow" data-gid="${gid}" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(12, false, 'var(--green-light)', false)}</span>
       </div>
       <div id="${gid}" class="hidden" style="display:flex;flex-direction:column;gap:2px">${courseGroups[key].map(courseRowHtml).join('')}</div>`;
     };
@@ -9866,8 +10400,8 @@ function buildClubList() {
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:var(--white);margin-top:4px;cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">Kort: ${escapeHtml(shortName || '—')}${isHome ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-left:8px;opacity:.8" title="Thuisclub"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg>' : ''}</div>
       <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:4px" onclick="toggleCourseList(this)">
         <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Banen</span>
-        <span style="font-size:20px;font-weight:700;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length}</span>
-        <span class="course-arrow" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+        <span style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length}</span>
+        <span class="course-arrow" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
       </div>
       <div class="course-list-toggle" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;display:none;cursor:pointer" onclick="toggleCourseList(this)">${courseList}</div>
       <div class="hidden" data-club-export-msg="${escapeHtml(club)}" style="color:var(--green-light);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
@@ -9880,7 +10414,7 @@ function buildClubList() {
 
   const clubCollapsibleHeader = (title, count, key) => {
     const collapsed = window._clubSectionCollapsed?.[key] !== false; // standaard ingeklapt
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._clubSectionCollapsed=window._clubSectionCollapsed||{};window._clubSectionCollapsed['${key}']=window._clubSectionCollapsed['${key}']===false?true:false;buildClubList()"><span style="flex:1">${title}</span><span style="opacity:.8">${count}</span><span style="display:inline-block;align-self:center;margin-top:0;transform:rotate(${collapsed?0:90}deg)">▶</span></div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._clubSectionCollapsed=window._clubSectionCollapsed||{};window._clubSectionCollapsed['${key}']=window._clubSectionCollapsed['${key}']===false?true:false;buildClubList()"><span style="flex:1">${title}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
 
   let html = '';
@@ -11395,6 +11929,18 @@ document.addEventListener('focusin', (e) => {
   </div>
 </div>
 
+<!-- Analyse van je spel: regelgebaseerd rapport + kopieerknop voor een AI-gesprek -->
+<div id="analysisModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:640;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column">
+    <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center">Analyse van je spel</div>
+    <div id="analysisBody" style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-secondary" id="analysisCopyBtn" style="flex:1;padding:12px;font-size:17px" onclick="copyAnalysisForAi()">Prompt voor AI</button>
+      <button class="btn-secondary" style="flex:1;padding:12px;font-size:17px" onclick="document.getElementById('analysisModal').classList.add('hidden')">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bevestigingsmodal voor alles wissen (rode stijl) -->
 <div id="resetAllModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
@@ -11435,7 +11981,7 @@ document.addEventListener('focusin', (e) => {
 <div id="clubEditorOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;overflow-y:auto;padding:12px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--white)">Club bewerken</h2>
+      <h2 id="clubEditorTitle" style="margin:0;font-size:20px;font-weight:800;color:var(--white)">Club bewerken</h2>
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeClubEditor()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:10px">
@@ -11479,8 +12025,8 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('tees')">
       <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Tees</span>
-      <span id="editorTeesCount" style="font-size:20px;font-weight:700;color:var(--green-light);margin-left:8px"></span>
-      <span class="editor-section-arrow" data-section="tees" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+      <span id="editorTeesCount" style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px"></span>
+      <span class="editor-section-arrow" data-section="tees" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
     </div>
     <div id="editorTeesWrap" class="hidden">
       <div id="editorTees" style="margin:4px 0 8px;display:flex;flex-direction:column;gap:6px"></div>
@@ -11495,8 +12041,8 @@ document.addEventListener('focusin', (e) => {
 
     <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('holes')">
       <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Holes</span>
-      <span id="editorHolesCount" style="font-size:20px;font-weight:700;color:var(--green-light);margin-left:8px"></span>
-      <span class="editor-section-arrow" data-section="holes" style="font-size:14px;color:var(--green-light);margin-left:8px;transition:transform .2s;display:inline-block">▶</span>
+      <span id="editorHolesCount" style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px"></span>
+      <span class="editor-section-arrow" data-section="holes" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
     </div>
     <div id="editorHolesWrap" class="hidden">
       <div id="editorHoles"></div>
