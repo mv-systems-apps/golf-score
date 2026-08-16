@@ -1163,7 +1163,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-042</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-04A</div>
 </div>
 
 <script>
@@ -3443,6 +3443,12 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
         if (!met.length) return '—';
         return met.reduce((s, h) => s + h.putts, 0);
       })()],
+      ['Putts per hole', (() => {
+        const gespeeld = game.holes.filter(h => h && h.score != null);
+        const met = gespeeld.filter(h => h.putts != null);
+        if (!met.length) return '—';
+        return fmt1(met.reduce((s, h) => s + h.putts, 0) / met.length);
+      })()],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
       ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
@@ -4032,7 +4038,7 @@ function renderPlayerStats() {
       + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
       + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
   };
-  const distGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center;margin:2px 0">${binnen}</div>`;
+  const distGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center;margin:0 0 2px">${binnen}</div>`;
   // Scoreverdeling-kleuren via CSS-vars (licht/donker). Par gebruikt het app-grijs --res-par.
   const distCard = `<div class="card"><h2>Scoreverdeling</h2>`
     + distGrid(distRow('Eagle+', eagle, 'var(--dist-eagle)')
@@ -4355,7 +4361,7 @@ function renderPlayerStats() {
     const nGroups = groupOrder.length;
     const groupVals = Object.values(groupAvgs).filter(d => d.avg != null).map(d => d.avg);
     const toggleBtn = (mode, label) => `<button class="btn-secondary" style="flex:1;padding:8px;font-size:15px${viewMode === mode ? ';background:var(--gold);color:var(--green-deep)' : ''}" onclick="window._weekdayViewMode='${mode}';renderPlayerStats()">${label}</button>`;
-    const toggleRow = `<div style="display:flex;gap:6px;margin:8px 0 4px">${toggleBtn('weekend', 'Werkweek/weekend')}${toggleBtn('days', 'Weekdag')}</div>`;
+    const toggleRow = `<div style="display:flex;gap:6px;margin:0 0 4px">${toggleBtn('weekend', 'Werkweek/weekend')}${toggleBtn('days', 'Weekdag')}</div>`;
     if (groupVals.length) {
       const minV = Math.min(0, ...groupVals);
       const maxV = Math.max(0, ...groupVals);
@@ -4511,7 +4517,7 @@ function renderPlayerStats() {
     }).filter(v => v != null);
     return diffs.length >= MIN_ROUNDS_PERF ? diffs.reduce((s, x) => s + x, 0) / diffs.length : null;
   };
-  const fmtDiff = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  const fmtDiff = v => { const a = Math.abs(v).toFixed(1); return parseFloat(a) === 0 ? '±0' : (v > 0 ? '+' : '−') + a; }; // teken pas ná afronding: anders wordt −0.04 "−0.0"
   window._statClubCollapsed = window._statClubCollapsed || {};
   const clubNames = Object.keys(byClub).sort((a, b) => {
     const ca = Object.values(byClub[a]).reduce((s, x) => s + x.length, 0);
@@ -4597,7 +4603,8 @@ function renderPlayerStats() {
   const trackCard = clubBlocks ? `<div class="card">${clubBlocks}</div>` : '';
 
   // Vorm & consistentie
-  const fmtSigned = v => (v > 0 ? '+' : '') + v.toFixed(1);
+  // Teken pas ná afronding, anders toont −0.04 als "-0.0".
+  const fmtSigned = v => { const s = v.toFixed(1); return parseFloat(s) === 0 ? Math.abs(v).toFixed(1) : (v > 0 ? '+' : '') + s; };
   const trendRow = trend
     ? (() => {
         // Tekstdriehoekjes, bewust NIET de SVG-pijl uit het archief: die is voorbehouden
@@ -4695,15 +4702,16 @@ function renderPlayerStats() {
       `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
       + `<span style="flex:1;font-size:17px;color:var(--muted)">${label}</span>`
       + `<span style="font-size:17px;font-weight:700">${waarde}</span></div>`;
-    let z = false;
+    // Zebra begint mét accentkleur op de eerste rij, net als dataRow elders in de app.
+    let z = 0;
     const kern = [
-      ['Putts per ronde', fmt1(pTot / metPutts.length)],
       ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
+      ['Putts per hole', fmt1(pTot / pHoles)],
       ...(pGir >= 5 ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
       ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
       ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
       ...(pGeenGir >= 9 ? [['Scrambling (t.o.v. persoonlijke par)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
-    ].map(([l, v]) => { z = !z; return rij(l, v, !z); }).join('');
+    ].map(([l, v]) => rij(l, v, z++ % 2 === 0)).join('');
 
     // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
     const verdRij = (label, n, kleur) => {
@@ -5522,7 +5530,7 @@ function buildGameAnalysis() {
 
   // fmtDiff bestaat alleen binnen renderPlayerStats, dus hier een eigen exemplaar
   // (zelfde notatie: +0.8 / −0.3 / ±0).
-  const fmtDiff = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  const fmtDiff = v => { const a = Math.abs(v).toFixed(1); return parseFloat(a) === 0 ? '±0' : (v > 0 ? '+' : '−') + a; }; // teken pas ná afronding: anders wordt −0.04 "−0.0"
   const sdOf = r => { const e = effectiveSD(r); return e ? e.value : null; };
   // Twee maten per hole: t.o.v. par (kale score) en t.o.v. de "persoonlijke par" — par
   // plus de handicapslagen die je op die hole krijgt (h.phcp). Die laatste is de eerlijke
@@ -5730,10 +5738,9 @@ function buildGameAnalysis() {
     // Zelfde drempel als overal: het ingestelde minimum aantal rondes (Marks keuze,
     // zodat alle statistieken op dezelfde onderbouwing rusten).
     if (metPutts.length >= minN && holes > 0) {
-      const perRonde = puttsTot / metPutts.length;
       const per18 = puttsTot / holes * 18;
       const regels = [
-        `Gemiddeld <b>${fmt1(perRonde)}</b> putts per ronde, dat is <b>${fmt1(per18)}</b> per 18 holes (${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts).`,
+        `Gemiddeld <b>${fmt1(per18)}</b> putts per 18 holes en <b>${fmt1(puttsTot / holes)}</b> per hole (${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts). Ter vergelijking: rond de 36 per 18 holes is gebruikelijk voor beginnende golfers, rond de 29 op tourniveau.`,
         `Green in regulation: <b>${Math.round(gir / holes * 100)}%</b> van je holes (${gir} van ${holes}).`,
         `Drie putts of meer: <b>${drie}</b> keer, <b>${Math.round(drie / holes * 100)}%</b> van je holes.`
       ];
@@ -5760,8 +5767,7 @@ function buildGameAnalysis() {
         const deel = Math.abs(verliesTotaal) > 0.001
           ? ` (${Math.round(Math.abs(verliesVoorGreen) / (Math.abs(verliesVoorGreen) + Math.abs(verliesOpGreen)) * 100)}% v\u00f3\u00f3r de green)` : '';
         secties.push({ kop: 'Waar verlies je je slagen?', regels: [
-          `Van je <b>${fmtDiff(perHole(verliesTotaal))}</b> per hole t.o.v. par verlies je <b>${fmtDiff(perHole(verliesVoorGreen))}</b> v\u00f3\u00f3r de green en <b>${fmtDiff(perHole(verliesOpGreen))}</b> op de green${deel}.`,
-          'V\u00f3\u00f3r de green = alles tot je de green raakt, op de green = je putts boven de twee die in par zitten.'
+          `Van je <b>${fmtDiff(perHole(verliesTotaal))}</b> per hole t.o.v. par verlies je <b>${fmtDiff(perHole(verliesVoorGreen))}</b> v\u00f3\u00f3r de green en <b>${fmtDiff(perHole(verliesOpGreen))}</b> op de green${deel}.`
         ] });
         if (perHole(verliesOpGreen) > perHole(verliesVoorGreen)) {
           aanbev.push('Je verliest meer slagen op de green dan ervoor. Dat is ongebruikelijk en betekent dat oefentijd op de putting green direct rendement geeft.');
@@ -10221,7 +10227,9 @@ function formatPccOrUnknown(v) {
 function fmt1(v) {
   const n = Number(v);
   if (!isFinite(n)) return '—';
-  return n.toFixed(1);
+  const s = n.toFixed(1);
+  // "-0.0" bestaat niet als waarde: na afronding naar nul hoort er geen minteken.
+  return parseFloat(s) === 0 ? Math.abs(n).toFixed(1) : s;
 }
 
 // ══ WAT ALS...? ═════════════════════════════════════════════════════════
@@ -10240,7 +10248,8 @@ function onWatIfInput(input) {
   if (!whatIf) { resultEl.innerHTML = ''; return; }
   const { current, hypo } = whatIf;
   const diff = current != null && hypo != null ? hypo.value - current.value : null;
-  const fmtSignedLocal = v => (v > 0 ? '+' : '') + v.toFixed(1);
+  // Teken pas ná afronding, anders toont −0.04 als "-0.0".
+  const fmtSignedLocal = v => { const s = v.toFixed(1); return parseFloat(s) === 0 ? Math.abs(v).toFixed(1) : (v > 0 ? '+' : '') + s; };
   // Hier gaat het wél om een handicapverandering, dus de SVG-pijl uit het archief.
   const gelijk = diff == null || Math.abs(diff) < 0.05;
   const arrow = gelijk ? hcpArrowSvg(0, 0, 15) : hcpArrowSvg(current.value, hypo.value, 15);
