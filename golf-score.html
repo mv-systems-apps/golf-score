@@ -340,6 +340,10 @@
     /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
     /* Blokje om de grafiek zelf: de swipe-pijltjes centreren hierop, zodat ze niet
        meezakken als er onder de grafiek regels bij komen (detail, Low HI, legenda). */
+    /* Putts: paars, zodat ze in de tabel niet met scores te verwarren zijn. */
+    /* Puttregel: eigen achtergrond en een dun goudkleurig randje, zodat hij zich net
+       als het vroegere zwevende paneel losmaakt van de scorerijen eromheen. */
+    .putt-row { background: var(--card-solid); border-radius: 10px; box-shadow: 0 0 0 1px var(--gold); }
     .sd-chart-zone { position: relative; }
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
@@ -774,9 +778,9 @@
 
 <div id="screen-settings" class="screen">
   <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')">Instellingen</button>
-    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">WHS</button>
-    <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')">Gegevens</button>
+    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Instellingen</button>
+    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">WHS</button>
+    <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Gegevens</button>
   </div>
   <div id="settingsTabMain">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Weergave</div>
@@ -811,7 +815,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
-        <div style="font-size:20px;font-weight:700;color:var(--white)">Oudere jaren in archief inklappen</div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Oudere jaren bij rondes inklappen</div>
         <div style="font-size:17px;color:var(--muted)">Aan: alleen dit en vorig jaar staan open, oudere jaren beginnen ingeklapt. Uit: alle jaren staan open. Tikken op een jaarkop klapt altijd in of uit.</div>
       </div>
       <label class="switch"><input type="checkbox" id="archiveYearsClosedToggle" onchange="toggleArchiveYearsClosed()"><span class="slider"></span></label>
@@ -830,6 +834,8 @@
   </div>
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Tijdens de ronde <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>)</span></div>
+  
+
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
@@ -851,7 +857,28 @@
     </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Spelers <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>)</span></div>
+    <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Putts en greens</div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Putts bijhouden</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: bij het invullen van een score kun je in hetzelfde venster het aantal putts kiezen (0 t/m 5). Tel alleen slagen vanaf de green — een chip of putt vanaf de fringe telt dus niet mee. Rondes zonder putts blijven zonder putts.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="trackPuttsToggle" onchange="toggleTrackPutts()"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Putts in statistieken</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: rondes waarin je alle putts hebt ingevuld leveren extra cijfers op in "Analyseer mijn spel" — putts per ronde, greens in regulation, drie-putts en putts per green.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="puttsStatsToggle" onchange="togglePuttsStats()"><span class="slider"></span></label>
+    </div>
+  </div>
+
+<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Spelers <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>)</span></div>
   <div class="card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
@@ -974,8 +1001,8 @@
       </div>
     </div>
   </div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Symbolen</div>
   <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:10px">Symbolen</div>
     <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:0 0 8px">WHS</div><div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
       <span class="tee-badge badge-q" style="justify-self:center">Q</span><span style="justify-self:start">Qualifying-ronde</span>
       <span class="tee-badge badge-whs" style="justify-self:center">1</span><span style="justify-self:start">Beste 8 van laatste 20 (1 = oudste)</span>
@@ -992,6 +1019,7 @@
     </div>
     <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:14px 0 8px">Overige symbolen</div><div style="display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:10px;font-size:17px;color:var(--muted);align-items:center;justify-items:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--white)" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg><span style="justify-self:start">Thuisclub</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b7fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="justify-self:start">Ronde met putts op sommige holes, maar niet op alle</span>
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6" y="3" width="8" height="14" rx="1" fill="var(--green-light)"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, laatste 2 jaar</span>
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6.75" y="3.75" width="6.5" height="12.5" rx="1" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, ouder dan 2 jaar</span>
     
@@ -1014,7 +1042,7 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Lang indrukken bij groeperen</div>
-        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt voor alle groepeerknoppen, bij Clubs én in het Archief.</div>
+        <div style="font-size:17px;color:var(--muted)">Lang indrukken op een groepeerknop (club, speler, categorie) klapt alles in. Geldt bij Clubs, bij Rondes én in Instellingen — daar klapt lang indrukken op een tabknop bovenin alle secties in of uit.</div>
       </div>
     </div>
   </div>
@@ -1036,6 +1064,7 @@
   <div class="card" id="dataHealthCard" onclick="dataHealthClick()" style="cursor:pointer">
     <div id="dataHealthLine" style="font-size:17px;color:var(--muted)">&hellip;</div>
     <div id="dataHealthDupLine" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthDupClick()"></div>
+    <div id="dataHealthPuttLine" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthPuttClick()"></div>
     <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-top:4px">Nog nooit geëxporteerd</div>
   </div>
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
@@ -1134,7 +1163,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-011</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-042</div>
 </div>
 
 <script>
@@ -1316,6 +1345,20 @@ function roundHasWarning(r) {
   const isDoneW = holesW.length > 0 && holesW.every(h => h.score !== null);
   return !!(isDoneW && qualifying && !hasValidSd);
 }
+// Puttwaarschuwing: eigen icoon zodat het niet met het oranje driehoekje (ontbrekend
+// dagresultaat) te verwarren is — een paarse cirkel met uitroepteken, in dezelfde
+// paarse tint als de puttwaarden zelf.
+const puttWarnIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9b7fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+// Half ingevulde putts: sommige gespeelde holes hebben een puttwaarde en andere niet.
+// Geen enkele hole putts = prima (niet bijgehouden), alle holes putts = prima.
+function roundHasPuttWarning(r) {
+  const gespeeld = (r && r.holes ? r.holes : []).filter(h => h && h.score != null);
+  if (gespeeld.length < 2) return false;
+  const met = gespeeld.filter(h => h.putts != null).length;
+  return met > 0 && met < gespeeld.length;
+}
+
 const warningIconSmall = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
 // ══ DAGRESULTAAT (Score Differential) ═════════════════════════════════════
@@ -2833,7 +2876,7 @@ function startRound() {
   const roundsToAdd = player2Visible ? 2 : 1;
   if (saved.length + roundsToAdd > getRoundStorageLimit()) {
     document.getElementById('roundLimitMessage').textContent =
-      `Je hebt het maximum van ${getRoundStorageLimit()} opgeslagen rondes bereikt. Als je doorgaat, wordt${roundsToAdd > 1 ? 'en de oudste rondes' : ' de oudste ronde'} automatisch verwijderd. Je kunt ook eerst rondes verwijderen in het archief.`;
+      `Je hebt het maximum van ${getRoundStorageLimit()} opgeslagen rondes bereikt. Als je doorgaat, wordt${roundsToAdd > 1 ? 'en de oudste rondes' : ' de oudste ronde'} automatisch verwijderd. Je kunt ook eerst rondes verwijderen bij Rondes.`;
     document.getElementById('roundLimitModal').classList.remove('hidden');
     return;
   }
@@ -2849,9 +2892,9 @@ function startRound() {
       const isDone2 = (game2.holes || []).length > 0 && (game2.holes || []).every(h => h.score !== null);
       const status2 = isDone2 ? 'afgerond maar nog niet opgeslagen' : 'nog bezig';
       const naam2 = game2.player || 'onbekend';
-      msg = `Er zijn actieve rondes van ${naam1} (${status1}) en ${naam2} (${status2}). Als je doorgaat worden die rondes opgeslagen in het archief.`;
+      msg = `Er zijn actieve rondes van ${naam1} (${status1}) en ${naam2} (${status2}). Als je doorgaat worden die rondes opgeslagen.`;
     } else {
-      msg = `Er is een actieve ronde van ${naam1} (${status1}). Als je doorgaat wordt die ronde opgeslagen in het archief.`;
+      msg = `Er is een actieve ronde van ${naam1} (${status1}). Als je doorgaat wordt die ronde opgeslagen.`;
     }
     document.getElementById('confirmModalTitle').textContent = 'Actieve ronde aanwezig';
     document.getElementById('confirmModalMessage').textContent = msg;
@@ -3098,6 +3141,7 @@ function armScoreChange(i, newValue) {
   scoreTapChanged = h.score;
   scoreTapHole = i;
   h.score = newValue;
+  syncPuttsWithScore(i);
   scoreTapTimeout = setTimeout(() => clearScoreTap(true), 2000);
   pulseScore(i);
   updateHeader();
@@ -3210,6 +3254,7 @@ function clearScoreTap(revert) {
   if (scoreTapHole === null) return;
   const i = scoreTapHole;
   if (revert) game.holes[i].score = scoreTapChanged;
+  syncPuttsWithScore(i);
   scoreTapHole = null;
   if (scoreTapTimeout) { clearTimeout(scoreTapTimeout); scoreTapTimeout = null; }
   pulseScore(i);
@@ -3243,6 +3288,7 @@ function stepScore(i, d) {
     const next = was + d;
     h.score = next < 1 ? null : Math.min(19, next);
   }
+  syncPuttsWithScore(i);
   pulseScore(i);
   if (navigator.vibrate) navigator.vibrate(20);
   updateHeader();
@@ -3386,6 +3432,17 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       ['Bruto (STR)',         total + ' (' + rawFmt(dRaw) + ' vs par)'],
       ['Netto',               netto + ' (' + rawFmt(dNetto) + ' vs ppar)'],
       ['Aangepast (AGS)',     played.length ? totalAgs : '—'],
+      // Putts direct onder de AGS. Streepje als er geen putts zijn, en het paarse
+      // waarschuwingsicoon direct achter het label als de ronde half ingevuld is
+      // (zelfde plek als het oranje driehoekje bij het voorlopige dagresultaat).
+      // Staat los van de instelling "Putts in statistieken": dit is de ronde zelf.
+      ['Putts' + (roundHasPuttWarning(game) ? ' ' + puttWarnIcon : ''), (() => {
+        const gespeeld = game.holes.filter(h => h && h.score != null);
+        if (!gespeeld.length) return '—';
+        const met = gespeeld.filter(h => h.putts != null);
+        if (!met.length) return '—';
+        return met.reduce((s, h) => s + h.putts, 0);
+      })()],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
       ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
@@ -3584,12 +3641,19 @@ function renderScoreTable() {
         ? `<div class="sum-tr-btn-cell plus-cell" onpointerdown="plusDown(${i})" onpointerup="plusUp(${i})" onpointerleave="plusCancel()" onpointercancel="plusCancel()" onclick="event.stopPropagation()" oncontextmenu="return false">
              <button class="score-btn plus" style="pointer-events:none">+</button>
            </div>`
-        : `<div class="sum-tr-btn-cell plus-cell" onclick="event.stopPropagation(); selectScoreRow(${i})"></div>`}
+        : `<div class="sum-tr-btn-cell plus-cell" onclick="event.stopPropagation(); selectScoreRow(${i})">${(trackPuttsEnabled() && h.putts != null) ? `<span class="score-val" style="color:#9b7fd4;font-weight:900">${h.putts}</span>` : ''}</div>`}
       <span class="sum-spacer"></span>
       <span class="${isHiddenPparDouble ? 'stb-ppar-double-marker' : ''}" style="font-weight:900;color:${stbColor}">${stbDisplay}</span>
       <span class="sum-spacer"></span>
     `;
     rows.appendChild(row);
+    // Experimentele variant: de puttregel als echte tabelregel, dus de holes eronder
+    // schuiven op i.p.v. bedekt te worden.
+    // De puttregel schuift als echte tabelregel tussen de holes (de zwevende variant
+    // is vervallen — Marks keuze: inline werkt prettiger in de praktijk).
+    if (puttRowActief() && i === scoreButtonsRow) {
+      rows.appendChild(maakPuttRij(row, i));
+    }
   });
   scrollToCurrentRow();
 }
@@ -3603,7 +3667,7 @@ function renderPlayerStats() {
   if (!player) {
     const hasAnyRounds = loadSavedRounds().length > 0;
     el.innerHTML = hasAnyRounds
-      ? `<div class="card"><div style="font-size:20px;color:var(--muted)">Geen <b>statistieken</b>.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Er staan al rondes in het archief, maar er is geen spelernaam ingevuld bij Start (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Vul die daar in om de statistieken te zien.</div></div>`
+      ? `<div class="card"><div style="font-size:20px;color:var(--muted)">Geen <b>statistieken</b>.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Er staan al rondes opgeslagen, maar er is geen spelernaam ingevuld bij Start (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Vul die daar in om de statistieken te zien.</div></div>`
       : '<span class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen statistieken</span>';
     return;
   }
@@ -3735,7 +3799,6 @@ function renderPlayerStats() {
   const lowHiEff = effectiveLowHi(player, all);
   const esrMapStats = esrMapFor(player, all);
   const whs = whsHandicap(last20, lowHiEff, esrMapStats);
-  const bestSd = validSd.length ? Math.min(...validSd) : null;
   const avgSd  = validSd.length ? validSd.reduce((s, x) => s + x, 0) / validSd.length : null;
   const sdKpiWarning = rounds.some(r => { const e = effectiveSD(r); return e && e.value != null && roundHasWarning(r); });
   // Zelfde opmaak als hcpTriangle/loTriangle (vertical-align:middle + spatie erna) i.p.v.
@@ -3743,6 +3806,14 @@ function renderPlayerStats() {
   const sdKpiTriangle = sdKpiWarning
     ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
+  // Gemiddeld aantal putts per ronde: alleen rondes waarin élke gespeelde hole een
+  // puttwaarde heeft (half ingevulde rondes zouden het gemiddelde vertekenen).
+  const puttTotals = rounds.map(r => {
+    const gespeeld = (r.holes || []).filter(h => h && h.score != null);
+    if (!gespeeld.length || !gespeeld.every(h => h.putts != null)) return null;
+    return gespeeld.reduce((s, h) => s + h.putts, 0);
+  }).filter(v => v != null);
+  const avgPutts = puttTotals.length ? puttTotals.reduce((s, x) => s + x, 0) / puttTotals.length : null;
   const stbVals = rounds.map(r => r.totalStb).filter(v => v != null && isFinite(v));
   const avgStb = stbVals.length ? stbVals.reduce((s, x) => s + x, 0) / stbVals.length : null;
 
@@ -3847,9 +3918,9 @@ function renderPlayerStats() {
     + kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle })
     + (() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle }); })()
     + kpi('Rondes', rounds.length)
-    + kpi('Beste Sd', bestSd != null ? fmt1(bestSd) : '—', { prefix: sdKpiTriangle })
     + kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle })
     + kpi('Gem. Stb', avgStb != null ? fmt1(avgStb) : '—')
+    + kpi('Gem. putts', avgPutts != null ? fmt1(avgPutts) : '—')
     + `</div>`
     + newLowBanner
     + `</div>`;
@@ -3945,11 +4016,18 @@ function renderPlayerStats() {
   }));
   // Zelfde principe als bij "T.o.v. je handicap": kolommen zo breed als de langste
   // waarde, dus alle balken even lang en niets valt weg.
+  const BALK_RX = 0; // 0 = rechte hoeken (Edge tekent afgeronde hoeken onbetrouwbaar); 9 = pilvorm
+  const balkSvg = (pct, kleur) =>
+    `<svg width="100%" height="18" style="display:block;min-width:0" preserveAspectRatio="none">`
+    + `<rect x="0" y="0" width="100%" height="18" rx="${BALK_RX}" ry="${BALK_RX}" fill="var(--overlay-soft)"/>`
+    + (pct > 0 ? `<rect x="0" y="0" width="${pct}%" height="18" rx="${BALK_RX}" ry="${BALK_RX}" fill="${kleur}"/>` : '')
+    + `</svg>`;
+
   const distRow = (label, n, color) => {
     const pct = holesTot ? Math.round(n / holesTot * 100) : 0;
     return `<div style="display:contents">`
       + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-      + `<div style="min-width:0;height:18px;border-radius:9px;background:linear-gradient(to right, ${color} 0 ${pct}%, var(--overlay-soft) ${pct}% 100%)"></div>`
+      + `<div style="min-width:0">${balkSvg(pct, color)}</div>`
       + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
       + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
       + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
@@ -4378,7 +4456,7 @@ function renderPlayerStats() {
     const warn = arr.some(entry => entry.uncertain);
     return `<div style="display:contents">`
       + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-      + `<div style="min-width:0;height:18px;border-radius:9px;background:linear-gradient(to right, var(--green-light) 0 ${pct}%, var(--overlay-soft) ${pct}% 100%)"></div>`
+      + `<div style="min-width:0">${balkSvg(pct, 'var(--green-light)')}</div>`
       + (hdWarnAny ? `<span style="display:flex;align-items:center;justify-content:flex-end">${warn ? warningIconSmall : ''}</span>` : '')
       + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
       + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">·</span>`
@@ -4581,6 +4659,92 @@ function renderPlayerStats() {
     `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">${label}</span><span style="font-size:17px;font-weight:700">${fmt1(t.avg)} <span style="font-size:15px;color:var(--muted);font-weight:400">${t.n}×</span></span></div>`;
   const typeRow = typeLine('Gem. dagresultaat 9 holes', t9, false) + typeLine('Gem. dagresultaat 18 holes', t18, true);
   const formBody = trendRow + spreadRow + typeRow + hdSubHead + hdBody + threeRow + nineRow;
+  // ── Kaart "Putten en greens" ─────────────────────────────────────────────
+  // Volgt de periodeknop (net als de kaarten eromheen; de analysemodal rekent juist
+  // altijd over het hele archief). Alleen rondes waarin ÉLKE gespeelde hole een
+  // puttwaarde heeft tellen mee — een half ingevulde ronde zou elke maat vertekenen.
+  const puttCard = (() => {
+    if (typeof puttsStatsEnabled !== 'function' || !puttsStatsEnabled()) return '';
+    const metPutts = periodRounds.filter(r => {
+      const gespeeld = (r.holes || []).filter(h => h && h.score != null);
+      return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
+    });
+    if (metPutts.length < getMinRoundsStat()) return '';
+    let pHoles = 0, pTot = 0, pGir = 0, pDrie = 0, pOpGir = 0, pGeenGir = 0, pScramble = 0;
+    let vTot = 0, vVoor = 0, vOp = 0;
+    const puttVerdeling = {};
+    metPutts.forEach(r => (r.holes || []).forEach(h => {
+      if (!h || h.score == null || h.putts == null || h.par == null) return;
+      pHoles++;
+      pTot += h.putts;
+      if (h.putts >= 3) pDrie++;
+      const bucket = Math.min(h.putts, 4);
+      puttVerdeling[bucket] = (puttVerdeling[bucket] || 0) + 1;
+      const totGreen = h.score - h.putts;
+      const isGir = totGreen <= h.par - 2;
+      if (isGir) { pGir++; pOpGir += h.putts; }
+      else { pGeenGir++; if (h.phcp != null && h.score <= h.par + h.phcp) pScramble++; }
+      vTot += h.score - h.par;
+      vVoor += totGreen - (h.par - 2);
+      vOp += h.putts - 2;
+    }));
+    if (!pHoles) return '';
+
+    // Blok 1: kerngetallen, in de rijstijl van Vorm & consistentie
+    const rij = (label, waarde, zebra) =>
+      `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
+      + `<span style="flex:1;font-size:17px;color:var(--muted)">${label}</span>`
+      + `<span style="font-size:17px;font-weight:700">${waarde}</span></div>`;
+    let z = false;
+    const kern = [
+      ['Putts per ronde', fmt1(pTot / metPutts.length)],
+      ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
+      ...(pGir >= 5 ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
+      ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
+      ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
+      ...(pGeenGir >= 9 ? [['Scrambling (t.o.v. persoonlijke par)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
+    ].map(([l, v]) => { z = !z; return rij(l, v, !z); }).join('');
+
+    // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
+    const verdRij = (label, n, kleur) => {
+      const pct = pHoles ? Math.round(n / pHoles * 100) : 0;
+      return `<div style="display:contents">`
+        + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+        + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
+        + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
+        + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
+        + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+    };
+    // Eigen raster zonder buitenmarge: zo bepaalt alleen subHead (10px boven, 4px onder)
+    // de ruimte rond de groene subkoppen, gelijk aan Vorm & consistentie.
+    const puttGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center">${binnen}</div>`;
+    const verdeling = puttGrid(
+      verdRij('1 putt', puttVerdeling[1] || 0, 'var(--dist-birdie)')
+      + verdRij('2 putts', puttVerdeling[2] || 0, 'var(--res-par)')
+      + verdRij('3 putts', puttVerdeling[3] || 0, 'var(--dist-bogey)')
+      + verdRij('4 of meer', puttVerdeling[4] || 0, 'var(--dist-worse)')
+      + ((puttVerdeling[0] || 0) ? verdRij('0 putts', puttVerdeling[0], 'var(--dist-eagle)') : ''));
+
+    // Blok 3: waar verlies je je slagen — twee balken die samen 100% vormen
+    const absVoor = Math.abs(vVoor), absOp = Math.abs(vOp), absSom = absVoor + absOp;
+    const pctVoor = absSom ? Math.round(absVoor / absSom * 100) : 0;
+    const splitRij = (label, pct, perHole, kleur) => `<div style="display:contents">`
+      + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+      + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${fmtDiff(perHole)}</span>`
+      + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+    const split = subHead('Waar verlies je je slagen') + puttGrid(
+      splitRij('V\u00f3\u00f3r de green', pctVoor, vVoor / pHoles, 'var(--green-light)')
+      + splitRij('Op de green', 100 - pctVoor, vOp / pHoles, 'var(--gold)'));
+
+    return `<div class="card"><h2>Putten en greens</h2>`
+      + kern
+      + subHead('Putts per hole') + verdeling
+      + split
+      + `<div style="font-size:15px;color:var(--muted);margin-top:6px">${pHoles} holes over ${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts</div></div>`;
+  })();
+
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
   const stickyPeriodBar = `<div style="position:sticky;top:var(--header-h, 60px);z-index:90;background:var(--green-deep);margin:0 -12px 12px;padding:12px 12px 12px">${periodBar}</div>`;
@@ -4796,7 +4960,7 @@ function renderPlayerStats() {
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', 'Prestaties')
-    + (grpOpen('prestaties') ? distCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
+    + (grpOpen('prestaties') ? distCard + puttCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
     + grpHeader('banen', `Clubs${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
     + (grpOpen('banen') ? trackCard : '')
     // Analyseknop helemaal onderaan (Marks plaatsing): opent een modal met een
@@ -5190,6 +5354,25 @@ function refreshDataHealth() {
   el.innerHTML = `<span style="color:var(--orange);font-weight:700">${probleem.length} afgeronde qualifying ronde${probleem.length === 1 ? '' : 's'} zonder vastgesteld dagresultaat</span> (bij ${clubs.size} club${clubs.size === 1 ? '' : 's'}) — tik om te bekijken`;
 }
 // Aparte functie: de duplicaatregel hoort óók bij "Alles compleet" gevuld te worden
+// Rondes met half ingevulde putts: alleen zichtbaar áls ze er zijn (zelfde aanpak als
+// de duplicaatregel). Tik → archief met een filter op precies die rondes.
+function refreshDataHealthPutts() {
+  const el = document.getElementById('dataHealthPuttLine');
+  if (!el) return;
+  const rondes = loadSavedRounds().filter(roundHasPuttWarning);
+  window._puttWarnIds = new Set(rondes.map(r => String(r.id)));
+  if (!rondes.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.innerHTML = `<span style="color:#9b7fd4;font-weight:700">${rondes.length} ronde${rondes.length === 1 ? '' : 's'} met putts op sommige holes</span> (niet op alle) \u2014 tik om te bekijken`;
+  el.style.cursor = 'pointer';
+  el.classList.remove('hidden');
+}
+function dataHealthPuttClick() {
+  if (!window._puttWarnIds || !window._puttWarnIds.size) return;
+  window._warnFilterActive = 'putt';
+  nav('archive');
+  loadSaved();
+}
+
 function refreshDataHealthDup() {
   const el = document.getElementById('dataHealthDupLine');
   if (!el) return;
@@ -5304,7 +5487,7 @@ function updateAppBadge() {
   if (!('setAppBadge' in navigator)) return;
   try {
     const nu = Date.now();
-    const isDoneB = r => ((r.playedCount ?? (r.holes || []).filter(h => h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
+    const isDoneB = r => ((r.playedCount ?? (r.holes || []).filter(h => h && h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
     const n = loadSavedRounds().filter(r => !isDoneB(r) && r.date && new Date(`${r.date}T${r.time || '00:00'}`).getTime() > nu).length;
     const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
     if (p && p.catch) p.catch(() => {});
@@ -5322,7 +5505,7 @@ setTimeout(updateAppBadge, 1500);
 // wél een echt AI-gesprek wil — zonder API-sleutel in de app.
 function analysisRounds() {
   const player = startPlayerName();
-  const isDoneA = r => ((r.playedCount ?? (r.holes || []).filter(h => h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
+  const isDoneA = r => ((r.playedCount ?? (r.holes || []).filter(h => h && h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
   return loadSavedRounds()
     .filter(r => r.player === player && r.qualifying && r.date && isDoneA(r))
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
@@ -5345,8 +5528,8 @@ function buildGameAnalysis() {
   // plus de handicapslagen die je op die hole krijgt (h.phcp). Die laatste is de eerlijke
   // maat om holes te vergelijken: op moeilijke holes krijg je meer slagen, dus t.o.v. par
   // lijken ze duurder dan ze zijn. In de scorekaart heet dit "vs ppar".
-  const brutoOf = h => (h.score != null && h.par != null) ? h.score - h.par : null;
-  const nettoOf = h => (h.score != null && h.par != null && h.phcp != null) ? h.score - h.par - h.phcp : null;
+  const brutoOf = h => (h && h.score != null && h.par != null) ? h.score - h.par : null;
+  const nettoOf = h => (h && h.score != null && h.par != null && h.phcp != null) ? h.score - h.par - h.phcp : null;
   const sds = rondes.map(sdOf).filter(v => v != null);
   const gem = a => a.reduce((s, x) => s + x, 0) / a.length;
   const sdev = a => a.length < 2 ? null : Math.sqrt(a.reduce((s, x) => s + (x - gem(a)) ** 2, 0) / (a.length - 1));
@@ -5355,7 +5538,7 @@ function buildGameAnalysis() {
   {
     const regels = [];
     const eerste = rondes[0].date, laatste = rondes[rondes.length - 1].date;
-    regels.push(`${rondes.length} qualifying rondes van ${formatFullDate(eerste)} t/m ${formatFullDate(laatste)} \u2014 je hele archief.`);
+    regels.push(`${rondes.length} qualifying rondes van ${formatFullDate(eerste)} t/m ${formatFullDate(laatste)} \u2014 al je opgeslagen rondes.`);
     const hcpNu = currentOfficialHcp();
     if (hcpNu != null) regels.push(`Je handicap is nu <b>${fmt1(hcpNu)}</b>.`);
     if (sds.length) {
@@ -5423,7 +5606,7 @@ function buildGameAnalysis() {
   {
     const buckets = { hard: { bruto: [], netto: [] }, mid: { bruto: [], netto: [] }, easy: { bruto: [], netto: [] } };
     rondes.forEach(r => {
-      const geldig = (r.holes || []).filter(h => h.score != null && h.si != null && h.par != null);
+      const geldig = (r.holes || []).filter(h => h && h.score != null && h.si != null && h.par != null);
       if (!geldig.length) return;
       const opSi = [...geldig].sort((a, b) => a.si - b.si);
       const derde = Math.ceil(opSi.length / 3);
@@ -5467,7 +5650,7 @@ function buildGameAnalysis() {
     const perHole = {};
     rondes.forEach(r => {
       (r.holes || []).forEach((h, i) => {
-        if (h.score == null || h.par == null || h.phcp == null) return;
+        if (!h || h.score == null || h.par == null || h.phcp == null) return;
         holesTot++;
         const punten = typeof stbFor === 'function' ? stbFor(h) : null;
         if (punten == null) return;
@@ -5481,7 +5664,7 @@ function buildGameAnalysis() {
       const perRonde = nullersTot / rondes.length;
       const per18 = nullersTot / holesTot * 18;
       const regels = [
-        `Gemiddeld <b>${fmt1(perRonde)}</b> nullers per ronde, oftewel <b>${fmt1(per18)}</b> per 18 holes (${Math.round(nullersTot / holesTot * 100)}% van je holes).`
+        `Gemiddeld <b>${fmt1(perRonde)}</b> nullers per ronde, dat is <b>${fmt1(per18)}</b> per 18 holes (${Math.round(nullersTot / holesTot * 100)}% van je holes).`
       ];
       // Alleen holes die je vaak genoeg speelde én waar het meer dan incidenteel gebeurt.
       const kandidaten = Object.values(perHole)
@@ -5504,6 +5687,97 @@ function buildGameAnalysis() {
     }
   }
 
+  // ── Putten en greens ──
+  // Alleen rondes waarin ÉLKE gespeelde hole een puttwaarde heeft; een half ingevulde
+  // ronde zou elke maat vertekenen. GIR (green in regulation) is af te leiden zonder
+  // extra invoer: slagen tot de green = score − putts, en dat moet par − 2 of minder
+  // zijn. Voorwaarde is wel dat putts uitsluitend slagen vanaf de green zijn — zo staat
+  // het ook in de instelling beschreven.
+  if (typeof puttsStatsEnabled === 'function' && puttsStatsEnabled()) {
+    const metPutts = rondes.filter(r => {
+      const gespeeld = (r.holes || []).filter(h => h && h.score != null);
+      return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
+    });
+    let holes = 0, puttsTot = 0, gir = 0, drie = 0, puttsOpGir = 0;
+    // Extra tellingen voor de splitsing, scrambling en greens per par-type.
+    let verliesTotaal = 0, verliesVoorGreen = 0, verliesOpGreen = 0;
+    let geenGir = 0, scramblePar = 0, scramblePpar = 0;
+    const girPerPar = {};
+    metPutts.forEach(r => (r.holes || []).forEach(h => {
+      if (!h || h.score == null || h.putts == null || h.par == null) return;
+      holes++;
+      puttsTot += h.putts;
+      if (h.putts >= 3) drie++;
+      const totGreen = h.score - h.putts;          // slagen tot de green
+      const isGir = totGreen <= h.par - 2;
+      if (isGir) { gir++; puttsOpGir += h.putts; }
+      // Splitsing van je verlies: alles vóór de green (t.o.v. par − 2 slagen) en
+      // alles op de green (t.o.v. de twee putts die in par zijn verdisconteerd).
+      // Samen tellen ze exact op tot je verlies t.o.v. par.
+      verliesTotaal += h.score - h.par;
+      verliesVoorGreen += totGreen - (h.par - 2);
+      verliesOpGreen += h.putts - 2;
+      // Scrambling: green gemist, maar toch nog par (officieel) of persoonlijke par.
+      if (!isGir) {
+        geenGir++;
+        if (h.score <= h.par) scramblePar++;
+        if (h.phcp != null && h.score <= h.par + h.phcp) scramblePpar++;
+      }
+      const p = girPerPar[h.par] = girPerPar[h.par] || { n: 0, gir: 0 };
+      p.n++;
+      if (isGir) p.gir++;
+    }));
+    // Zelfde drempel als overal: het ingestelde minimum aantal rondes (Marks keuze,
+    // zodat alle statistieken op dezelfde onderbouwing rusten).
+    if (metPutts.length >= minN && holes > 0) {
+      const perRonde = puttsTot / metPutts.length;
+      const per18 = puttsTot / holes * 18;
+      const regels = [
+        `Gemiddeld <b>${fmt1(perRonde)}</b> putts per ronde, dat is <b>${fmt1(per18)}</b> per 18 holes (${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts).`,
+        `Green in regulation: <b>${Math.round(gir / holes * 100)}%</b> van je holes (${gir} van ${holes}).`,
+        `Drie putts of meer: <b>${drie}</b> keer, <b>${Math.round(drie / holes * 100)}%</b> van je holes.`
+      ];
+      if (gir >= 5) regels.push(`Op greens die je in regulation raakte: <b>${fmt1(puttsOpGir / gir)}</b> putts gemiddeld \u2014 de zuiverste maat voor je putten.`);
+      // Greens per par-type: laat zien of een sterk par-type aan het bereiken van de
+      // green ligt of pas aan wat je er daarna mee doet.
+      const parKeysGir = Object.keys(girPerPar).map(Number).sort().filter(p => girPerPar[p].n >= 9);
+      if (parKeysGir.length >= 2) {
+        regels.push('Greens in regulation per par-type: ' + parKeysGir
+          .map(p => `par ${p} <b>${Math.round(girPerPar[p].gir / girPerPar[p].n * 100)}%</b>`).join(', ') + '.');
+      }
+      // Scrambling: green gemist en toch nog par. De officiële maat is voor een
+      // handicap rond de 30 vaak bijna nul, dus staat de persoonlijke par erbij.
+      if (geenGir >= 9) {
+        regels.push(`Scrambling: <b>${Math.round(scramblePpar / geenGir * 100)}%</b> t.o.v. je persoonlijke par, <b>${Math.round(scramblePar / geenGir * 100)}%</b> t.o.v. de gewone par (${geenGir} holes zonder green in regulation).`);
+      }
+      secties.push({ kop: 'Putten en greens', regels });
+
+      // ── Waar verlies je je slagen? ──
+      // Eigen sectie: dit is een conclusie over je hele spel, niet alleen over putten.
+      // De twee bedragen tellen exact op tot je verlies t.o.v. par.
+      if (holes >= 18) {
+        const perHole = v => v / holes;
+        const deel = Math.abs(verliesTotaal) > 0.001
+          ? ` (${Math.round(Math.abs(verliesVoorGreen) / (Math.abs(verliesVoorGreen) + Math.abs(verliesOpGreen)) * 100)}% v\u00f3\u00f3r de green)` : '';
+        secties.push({ kop: 'Waar verlies je je slagen?', regels: [
+          `Van je <b>${fmtDiff(perHole(verliesTotaal))}</b> per hole t.o.v. par verlies je <b>${fmtDiff(perHole(verliesVoorGreen))}</b> v\u00f3\u00f3r de green en <b>${fmtDiff(perHole(verliesOpGreen))}</b> op de green${deel}.`,
+          'V\u00f3\u00f3r de green = alles tot je de green raakt, op de green = je putts boven de twee die in par zitten.'
+        ] });
+        if (perHole(verliesOpGreen) > perHole(verliesVoorGreen)) {
+          aanbev.push('Je verliest meer slagen op de green dan ervoor. Dat is ongebruikelijk en betekent dat oefentijd op de putting green direct rendement geeft.');
+        } else if (perHole(verliesVoorGreen) >= 3 * Math.max(perHole(verliesOpGreen), 0.01)) {
+          aanbev.push('Verreweg de meeste slagen verlies je v\u00f3\u00f3r de green. Je putten is dus niet je probleem \u2014 richt je oefentijd op het lange spel en de approach.');
+        }
+      }
+
+      {
+        if (drie / holes >= 0.12) aanbev.push(`Op ${Math.round(drie / holes * 100)}% van je holes heb je drie putts of meer nodig. Dat is de snelste winst die er is: oefen lange putts op afstand (lag putting) in plaats van korte putts.`);
+        if (gir / holes <= 0.15) aanbev.push('Je raakt weinig greens in regulation. Dat wijst op het lange spel of de approach, niet op je putten \u2014 richt je oefentijd daar dus op.');
+        if (gir >= 5 && puttsOpGir / gir >= 2.1) aanbev.push('Op greens die je in regulation raakt heb je gemiddeld meer dan twee putts nodig. Daar liggen dus slagen op de green zelf, niet in het bereiken ervan.');
+      }
+    }
+  }
+
   // ── Duurste holes ──
   // Waar lek je slagen weg, ook op holes waar je nog wel punten haalt? Gesorteerd op
   // het GEMIDDELDE verlies per hole, niet op het totaal: anders komen holes die je
@@ -5515,9 +5789,10 @@ function buildGameAnalysis() {
       const n = nettoOf(h);
       if (n == null) return;
       const k = `${r.track || '?'}|${i + 1}`;
-      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
+      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0, putts: 0, puttN: 0 };
       p.som += n;
       p.n++;
+      if (h.putts != null) { p.putts += h.putts; p.puttN++; }
     }));
     const duurste = Object.values(perHole)
       .filter(p => p.n >= Math.max(minN, 3))
@@ -5526,7 +5801,7 @@ function buildGameAnalysis() {
       .slice(0, 5); // zelfde aantal als in de prompt (Marks vraag: waarom verschilden die?)
     if (duurste.length) {
       secties.push({ kop: 'Duurste holes', regels: duurste.map(p =>
-        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par, ${p.n}\u00d7 gespeeld.`
+        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par${(typeof puttsStatsEnabled === 'function' && puttsStatsEnabled() && p.puttN >= Math.max(minN, 3)) ? `, <b>${fmt1(p.putts / p.puttN)}</b> putts` : ''}, ${p.n}\u00d7 gespeeld.`
       ) });
     } else if (Object.keys(perHole).length) {
       secties.push({ kop: 'Duurste holes', regels: ['Nog te weinig herhaalde holes om betrouwbaar te vergelijken.'] });
@@ -5539,7 +5814,7 @@ function buildGameAnalysis() {
     rondes.forEach(r => {
       if ((r.holesCount ?? (r.holes || []).length) !== 18) return;
       (r.holes || []).forEach((h, i) => {
-        if (h.score == null || h.par == null) return;
+        if (!h || h.score == null || h.par == null) return;
         (i < 9 ? eerste9 : tweede9).push(h.score - h.par);
       });
     });
@@ -5678,7 +5953,11 @@ async function copyAnalysisForAi() {
   tekst += '- "T.o.v. par" is de kale score. "Mijn persoonlijke par" telt de handicapslagen mee die ik op die hole krijg (bij handicap 30 één slag, op de twaalf moeilijkste holes twee), dus op een par 4 met twee slagen is mijn persoonlijke par 6. Dat is de eerlijke maat om holes onderling te vergelijken.\n';
   tekst += '- Stb = stablefordpunten (2 punten = mijn persoonlijke par op die hole, hoger is beter).\n';
   tekst += '- CR/SR = Course Rating en Slope Rating van de gespeelde tee: hoe hoger, hoe zwaarder de baan.\n';
-  tekst += '- Ik houd GEEN putts, fairways-geraakt of greens-in-regulation bij, dus baseer je advies op wat hieronder staat.\n\n';
+  const heeftPutts = typeof puttsStatsEnabled === 'function' && puttsStatsEnabled()
+    && analysisRounds().some(r => (r.holes || []).some(h => h.putts != null));
+  tekst += heeftPutts
+    ? '- Ik houd het aantal putts per hole bij (alleen slagen vanaf de green). GIR = green in regulation, afgeleid als score \u2212 putts \u2264 par \u2212 2. Fairways-geraakt houd ik niet bij.\n\n'
+    : '- Ik houd GEEN putts, fairways-geraakt of greens-in-regulation bij, dus baseer je advies op wat hieronder staat.\n\n';
   a.secties.forEach(s => {
     tekst += s.kop.toUpperCase() + '\n';
     s.regels.forEach(r => { tekst += '- ' + strip(r) + '\n'; });
@@ -5692,7 +5971,7 @@ async function copyAnalysisForAi() {
   {
     const perHole = {};
     analysisRounds().forEach(r => (r.holes || []).forEach((h, i) => {
-      if (h.score == null || h.par == null || h.phcp == null) return;
+      if (!h || h.score == null || h.par == null || h.phcp == null) return;
       const k = `${r.track || '?'}|${i + 1}`;
       const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
       p.som += h.score - h.par - h.phcp;
@@ -5718,7 +5997,7 @@ async function copyAnalysisForAi() {
     const telMee = window._whsUsedIds || new Set();
     tekst += '\nLAATSTE ' + ruw.length + ' RONDES (nieuwste eerst)\n';
     tekst += 'Een * betekent: deze ronde zit in de beste 8 die mijn handicap nu bepalen.\n';
-    tekst += 'datum | tijd | club | baan | tee | holes | par | CR | SR | Sd | Stb | telt mee\n';
+    tekst += 'datum | tijd | club | baan | tee | holes | par | CR | SR | Sd | Stb' + (heeftPutts ? ' | putts' : '') + ' | telt mee\n';
     ruw.forEach(r => {
       const e = effectiveSD(r);
       const stb = r.totalStb != null ? r.totalStb : (r.holes || []).reduce((s, h) => s + (typeof stbFor === 'function' ? stbFor(h) : 0), 0);
@@ -5734,6 +6013,11 @@ async function copyAnalysisForAi() {
         r.SR != null ? r.SR : '-',
         e && e.value != null ? fmt1(e.value) : '-',
         stb != null ? stb : '-',
+        ...(heeftPutts ? [(() => {
+          const gespeeld = (r.holes || []).filter(h => h && h.score != null);
+          const compleet = gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
+          return compleet ? gespeeld.reduce((s, h) => s + h.putts, 0) : '-';
+        })()] : []),
         telMee.has(r.id) ? '*' : ''
       ].join(' | ') + '\n';
     });
@@ -5855,7 +6139,7 @@ function courseAnalysisData(club, track) {
   rs.forEach(r => {
     const recent = (r.date || '') >= cutIso;
     r.holes.forEach((h, i) => {
-      if (h.score == null || h.par == null) return;
+      if (!h || h.score == null || h.par == null) return;
       if (!agg.has(h.id)) agg.set(h.id, { id: h.id, par: h.par, order: i, nu: leeg(), toen: leeg() });
       const kant = recent ? agg.get(h.id).nu : agg.get(h.id).toen;
       kant.sumDiff += h.score - h.par;
@@ -6017,7 +6301,7 @@ async function exportRoundIcs(roundId) {
 }
 
 function renderScore() {
-  if (!game.started) { renderScoreEmpty(); return; }
+  if (!game.started) { scoreButtonsRow = null; renderScoreEmpty(); return; }
 
   document.getElementById('statEmptyMsg').innerHTML = '';
   document.getElementById('scoreEmptyMsg').innerHTML = '';
@@ -6074,10 +6358,78 @@ function updateOnScheduleIndicator(playedCount, totalStb) {
 // OP-SCHEMA-INDICATIE IN DE HEADER (EINDE van verwijderbaar blok)
 // ══════════════════════════════════════════════════════════════════════════
 
-function scrollToCurrentRow() {
-  document.querySelector('.sum-tr.current-row')
-    ?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+// Zwevend paneel over de actieve rij: bovenin exact dezelfde −/score/+ knoppen op
+// dezelfde plek (de rij eronder wordt visueel bedekt), eronder dezelfde opbouw voor
+// de putts. Alleen als "Putts bijhouden" aanstaat én de hole een score heeft — zonder
+// score is er niets te putten en blijft het scherm precies zoals het altijd was.
+// Puttregel = een KLOON van de scorerij waarvan alleen de celinhoud wisselt. Eerder
+// werd het raster nagebouwd (en daarna met gemeten kolombreedtes gekopieerd), maar dan
+// bleven −, waarde en + net links van hun tegenhangers staan. Met een kloon is de
+// structuur per definitie identiek, dus staan ze exact onder elkaar.
+// Celvolgorde in een rij: 0 spacer, 1 hole, 2 spacer, 3 par, 4 spacer,
+// 5 minus, 6 score, 7 plus, 8 spacer, 9 stb, 10 spacer.
+function maakPuttRij(bronRij, i) {
+  const h = game.holes[i];
+  // Kolombreedtes van de bronrij VASTZETTEN in px. Zonder dat schuiven de knoppen naar
+  // links: de flexibele 1fr-kolommen krimpen nooit onder hun inhoud, en in de puttregel
+  // zijn de hole- en par-cel leeg (of korter), dus dan verdeelt het raster anders.
+  const kolommen = [...bronRij.children].map(c => c.getBoundingClientRect().width.toFixed(2) + 'px').join(' ');
+  const rij = bronRij.cloneNode(true);
+  rij.style.gridTemplateColumns = kolommen;
+  rij.classList.remove('current-row');
+  rij.classList.add('putt-row');
+  rij.removeAttribute('id');
+  rij.onclick = e => {
+    e.stopPropagation();
+    scoreButtonsRow = null;
+    scoreButtonsJustToggled = true;
+    renderScore();
+  };
+  const c = rij.children;
+  const leeg = idx => { if (c[idx]) { c[idx].innerHTML = ''; c[idx].removeAttribute('style'); } };
+  // Label op de plek van het holenummer, rest van de linkerkant leeg
+  if (c[1]) {
+    c[1].innerHTML = 'Putts';
+    c[1].setAttribute('style', 'font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px');
+  }
+  leeg(3); leeg(9);
+  // Na wissen staat er geen waarde: dan een streepje. Een tik op − of + legt weer een
+  // waarde vast (die begint dan op 2).
+  const putts = h.putts == null ? '\u2014' : h.putts;
+  const knopCel = (idx, teken, klasse, delta) => {
+    const cel = c[idx];
+    if (!cel) return;
+    ['onpointerdown', 'onpointerup', 'onpointerleave', 'onpointercancel', 'oncontextmenu', 'onclick'].forEach(a => cel.removeAttribute(a));
+    cel.innerHTML = `<button class="score-btn ${klasse}" style="pointer-events:none">${teken}</button>`;
+    cel.onclick = e => { e.stopPropagation(); stepPutts(i, delta); };
+  };
+  knopCel(5, '\u2212', 'minus', -1);
+  knopCel(7, '+', 'plus', 1);
+  if (c[6]) {
+    c[6].innerHTML = `<span class="score-val" style="color:#9b7fd4;font-weight:900" onpointerdown="puttsValDown(${i})" onpointerup="puttsValUp()" onpointerleave="puttsValUp()" onpointercancel="puttsValUp()" oncontextmenu="return false" onclick="event.stopPropagation(); puttValTap(${i})">${putts}</span>`;
+  }
+  return rij;
 }
+
+// Of er op dit moment een puttregel hoort te zijn: instelling aan, knoppen open en
+// de hole heeft een score (zonder score valt er niets te putten).
+function puttRowActief() {
+  // Zonder actieve ronde is er niets in te vullen: anders bleef de zwevende regel na
+  // het afronden/pauzeren van een ronde op het lege scorescherm staan (Marks melding).
+  if (!game || !game.started || !Array.isArray(game.holes) || !game.holes.length) return false;
+  if (!trackPuttsEnabled() || scoreButtonsRow === null) return false;
+  const h = game.holes[scoreButtonsRow];
+  return !!h && h.score !== null;
+}
+
+
+function scrollToCurrentRow() {
+  // Is er een puttregel, dan die in beeld brengen: hij staat ónder de scorerij, dus
+  // anders valt hij net buiten beeld als je onderaan de tabel zit (Marks vraag).
+  const doel = document.querySelector('.putt-row') || document.querySelector('.sum-tr.current-row');
+  doel?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+}
+
 
 // ══ DELEN / EXPORTEREN ══════════════════════════════════════════════════
 function buildScoreText(round) {
@@ -6514,17 +6866,17 @@ function importRound(input) {
 
         showConfirmModal(
           'Meerdere rondes importeren',
-          `Dit bestand bevat ${n} ronde${n !== 1 ? 's' : ''}. Wil je ze toevoegen aan je bestaande archief (${existingCount} ronde${existingCount !== 1 ? 's' : ''}), of je archief volledig vervangen door dit bestand?`,
+          `Dit bestand bevat ${n} ronde${n !== 1 ? 's' : ''}. Wil je ze toevoegen aan je bestaande rondes (${existingCount} ronde${existingCount !== 1 ? 's' : ''}), of al je rondes volledig vervangen door dit bestand?`,
           () => doAdditiveImport(parsed),
           'Volledig herstellen…',
           () => {
             showDangerModal(
               'Weet je het zeker?',
-              `Je huidige archief (${existingCount} ronde${existingCount !== 1 ? 's' : ''}) wordt volledig vervangen door de ${n} ronde${n !== 1 ? 's' : ''} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`,
+              `Je huidige rondes (${existingCount} ronde${existingCount !== 1 ? 's' : ''}) worden volledig vervangen door de ${n} ronde${n !== 1 ? 's' : ''} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`,
               'Vervangen',
               () => {
                 doFullRestoreImport(parsed);
-                showStatus(`Archief hersteld: ${n} ronde${n !== 1 ? 's' : ''}`, false);
+                showStatus(`Rondes hersteld: ${n} ronde${n !== 1 ? 's' : ''}`, false);
               }
             );
           },
@@ -7579,7 +7931,9 @@ function loadSaved() {
 
   const hasDateCriteria = !!(parsedSearch.dateFrom || parsedSearch.dateTo || parsedSearch.recurring);
   const bron = window._warnFilterActive
-    ? saved.filter(r => window._warnFilterActive === 'dup' ? (window._dupIds && window._dupIds.has(String(r.id))) : roundHasWarning(r))
+    ? saved.filter(r => window._warnFilterActive === 'dup' ? (window._dupIds && window._dupIds.has(String(r.id)))
+        : window._warnFilterActive === 'putt' ? roundHasPuttWarning(r)
+        : roundHasWarning(r))
     : saved;
   const filtered = (!parsedSearch.dateError && (query || hasDateCriteria))
     ? bron.filter(r => {
@@ -7729,6 +8083,7 @@ function loadSaved() {
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
+          ${roundHasPuttWarning(r) ? puttWarnIcon : ''}
           ${done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi">L</span>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
@@ -7741,7 +8096,15 @@ function loadSaved() {
     // hetzelfde als de rest van de kaart (actieknoppen tonen), zodat twee plekken die
     // er identiek uitzien niet verschillend reageren (Marks consistentiepunt).
     const dateLine = dateLineInner;
-    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${sdFrag}</div>`;
+    // Putts achter de slagen: alleen als ÉLKE gespeelde hole een puttwaarde heeft
+    // (half ingevulde rondes zouden een misleidend totaal geven — die krijgen het
+    // paarse waarschuwingsicoontje in de datumregel). Staat achter Str, en bij een
+    // afwijkende AGS ook achter dat getal, gescheiden door een schuine streep.
+    const gespeeldeHoles = (r.holes || []).filter(h => h && h.score != null);
+    const puttsTotaal = (gespeeldeHoles.length && gespeeldeHoles.every(h => h.putts != null))
+      ? gespeeldeHoles.reduce((s, h) => s + h.putts, 0) : null;
+    const puttFrag = puttsTotaal != null ? ` / ${puttsTotaal}` : '';
+    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${puttFrag}${sdFrag}</div>`;
     const stbHcpLine = (() => {
       // Stb + Hcp samen als aparte, laatste regel, direct boven de par-grafiek.
       const t = hcpTrendMap[r.id];
@@ -8028,7 +8391,7 @@ function loadSaved() {
     html = `<div class="info-msg" style="font-size:17px;color:var(--muted);font-weight:700;margin-bottom:8px">${filtered.length} ronde${filtered.length !== 1 ? 's' : ''} gevonden</div>` + html;
   }
   if (window._warnFilterActive) {
-    html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:var(--orange);font-weight:700;margin-bottom:8px"><span style="flex:1">Gefilterd op ${window._warnFilterActive === 'dup' ? 'mogelijke duplicaten' : 'waarschuwingen'} (${filtered.length})</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
+    html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:var(--orange);font-weight:700;margin-bottom:8px"><span style="flex:1">Gefilterd op ${window._warnFilterActive === 'dup' ? 'mogelijke duplicaten' : window._warnFilterActive === 'putt' ? 'rondes met deels ingevulde putts' : 'waarschuwingen'} (${filtered.length})</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
   }
   el.innerHTML = html;
   updateAppBadge();
@@ -10232,7 +10595,7 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
-   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
+   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
@@ -10990,7 +11353,7 @@ function nav(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
-  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
+  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshDataHealthPutts(); refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
   if (id === 'score' && game.started) renderScore();
   if (id === 'setup') {
     window.scrollTo(0, 0);
@@ -11057,6 +11420,9 @@ function nav(id) {
     updateActionsAlwaysVisibleToggle();
     updateHandicapAlwaysToggle();
     updateArchiveYearsClosedToggle();
+    initSettingsSections();
+    updateTrackPuttsToggle();
+    updatePuttsStatsToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
     window.scrollTo(0, 0);
@@ -11134,9 +11500,10 @@ function toggleTheme() {
   storage.setItem('golf_theme', dark ? 'dark' : 'light');
 }
 
-// Scorekaart-symbolen (cirkel/vierkant om het cijfer op het Score-tabblad): standaard uit.
+// Scorekaart-symbolen (cirkel/vierkant om het cijfer op het Score-tabblad): standaard
+// AAN (Marks keuze), dus het !== 'off'-patroon van de andere standaard-aan-instellingen.
 function scorecardSymbolsEnabled() {
-  return storage.getItem('golf_scorecard_symbols') === 'on'; // afwezig = uit
+  return storage.getItem('golf_scorecard_symbols') !== 'off'; // afwezig = aan
 }
 function updateScorecardSymbolsToggle() {
   const cb = document.getElementById('scorecardSymbolsToggle');
@@ -11200,6 +11567,8 @@ function toggleBadWeather() {
 // restant van toen de WHS-uitleg daar nog fysiek tussenin stond), die samen als één tab
 // getoond/verborgen worden.
 function switchSettingsTab(tab) {
+  // Na een lange druk (alles in-/uitklappen) niet ook nog van tab wisselen.
+  if (settingsTabHoldFired) { settingsTabHoldFired = false; return; }
   const main1 = document.getElementById('settingsTabMain');
   const main2 = document.getElementById('settingsTabMain2');
   const whs = document.getElementById('settingsTabWhs');
@@ -11400,6 +11769,196 @@ function confirmDeleteOtherPlayers(btn) {
 // betekent dat de knoppenbalk pas verschijnt na een tik op het rondeblok.
 function actionsAlwaysVisible() {
   return storage.getItem('golf_actions_always_visible') !== 'off'; // afwezig = aan
+}
+
+// ── Inklapbare secties in Instellingen ────────────────────────────────────
+// De gouden sectiekoppen staan als losse divs in de HTML, met daarachter losse
+// kaarten. Bij het openen van Instellingen wordt elke kop omgebouwd tot een knop
+// (met aantal kaarten en het standaard draaiende driehoekje) en worden de kaarten
+// erachter in een omhulsel gezet dat in- of uitklapt. Zo hoeft de HTML zelf niet
+// per sectie herschreven te worden en blijft alles op één plek geregeld.
+window._setSectionCollapsed = window._setSectionCollapsed || {};
+
+function initSettingsSections() {
+  ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData'].forEach(tabId => {
+    const tab = document.getElementById(tabId);
+    if (!tab || tab.dataset.sectionsInit === '1') return;
+    tab.dataset.sectionsInit = '1';
+    const koppen = [...tab.children].filter(el =>
+      el.tagName === 'DIV' && !el.classList.contains('card') &&
+      /color:var\(--gold\)/.test(el.getAttribute('style') || '') &&
+      /text-transform:uppercase/.test(el.getAttribute('style') || ''));
+    koppen.forEach(kop => {
+      const key = tabId + '|' + kop.textContent.trim();
+      const omhulsel = document.createElement('div');
+      omhulsel.className = 'settings-section-body';
+      let volgende = kop.nextElementSibling;
+      while (volgende && !koppen.includes(volgende)) {
+        const daarna = volgende.nextElementSibling;
+        omhulsel.appendChild(volgende);
+        volgende = daarna;
+      }
+      kop.after(omhulsel);
+      const aantal = omhulsel.querySelectorAll(':scope > .card').length;
+      const titel = kop.innerHTML;
+      kop.dataset.sectionKey = key;
+      kop.style.display = 'flex';
+      kop.style.alignItems = 'center';
+      kop.style.gap = '8px';
+      kop.style.cursor = 'pointer';
+      kop.innerHTML = `<span style="flex:1">${titel}</span>`
+        + (aantal ? `<span style="font-size:15px;color:var(--gold)">${aantal}</span>` : '')
+        + `<span class="settings-section-arrow"></span>`;
+      kop.onclick = () => toggleSettingsSection(key);
+    });
+  });
+  applySettingsSections();
+}
+
+// Stand toepassen: omhulsel tonen of verbergen en het driehoekje meedraaien.
+function applySettingsSections() {
+  document.querySelectorAll('[data-section-key]').forEach(kop => {
+    const dicht = window._setSectionCollapsed[kop.dataset.sectionKey] === true;
+    const body = kop.nextElementSibling;
+    if (body && body.classList.contains('settings-section-body')) body.style.display = dicht ? 'none' : '';
+    const pijl = kop.querySelector('.settings-section-arrow');
+    if (pijl) pijl.innerHTML = arrowSvg(15, !dicht, 'var(--gold)');
+  });
+}
+
+function toggleSettingsSection(key) {
+  window._setSectionCollapsed[key] = window._setSectionCollapsed[key] !== true;
+  applySettingsSections();
+}
+
+// Lang indrukken op een tabknop bovenin klapt alle secties in of uit — zelfde
+// idioom als lang indrukken op een groepeerknop bij Clubs en in het Archief.
+function toggleAllSettingsSections() {
+  // De Status-sectie doet niet mee met "alles inklappen": daar staan de meldingen over
+  // ontbrekende dagresultaten, duplicaten en de backup-ouderdom, en die wil je bij het
+  // openen van Gegevens meteen zien (Marks keuze). Zelf inklappen kan wel gewoon.
+  const koppen = [...document.querySelectorAll('[data-section-key]')]
+    .filter(k => !/\|Status$/i.test(k.dataset.sectionKey));
+  if (!koppen.length) return;
+  const allesDicht = koppen.every(k => window._setSectionCollapsed[k.dataset.sectionKey] === true);
+  koppen.forEach(k => { window._setSectionCollapsed[k.dataset.sectionKey] = !allesDicht; });
+  if (navigator.vibrate) navigator.vibrate(20);
+  applySettingsSections();
+}
+let settingsTabHoldTimer = null, settingsTabHoldFired = false;
+function settingsTabDown() {
+  settingsTabHoldFired = false;
+  clearTimeout(settingsTabHoldTimer);
+  settingsTabHoldTimer = setTimeout(() => { settingsTabHoldFired = true; toggleAllSettingsSections(); }, LONG_PRESS_MS);
+}
+function settingsTabUp() {
+  clearTimeout(settingsTabHoldTimer);
+}
+
+// Putts bijhouden: standaard UIT, dus het '=== on'-patroon. Staat het uit, dan
+// verandert er niets aan het scorescherm en wordt er niets vastgelegd. Een lege
+// putt-waarde betekent "niet bijgehouden" — 0 putts is een echte uitkomst (chip-in).
+function trackPuttsEnabled() {
+  return storage.getItem('golf_track_putts') === 'on'; // afwezig = uit
+}
+function updateTrackPuttsToggle() {
+  const cb = document.getElementById('trackPuttsToggle');
+  if (cb) cb.checked = trackPuttsEnabled();
+}
+// Putts meenemen in de analyse: standaard AAN als je putts bijhoudt — de cijfers
+// verschijnen toch alleen bij rondes waarin élke gespeelde hole een puttwaarde heeft.
+function puttsStatsEnabled() {
+  return trackPuttsEnabled() && storage.getItem('golf_putts_stats') !== 'off';
+}
+function updatePuttsStatsToggle() {
+  const cb = document.getElementById('puttsStatsToggle');
+  if (cb) cb.checked = storage.getItem('golf_putts_stats') !== 'off';
+}
+function togglePuttsStats() {
+  const cb = document.getElementById('puttsStatsToggle');
+  const on = cb ? cb.checked : storage.getItem('golf_putts_stats') === 'off';
+  storage.setItem('golf_putts_stats', on ? 'on' : 'off');
+}
+
+function toggleTrackPutts() {
+  const cb = document.getElementById('trackPuttsToggle');
+  const on = cb ? cb.checked : !trackPuttsEnabled();
+  storage.setItem('golf_track_putts', on ? 'on' : 'off');
+  if (game && game.started) renderScore();
+}
+
+// Putts volgen de score: een score invullen of wijzigen zet putts op 2 (alleen als
+// de instelling aanstaat en er nog niets stond), een score wissen haalt putts weg.
+// Zo bestaat er nooit een score zonder putts, en krijgen oude rondes uit een backup
+// niets ongevraagd toebedeeld — pas als je die hole zelf aanraakt.
+function syncPuttsWithScore(i) {
+  const h = game.holes[i];
+  if (!h) return;
+  if (h.score === null) { if (h.putts != null) delete h.putts; return; }
+  if (!trackPuttsEnabled()) return;
+  if (h.putts == null) h.putts = 2;
+}
+function stepPutts(i, d) {
+  const h = game.holes[i];
+  if (!h || h.score === null || !trackPuttsEnabled()) return;
+  // Vanuit "geen putts" begint de teller op 2, ongeacht welke knop je indrukt.
+  // Onder de 0 wordt de waarde weer leeg — zelfde idioom als de score, die onder 1
+  // ook naar "niet gespeeld" terugvalt.
+  if (h.putts == null) { h.putts = 2; }
+  else {
+    const next = h.putts + d;
+    if (next < 0) delete h.putts;
+    else h.putts = Math.min(5, next);
+  }
+  if (navigator.vibrate) navigator.vibrate(20);
+  renderScore();
+  saveActiveRound();
+}
+// Lang indrukken (500 ms) op de puttwaarde wist hem, maar net als bij de score is dat
+// een VOORLOPIGE wijziging: bevestig je hem niet binnen 2 seconden met een tik op de
+// waarde, dan komt de oude waarde terug. Zo kan een onbedoelde druk nooit stilletjes
+// gegevens weggooien.
+let puttTapHole = null, puttTapOld = null, puttTapTimeout = null;
+function clearPuttTap(revert) {
+  clearTimeout(puttTapTimeout);
+  puttTapTimeout = null;
+  if (puttTapHole === null) return;
+  const h = game.holes[puttTapHole];
+  if (revert && h && puttTapOld != null) h.putts = puttTapOld;
+  puttTapHole = null;
+  puttTapOld = null;
+  renderScore();
+  saveActiveRound();
+}
+function clearPutts(i) {
+  const h = game.holes[i];
+  if (!h || h.putts == null) return;
+  if (puttTapHole !== null) clearPuttTap(true);
+  puttTapHole = i;
+  puttTapOld = h.putts;
+  delete h.putts;
+  if (navigator.vibrate) navigator.vibrate(20);
+  puttTapTimeout = setTimeout(() => clearPuttTap(true), 2000);
+  renderScore();
+  saveActiveRound();
+}
+// Tik op de waarde binnen die 2 seconden: wissen bevestigen.
+function puttValTap(i) {
+  if (puttTapHole === i) { clearPuttTap(false); return true; } // wissen bevestigen
+  // Geen openstaande wissing: dan doet een tik hetzelfde als een tik op de score —
+  // de knoppenrij (en daarmee de puttregel) verdwijnt (Marks consistentiepunt).
+  if (!puttsHoldFired) toggleScoreButtons(i);
+  return false;
+}
+let puttsHoldTimer = null, puttsHoldFired = false;
+function puttsValDown(i) {
+  puttsHoldFired = false;
+  clearTimeout(puttsHoldTimer);
+  puttsHoldTimer = setTimeout(() => { puttsHoldFired = true; clearPutts(i); }, PLUS_HOLD_MS);
+}
+function puttsValUp() {
+  clearTimeout(puttsHoldTimer);
+  puttsHoldFired = false;
 }
 
 // Oudere jaren in het archief standaard inklappen: standaard UIT (alles open), dus het
