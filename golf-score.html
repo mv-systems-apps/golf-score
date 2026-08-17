@@ -1161,7 +1161,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-07E</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-081</div>
 </div>
 
 <script>
@@ -2188,7 +2188,7 @@ function switchToPlayer(n) {
     const p2Entry = buildRoundEntry();
     const idx = saved.findIndex(r => r.id === game2Id);
     if (idx >= 0) saved[idx] = p2Entry;
-    storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+    setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
     activePlayer = 1;
     // Herstel speler 1 uit storage
     const active = saved.find(r => String(r.id) === storage.getItem('golf_active_id'));
@@ -3077,7 +3077,7 @@ function startRoundConfirmed() {
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
       saved2.unshift(round2);
-      storage.setItem('golf_rounds', JSON.stringify(saved2.slice(0, getRoundStorageLimit())));
+      setRoundsAndMark( JSON.stringify(saved2.slice(0, getRoundStorageLimit())));
       activePlayer = 1;
       storage.setItem('golf_game2_id', String(game2Id));
     }
@@ -7049,7 +7049,7 @@ function doImportRound(r, saved, skipImportFlag = false, deferSave = false) {
   // deferSave (batch-import): de aanroeper slaat na de hele batch één keer op en
   // rendert één keer — per ronde opslaan + volledig renderen maakte grote imports traag.
   if (deferSave) return;
-  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+  setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
   loadSaved();
 }
 
@@ -7073,7 +7073,7 @@ function doAdditiveImport(parsed) {
     imported++;
   });
   if (imported > 0) {
-    storage.setItem('golf_rounds', JSON.stringify(current.slice(0, getRoundStorageLimit())));
+    setRoundsAndMark( JSON.stringify(current.slice(0, getRoundStorageLimit())));
     loadSaved();
   }
   // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
@@ -7089,6 +7089,7 @@ function doAdditiveImport(parsed) {
     naBackupBijwerken();
   } else {
     storage.setItem('golf_last_backup_date', todayISO());
+    storage.setItem('golf_last_backup_ts', new Date().toISOString());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
     naBackupBijwerken();
   }
@@ -7109,12 +7110,13 @@ function doAdditiveImport(parsed) {
 function doFullRestoreImport(parsed) {
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
-  storage.setItem('golf_rounds', JSON.stringify(entries.slice(0, getRoundStorageLimit())));
+  setRoundsAndMark( JSON.stringify(entries.slice(0, getRoundStorageLimit())));
   // Een volledige herstel-import ís zelf een complete backup-momentopname — ongeacht of er
   // al eerder een backup-datum bekend was. Anders zou de app direct na een schone import
   // (bv. op een nieuw toestel) ten onrechte 'geen backup' melden, terwijl de zojuist
   // geïmporteerde data feitelijk de meest actuele, volledige stand al vertegenwoordigt.
   storage.setItem('golf_last_backup_date', todayISO());
+    storage.setItem('golf_last_backup_ts', new Date().toISOString());
   storage.setItem('golf_last_backup_count', String(entries.length));
   naBackupBijwerken();
   storage.removeItem('golf_active_id');
@@ -7158,7 +7160,7 @@ function archiveImportedRound(idx, btn) {
   const round = saved[idx];
   if (!round) return;
   delete round._justImported;
-  storage.setItem('golf_rounds', JSON.stringify(saved));
+  setRoundsAndMark( JSON.stringify(saved));
   loadSaved();
 }
 
@@ -7297,7 +7299,7 @@ function saveActiveRound(skipLoadSaved = false) {
   const saved = loadSavedRounds();
   const idx = saved.findIndex(r => r.id === game.id);
   if (idx >= 0) saved[idx] = entry; else saved.unshift(entry);
-  storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+  setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
 
   // Alleen golf_active_id zetten voor speler 1
   if (activePlayer !== 2) {
@@ -8558,7 +8560,7 @@ function clearImportedFlag(roundId) {
   const idx = saved.findIndex(r => r.id === roundId);
   if (idx >= 0 && saved[idx]._justImported) {
     delete saved[idx]._justImported;
-    storage.setItem('golf_rounds', JSON.stringify(saved));
+    setRoundsAndMark( JSON.stringify(saved));
   }
 }
 
@@ -8729,7 +8731,7 @@ function performDeleteRound(i) {
   const saved = loadSavedRounds();
   const removed = saved.splice(i, 1)[0];
   if (!removed) return;
-  storage.setItem('golf_rounds', JSON.stringify(saved));
+  setRoundsAndMark( JSON.stringify(saved));
 
   const activeId = storage.getItem('golf_active_id');
   const wasActive = removed && activeId && String(removed.id) === activeId;
@@ -9813,11 +9815,113 @@ function applyClubChanges({ newClubName, newShortName }) {
   saveClubsToStorage();
 }
 
+// Rondes die nog de oude clubnaam of korte naam dragen. Speler 2 zit in dezelfde
+// lijst en telt dus vanzelf mee; de actieve ronde wordt apart bijgewerkt.
+function rondesMetClubNaam(oudeNaam, oudeKort) {
+  return loadSavedRounds().filter(r =>
+    (oudeNaam && r.club === oudeNaam) || (oudeKort && r.clubShort === oudeKort));
+}
+
+// Rondes op een specifieke baan van een specifieke club. De clubnaam kan zowel de
+// lange als de korte zijn (rondes bewaren beide), vandaar de dubbele vergelijking.
+function rondesMetBaan(clubNaam, clubKort, baan) {
+  return loadSavedRounds().filter(r =>
+    r.track === baan && ((clubNaam && r.club === clubNaam) || (clubKort && r.clubShort === clubKort)));
+}
+function rondesMetTee(clubNaam, clubKort, baan, tee) {
+  return rondesMetBaan(clubNaam, clubKort, baan).filter(r => r.tee === tee);
+}
+
+let _clubRename = null;
+// Vraagt alleen als er ook echt rondes zijn; anders is er niets te kiezen.
+function vraagClubRename(oud, nieuw, aantal, klaar) {
+  _clubRename = { oud, nieuw, klaar };
+  const el = document.getElementById('clubRenameText');
+  const deel = [];
+  if (oud.club !== nieuw.club) deel.push(`<b>${escapeHtml(oud.club)}</b> \u2192 <b>${escapeHtml(nieuw.club)}</b>`);
+  if (oud.kort !== nieuw.kort) deel.push(`kort: <b>${escapeHtml(oud.kort)}</b> \u2192 <b>${escapeHtml(nieuw.kort)}</b>`);
+  if (el) el.innerHTML = `${deel.join('<br>')}<div style="margin-top:12px">Er ${aantal === 1 ? 'is' : 'zijn'} <b>${aantal}</b> ronde${aantal === 1 ? '' : 's'} met de oude naam. Ook aanpassen?</div>`;
+  document.getElementById('clubRenameModal').classList.remove('hidden');
+}
+
+// Algemene variant voor baan- en teenamen: zelfde modal, maar met een eigen
+// bijwerkfunctie die per ronde bepaalt wat er verandert.
+let _naamWijziging = null;
+function vraagNaamWijziging(kop, van, naar, aantal, pasAan, klaar) {
+  _naamWijziging = { pasAan, klaar };
+  const el = document.getElementById('clubRenameText');
+  if (el) el.innerHTML = `${kop}: <b>${escapeHtml(van)}</b> \u2192 <b>${escapeHtml(naar)}</b>`
+    + `<div style="margin-top:12px">Er ${aantal === 1 ? 'is' : 'zijn'} <b>${aantal}</b> ronde${aantal === 1 ? '' : 's'} met de oude naam. Ook aanpassen?</div>`;
+  document.getElementById('clubRenameModal').classList.remove('hidden');
+}
+
+function naamWijzigingKeuze(alles) {
+  document.getElementById('clubRenameModal').classList.add('hidden');
+  const w = _naamWijziging;
+  _naamWijziging = null;
+  if (!w) return;
+  if (alles) {
+    const saved = loadSavedRounds();
+    let n = 0;
+    saved.forEach(r => { if (w.pasAan(r)) n++; });
+    if (n) setRoundsAndMark(JSON.stringify(saved));
+    if (game && game.started && w.pasAan(game)) { saveActiveRound(); updateHeaderClubName(); }
+    rebuildAll();
+  }
+  if (typeof w.klaar === 'function') w.klaar();
+}
+
+function clubRenameKeuze(alles) {
+  // De modal wordt door twee stromen gebruikt; de naamwijziging-variant handelt
+  // zichzelf af (banen en tees), de clubvariant hieronder.
+  if (_naamWijziging) return naamWijzigingKeuze(alles);
+  document.getElementById('clubRenameModal').classList.add('hidden');
+  const ren = _clubRename;
+  _clubRename = null;
+  if (!ren) return;
+  if (alles) {
+    const saved = loadSavedRounds();
+    let n = 0;
+    saved.forEach(r => {
+      let raak = false;
+      if (ren.oud.club && r.club === ren.oud.club) { r.club = ren.nieuw.club; raak = true; }
+      if (ren.oud.kort && r.clubShort === ren.oud.kort) { r.clubShort = ren.nieuw.kort; raak = true; }
+      if (raak) n++;
+    });
+    if (n) setRoundsAndMark(JSON.stringify(saved));
+    // Actieve ronde spiegelt de opgeslagen gegevens, dus die apart bijwerken.
+    if (game && game.started) {
+      if (ren.oud.club && game.club === ren.oud.club) game.club = ren.nieuw.club;
+      if (ren.oud.kort && game.clubShort === ren.oud.kort) game.clubShort = ren.nieuw.kort;
+      saveActiveRound();
+      updateHeaderClubName();
+    }
+    rebuildAll();
+  }
+  if (typeof ren.klaar === 'function') ren.klaar();
+}
+
 function saveClubFromEditor() {
   const status = document.getElementById('clubEditorStatus');
   try {
     const validated = validateClubInput();
+    // Oude namen onthouden vóór de wijziging: daarmee kunnen we de bestaande rondes
+    // vinden die nog de oude naam dragen.
+    const oudeNaam = CLUBS[editorClub] ? CLUBS[editorClub].club : editorClub;
+    const oudeKort = CLUBS[editorClub] ? CLUBS[editorClub].shortName : '';
     applyClubChanges(validated);
+    const naamGewijzigd = oudeNaam && oudeNaam !== validated.newClubName;
+    const kortGewijzigd = oudeKort && oudeKort !== validated.newShortName;
+    if (naamGewijzigd || kortGewijzigd) {
+      const treffers = rondesMetClubNaam(naamGewijzigd ? oudeNaam : null, kortGewijzigd ? oudeKort : null);
+      if (treffers.length) {
+        vraagClubRename(
+          { club: oudeNaam, kort: oudeKort },
+          { club: validated.newClubName, kort: validated.newShortName },
+          treffers.length,
+          () => { editorClubSnapshot = snapshotClubEditor(); renderClubCourseList(); });
+      }
+    }
     status.style.color = 'var(--green-light)';
     status.classList.remove('error-msg');
     status.textContent = 'Opgeslagen';
@@ -10029,7 +10133,55 @@ function saveCourseFromEditor() {
   const status = document.getElementById('editorStatus');
   try {
     const validated = validateCourseInput();
+    // Oude namen onthouden vóór de wijziging (baan én tees): rondes bewaren die namen
+    // als kopie, dus zonder bijwerken splitst de historie in tweeën.
+    const clubNaam = CLUBS[editorClub] ? CLUBS[editorClub].club : editorClub;
+    const clubKort = CLUBS[editorClub] ? CLUBS[editorClub].shortName : '';
+    const oudeBaan = editorOrigCourseName;
+    const oudeTees = (oudeBaan && CLUBS[editorClub] && CLUBS[editorClub].courses[oudeBaan])
+      ? Object.keys(CLUBS[editorClub].courses[oudeBaan].tees || {}) : [];
     applyCourseChanges(validated);
+    const nieuweBaan = validated.newCourseName;
+    const nieuweTees = Object.keys(validated.tees || {});
+    const klaar = () => { editorCourseSnapshot = snapshotCourseEditor(); renderClubCourseList(); };
+
+    // Eerst de baannaam; daarna pas de tees, want die zoeken op de (mogelijk nieuwe)
+    // baannaam. De tweede vraag wordt vanuit de eerste gestart.
+    const teeVragen = () => {
+      const verdwenen = oudeTees.filter(t => !nieuweTees.includes(t));
+      const nieuw = nieuweTees.filter(t => !oudeTees.includes(t));
+      // Alleen een hernoeming als er precies één tee weg is en precies één bij is
+      // gekomen — bij meerdere tegelijk is niet te bepalen wat waarheen ging.
+      if (verdwenen.length === 1 && nieuw.length === 1) {
+        const treffers = rondesMetTee(clubNaam, clubKort, nieuweBaan, verdwenen[0]);
+        if (treffers.length) {
+          vraagNaamWijziging('Tee', verdwenen[0], nieuw[0], treffers.length,
+            r => {
+              const zelfdeClub = (clubNaam && r.club === clubNaam) || (clubKort && r.clubShort === clubKort);
+              if (zelfdeClub && r.track === nieuweBaan && r.tee === verdwenen[0]) { r.tee = nieuw[0]; return true; }
+              return false;
+            }, klaar);
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (oudeBaan && oudeBaan !== nieuweBaan) {
+      const treffers = rondesMetBaan(clubNaam, clubKort, oudeBaan);
+      if (treffers.length) {
+        vraagNaamWijziging('Baan', oudeBaan, nieuweBaan, treffers.length,
+          r => {
+            const zelfdeClub = (clubNaam && r.club === clubNaam) || (clubKort && r.clubShort === clubKort);
+            if (zelfdeClub && r.track === oudeBaan) { r.track = nieuweBaan; return true; }
+            return false;
+          }, () => { if (!teeVragen()) klaar(); });
+      } else if (teeVragen()) {
+        // tee-vraag loopt
+      }
+    } else {
+      teeVragen();
+    }
     status.style.color = 'var(--green-light)';
     status.classList.remove('error-msg');
     status.textContent = 'Opgeslagen';
@@ -10476,7 +10628,7 @@ function applyRoundInfo(saved, round, date, time) {
   if (noteVal) round.note = noteVal; else delete round.note;
   if (hcpVal !== null && !isNaN(hcpVal)) round.hcp = hcpVal;
   const activeId = storage.getItem('golf_active_id');
-  storage.setItem('golf_rounds', JSON.stringify(saved));
+  setRoundsAndMark( JSON.stringify(saved));
   if (activeId && String(round.id) === activeId) {
     game.date = date;
     game.time = time;
@@ -10484,7 +10636,7 @@ function applyRoundInfo(saved, round, date, time) {
     game.qualifying = round.qualifying;
     game.note = round.note;
     if (hcpVal !== null && !isNaN(hcpVal)) game.hcp = hcpVal;
-    storage.setItem('golf_rounds', JSON.stringify(saved));
+    setRoundsAndMark( JSON.stringify(saved));
     setHeaderInfo(game.track, game.tee, game.chcp);
     recalcPpar();
     updateHeader();
@@ -10531,7 +10683,7 @@ function confirmRoundResult() {
     game.sdFinal = round.sdFinal;
     game.note = round.note;
   }
-  storage.setItem('golf_rounds', JSON.stringify(saved));
+  setRoundsAndMark( JSON.stringify(saved));
   if (activeId && String(round.id) === activeId) {
     saveActiveRound(false);
   }
@@ -10712,7 +10864,7 @@ async function doResetAll() {
    'golf_gender','golf_profile_name2','golf_profile_hcp2','golf_fav_player2_name',
    'golf_fav_player2_hcp','golf_default_player2_name','golf_default_player2_hcp',
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
-   'golf_last_backup_date','golf_last_backup_count','golf_progress_indicator','golf_bad_weather',
+   'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
    'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
@@ -11108,6 +11260,7 @@ async function exportAllRounds() {
     });
     // Back-upstatus vastleggen en herinnering verbergen
     storage.setItem('golf_last_backup_date', todayISO());
+    storage.setItem('golf_last_backup_ts', new Date().toISOString());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
     naBackupBijwerken();
     updateLastBackupDisplay();
@@ -11118,6 +11271,14 @@ async function exportAllRounds() {
 // Gedeelde 'is een backup inmiddels achterstallig'-check — gebruikt door zowel de
 // Archief-herinneringsbanner als de statusregel in Instellingen → Gegevens → Backup, zodat
 // beide plekken altijd hetzelfde, consistente signaal geven.
+// Rondes opslaan én vastleggen dát er iets gewijzigd is. Zo telt niet alleen een
+// nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
+// van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
+function setRoundsAndMark(json) {
+  storage.setItem('golf_rounds', json);
+  try { storage.setItem('golf_rounds_changed', new Date().toISOString()); } catch (e) { /* opslag vol: niet kritiek */ }
+}
+
 function isBackupOverdue() {
   const rounds = loadSavedRounds();
   const total = rounds.length;
@@ -11126,6 +11287,12 @@ function isBackupOverdue() {
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const roundsThreshold = getBackupReminderRounds();
   if (!lastDate) return total >= roundsThreshold;
+  // Is er sinds de laatste backup überhaupt iets gewijzigd? Zo niet, dan is er niets
+  // te backuppen en zwijgt de app — ook als de dagen-drempel verstrijkt (Marks keuze).
+  // Zonder tijdstempels (oude installatie) valt hij terug op het oude gedrag.
+  const changedTs = storage.getItem('golf_rounds_changed');
+  const backupTs = storage.getItem('golf_last_backup_ts');
+  if (changedTs && backupTs && changedTs <= backupTs) return false;
   const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
   return newRounds >= roundsThreshold || daysSince >= getBackupReminderDays();
@@ -11755,7 +11922,7 @@ function onRoundLimitChange(v) {
     'Verwijderen',
     () => {
       const newLimit = setRoundStorageLimit(requested);
-      storage.setItem('golf_rounds', JSON.stringify(saved.slice(0, newLimit)));
+      setRoundsAndMark( JSON.stringify(saved.slice(0, newLimit)));
       loadSaved();
       updateStorageSettingsUI();
     }
@@ -11799,7 +11966,7 @@ function confirmPurgeNonQ(btn) {
     'Verwijderen',
     () => {
       const saved = loadSavedRounds().filter(r => r.qualifying);
-      storage.setItem('golf_rounds', JSON.stringify(saved));
+      setRoundsAndMark( JSON.stringify(saved));
       loadSaved();
       updateStorageSettingsUI();
     }
@@ -11870,7 +12037,7 @@ function confirmDeleteOtherPlayers(btn) {
     'Verwijderen',
     () => {
       const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase());
-      storage.setItem('golf_rounds', JSON.stringify(saved));
+      setRoundsAndMark( JSON.stringify(saved));
       loadSaved();
       updateStorageSettingsUI();
       updateOtherPlayerCleanupUI();
@@ -12624,6 +12791,21 @@ document.addEventListener('focusin', (e) => {
     </div>
   </div>
 </div>
+<!-- Clubnaam gewijzigd: bestaande rondes meenemen of niet? Rondes bewaren de clubnaam
+     als KOPIE (net als CR/SR/par), zodat een ronde blijft kloppen als de club later
+     verandert of verdwijnt. Bij hernoemen moet je dus kiezen wat er met de historie
+     gebeurt — anders staat dezelfde club straks dubbel in de statistieken. -->
+<div id="clubRenameModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:360px">
+    <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Naam gewijzigd</div>
+    <div id="clubRenameText" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primary" style="width:100%;padding:12px;font-size:17px" onclick="clubRenameKeuze(true)">Alles aanpassen</button>
+      <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px" onclick="clubRenameKeuze(false)">Alleen nieuwe rondes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bevestigingsmodal voor editor sluiten met onopgeslagen wijzigingen -->
 <div id="closeEditorWarningModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
