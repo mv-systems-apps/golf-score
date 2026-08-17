@@ -204,6 +204,9 @@
     /* SLECHTWEER-MODUS (START, verwijderbaar) — alleen scorescherm */
     body.bad-weather #screen-score .score-btn { width: 52px; height: 52px; font-size: 32px; }
     /* SLECHTWEER-MODUS (EINDE) */
+    /* Oranje stipje op een tab: signaleert dat er iets te melden is (Status). */
+    .tab { position: relative; }
+    .tab.has-dot::after { content: ''; position: absolute; top: 8px; right: calc(50% - 14px); width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
     .tab.active { color: var(--gold); border-top-color: var(--gold); }
     .tab:active { transform: scale(.93); }
 
@@ -343,11 +346,11 @@
     /* Putts: paars, zodat ze in de tabel niet met scores te verwarren zijn. */
     /* Puttregel: eigen achtergrond en een dun goudkleurig randje, zodat hij zich net
        als het vroegere zwevende paneel losmaakt van de scorerijen eromheen. */
-    .putt-row { background: var(--card-solid); border-radius: 10px; box-shadow: 0 0 0 1px var(--gold); }
+    html .sum-tr.putt-row { background: var(--card-solid); border-radius: 10px; box-shadow: 0 0 0 1px var(--gold); }
     .sd-chart-zone { position: relative; }
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
-    .saved-item.round-flash { animation: roundFlash 1.6s ease; }
+    .saved-item.round-flash, .round-flash { animation: roundFlash 1.6s ease; }
     @keyframes roundFlash { 0%, 55% { box-shadow: inset 0 0 0 3px var(--gold); } 100% { box-shadow: inset 0 0 0 3px transparent; } }
     .pop { animation: pop .22s ease; }
     .ppar-dot     { width: 8px; height: 8px; border-radius: 50%; background: var(--green-light); flex-shrink: 0; }
@@ -713,7 +716,6 @@
 
 <!-- ARCHIEF -->
 <div id="screen-archive" class="screen">
-  <div id="backupReminder" class="hidden orange-msg" style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:20px;font-weight:700;color:var(--orange);margin-bottom:10px"></div>
   <div id="exportRoundsMsg" class="export-rounds-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;justify-content:flex-end">
     <button id="groupByCategoryBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByCategory()" title="Groepeer op categorie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
@@ -731,6 +733,7 @@
       <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', loadSaved)" title="Wissen">&times;</button>
     </div>
   </div>
+  <div id="archiveStatus" class="hidden" style="margin-bottom:10px"></div>
   <input type="file" id="importRoundFile" accept=".json" style="display:none" onchange="importRound(this)">
   <div id="archiveEmptyMsg" class="info-msg hidden" style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:8px">Geen rondes</div>
   <div id="savedList"></div>
@@ -1008,7 +1011,7 @@
       <span class="tee-badge badge-whs" style="justify-self:center">1</span><span style="justify-self:start">Beste 8 van laatste 20 (1 = oudste)</span>
       <span class="tee-badge badge-lowhi" style="justify-self:center">L</span><span style="justify-self:start">Ronde die je Low HI opleverde</span>
       <span style="font-size:24px;font-weight:900;line-height:1">≈</span><span style="justify-self:start">Voorlopig/geschat dagresultaat</span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="justify-self:start">Dagresultaat niet vastgesteld</span>
+      <svg width="20" height="20" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="justify-self:start">Dagresultaat niet vastgesteld</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span style="justify-self:start">Dagresultaat vastgesteld</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span style="justify-self:start">Hcp gelijk gebleven</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg><span style="justify-self:start">Hcp gestegen</span>
@@ -1060,15 +1063,10 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Status</div>
-  <div class="card" id="dataHealthCard" onclick="dataHealthClick()" style="cursor:pointer">
-    <div id="dataHealthLine" style="font-size:17px;color:var(--muted)">&hellip;</div>
-    <div id="dataHealthDupLine" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthDupClick()"></div>
-    <div id="dataHealthPuttLine" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px" onclick="event.stopPropagation(); dataHealthPuttClick()"></div>
-    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-top:4px">Nog nooit geëxporteerd</div>
-  </div>
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
   <div class="card">
+    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:4px">Nog nooit geëxporteerd</div>
+    <div id="newRoundsInfo" class="hidden" style="font-size:17px;color:var(--muted);margin-bottom:10px"></div>
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
@@ -1163,7 +1161,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-04A</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-07E</div>
 </div>
 
 <script>
@@ -1348,7 +1346,7 @@ function roundHasWarning(r) {
 // Puttwaarschuwing: eigen icoon zodat het niet met het oranje driehoekje (ontbrekend
 // dagresultaat) te verwarren is — een paarse cirkel met uitroepteken, in dezelfde
 // paarse tint als de puttwaarden zelf.
-const puttWarnIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9b7fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const puttWarnIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9b7fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
 // Half ingevulde putts: sommige gespeelde holes hebben een puttwaarde en andere niet.
 // Geen enkele hole putts = prima (niet bijgehouden), alle holes putts = prima.
@@ -1359,7 +1357,7 @@ function roundHasPuttWarning(r) {
   return met > 0 && met < gespeeld.length;
 }
 
-const warningIconSmall = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const warningIconSmall = '<svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
 // ══ DAGRESULTAAT (Score Differential) ═════════════════════════════════════
 // Verwachte 9-holes SD op basis van Handicap Index — de officiële WHS-formule
@@ -3398,7 +3396,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
           .sort((a, b) => new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`) - new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`))
           .slice(0, 20);
         const whs = whsHandicap(pool, effectiveLowHi(game.player, all), esrMapFor(game.player, all));
-        const hcpWarnSuffix = sdFixed ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        const hcpWarnSuffix = sdFixed ? '' : ' <svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
         const label = (sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp') + hcpWarnSuffix;
         const capLabel = !whs || !whs.capped
           ? 'Cap'
@@ -3451,7 +3449,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       })()],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
-      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
+      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
         const done = game.holes.length > 0 && played.length === game.holes.length;
         if (!done) return '—';
         const c = computeSD({ holes: game.holes, CR: game.CR, SR: game.SR, hcp: game.hcp, pcc: game.pcc });
@@ -3653,15 +3651,39 @@ function renderScoreTable() {
       <span class="sum-spacer"></span>
     `;
     rows.appendChild(row);
-    // Experimentele variant: de puttregel als echte tabelregel, dus de holes eronder
-    // schuiven op i.p.v. bedekt te worden.
-    // De puttregel schuift als echte tabelregel tussen de holes (de zwevende variant
-    // is vervallen — Marks keuze: inline werkt prettiger in de praktijk).
-    if (puttRowActief() && i === scoreButtonsRow) {
-      rows.appendChild(maakPuttRij(row, i));
-    }
   });
   scrollToCurrentRow();
+  // De puttregel ZWEEFT over de tabel i.p.v. ertussen te schuiven: bij een tabelregel
+  // verspringen de holes eronder, en dat leest verwarrend (Marks keuze, teruggedraaid
+  // t.o.v. de inline-variant). Wordt ná de opbouw geplaatst, want hij hangt aan de
+  // gemeten positie van de actieve rij.
+  requestAnimationFrame(renderPuttOverlay);
+}
+
+// Zwevende puttregel: absoluut gepositioneerd BINNEN #sumRows (niet fixed), zodat hij
+// vanzelf meescrolt met de tabel. Bedekt de rij eronder — dat is het verschil met de
+// tabelvariant, en precies de bedoeling.
+function renderPuttOverlay() {
+  document.getElementById('puttOverlay')?.remove();
+  if (!puttRowActief()) return;
+  const rij = document.querySelector('.sum-tr.current-row');
+  const rows = document.getElementById('sumRows');
+  if (!rij || !rows) return;
+  const paneel = maakPuttRij(rij, scoreButtonsRow);
+  paneel.id = 'puttOverlay';
+  rows.style.position = 'relative';
+  paneel.style.position = 'absolute';
+  paneel.style.left = rij.offsetLeft + 'px';
+  paneel.style.top = (rij.offsetTop + rij.offsetHeight + 5) + 'px';
+  paneel.style.width = rij.offsetWidth + 'px';
+  paneel.style.boxSizing = 'border-box';
+  paneel.style.zIndex = '5';
+  paneel.style.background = 'var(--card-solid)';
+  paneel.style.borderRadius = '10px';
+  paneel.style.boxShadow = '0 0 0 1px var(--gold), 0 4px 12px rgba(0,0,0,.25)';
+  rows.appendChild(paneel);
+  // Minimaal bijscrollen als de regel onder de schermrand uitkomt.
+  paneel.scrollIntoView({ behavior: 'auto', block: 'nearest' });
 }
 
 // Meervoudige statistieken voor de hoofdspeler (naam in iName), op basis van
@@ -3810,7 +3832,7 @@ function renderPlayerStats() {
   // Zelfde opmaak als hcpTriangle/loTriangle (vertical-align:middle + spatie erna) i.p.v.
   // de kale warningIconSmall — anders staat dit driehoekje net iets anders uitgelijnd.
   const sdKpiTriangle = sdKpiWarning
-    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
+    ? '<svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   // Gemiddeld aantal putts per ronde: alleen rondes waarin élke gespeelde hole een
   // puttwaarde heeft (half ingevulde rondes zouden het gemiddelde vertekenen).
@@ -3886,7 +3908,7 @@ function renderPlayerStats() {
   const hcpColor = 'var(--green-light)';
   const hcpUncertain = last20.some(roundHasWarning);
   const hcpTriangle = hcpUncertain
-    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
+    ? '<svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   // Laagste hcp: twee onafhankelijke redenen waarom de handmatige waarde niet meer klopt.
   // (1) Je HUIDIGE officiële handicap (hetzelfde getal als de Hcp-KPI) is al lager dan de
@@ -3907,7 +3929,7 @@ function renderPlayerStats() {
   const loUncertain = loManual == null && loDerived != null && whs && whs.value != null
     && Math.abs(loDerived - whs.value) < 0.05 && hcpUncertain;
   const loTriangle = (loStale || loUncertain)
-    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
+    ? '<svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   let newLowBanner = '';
   if (loDerived != null && isFinite(loDerived)) {
@@ -4677,7 +4699,7 @@ function renderPlayerStats() {
       return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
     });
     if (metPutts.length < getMinRoundsStat()) return '';
-    let pHoles = 0, pTot = 0, pGir = 0, pDrie = 0, pOpGir = 0, pGeenGir = 0, pScramble = 0;
+    let pHoles = 0, pTot = 0, pGir = 0, pDrie = 0, pOpGir = 0, pGeenGir = 0, pScramble = 0, pScramblePar = 0;
     let vTot = 0, vVoor = 0, vOp = 0;
     const puttVerdeling = {};
     metPutts.forEach(r => (r.holes || []).forEach(h => {
@@ -4690,12 +4712,17 @@ function renderPlayerStats() {
       const totGreen = h.score - h.putts;
       const isGir = totGreen <= h.par - 2;
       if (isGir) { pGir++; pOpGir += h.putts; }
-      else { pGeenGir++; if (h.phcp != null && h.score <= h.par + h.phcp) pScramble++; }
+      else {
+        pGeenGir++;
+        if (h.phcp != null && h.score <= h.par + h.phcp) pScramble++;
+        if (h.score <= h.par) pScramblePar++;   // officiële maat: de echte par
+      }
       vTot += h.score - h.par;
       vVoor += totGreen - (h.par - 2);
       vOp += h.putts - 2;
     }));
     if (!pHoles) return '';
+    const drempel = getMinRoundsStat(); // zelfde drempel als overal (Marks regel)
 
     // Blok 1: kerngetallen, in de rijstijl van Vorm & consistentie
     const rij = (label, waarde, zebra) =>
@@ -4707,10 +4734,11 @@ function renderPlayerStats() {
     const kern = [
       ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
       ['Putts per hole', fmt1(pTot / pHoles)],
-      ...(pGir >= 5 ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
+      ...(pGir >= drempel ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
       ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
       ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
-      ...(pGeenGir >= 9 ? [['Scrambling (t.o.v. persoonlijke par)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
+      ...(pGeenGir >= drempel ? [['Scrambling (t.o.v. ppar)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
+      ...(pGeenGir >= drempel ? [['Scrambling (t.o.v. par)', Math.round(pScramblePar / pGeenGir * 100) + '%']] : []),
     ].map(([l, v]) => rij(l, v, z++ % 2 === 0)).join('');
 
     // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
@@ -5046,7 +5074,7 @@ function renderSdChart(sdSeries, hiSeries, capSeries, capTypeSeries, esrAppliedS
         && (() => { const id = periodRoundsView[p.i]?.id; return id != null && countingIds.has(id); })();
       if (hasWarn) {
         const extra = ringHere ? 3 : 0;
-        out += `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 17 - extra).toFixed(1)}) scale(0.5)" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g>`;
+        out += `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 17 - extra - 0.215).toFixed(2)}) scale(0.5)" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g>`;
       }
       // Cap-icoon: dichtstbijzijnde plek als er geen driehoekje is, anders een stap
       // verder naar buiten (offset -20 i.p.v. -10, plus dezelfde extra ruimte voor de ring).
@@ -5349,53 +5377,79 @@ function initSdSwipe() {
 // ── Datacontrole (Instellingen): telt afgeronde qualifying rondes zonder geldig
 // dagresultaat — dezelfde bron als de oranje driehoekjes. Tik opent het archief met
 // een tijdelijk waarschuwingsfilter (programmatische toestand, het zoekveld blijft leeg).
-function refreshDataHealth() {
-  const el = document.getElementById('dataHealthLine');
-  if (!el) return;
-  const probleem = loadSavedRounds().filter(roundHasWarning);
-  window._dataHealthCount = probleem.length;
-  if (!probleem.length) {
-    el.innerHTML = '<span style="color:var(--green-light);font-weight:700">Alles compleet &#10003;</span>';
-    return;
-  }
-  const clubs = new Set(probleem.map(r => r.club || '?'));
-  el.innerHTML = `<span style="color:var(--orange);font-weight:700">${probleem.length} afgeronde qualifying ronde${probleem.length === 1 ? '' : 's'} zonder vastgesteld dagresultaat</span> (bij ${clubs.size} club${clubs.size === 1 ? '' : 's'}) — tik om te bekijken`;
+const statusWarnIcon = '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+
+
+// Openstaande meldingen op volgorde van urgentie. Bovenaan Rondes tonen we er ÉÉN;
+// is die opgelost, dan schuift de volgende door (Marks keuze). Volgorde: een ontbrekend
+// dagresultaat raakt je handicap, een duplicaat vervuilt alle statistieken, onvolledige
+// putts alleen de puttcijfers.
+function openStaandeMeldingen() {
+  const rondes = loadSavedRounds();
+  const zonderSd = rondes.filter(roundHasWarning).length;
+  const dupIds = (typeof findDuplicateRounds === 'function') ? findDuplicateRounds() : new Set();
+  const dups = dupIds.size;
+  const puttRondes = rondes.filter(roundHasPuttWarning);
+  const putts = puttRondes.length;
+  // De archieffilters lezen deze verzamelingen; ze werden eerder gevuld door de losse
+  // refresh-functies van de inmiddels opgeheven Status-kaart.
+  window._dupIds = dupIds;
+  window._puttWarnIds = new Set(puttRondes.map(r => String(r.id)));
+  window._dataHealthCount = zonderSd;
+  const lijst = [];
+  if (zonderSd) lijst.push({ filter: 'warn', n: zonderSd, tekst: `${zonderSd} zonder vastgesteld dagresultaat`, kleur: 'var(--orange)' });
+  if (dups) lijst.push({ filter: 'dup', n: dups, tekst: `${dups} mogelijke duplicaten`, kleur: 'var(--orange)' });
+  if (putts) lijst.push({ filter: 'putt', n: putts, tekst: `${putts} met onvolledige putts`, kleur: '#9b7fd4' });
+  return lijst;
 }
-// Aparte functie: de duplicaatregel hoort óók bij "Alles compleet" gevuld te worden
-// Rondes met half ingevulde putts: alleen zichtbaar áls ze er zijn (zelfde aanpak als
-// de duplicaatregel). Tik → archief met een filter op precies die rondes.
-function refreshDataHealthPutts() {
-  const el = document.getElementById('dataHealthPuttLine');
+
+// Waarschuwingsregels in het archief, onder de knoppen: één regel per soort, elk met
+// het eigen icoon en het eigen filter (zelfde indeling als voorheen in de Status-kaart
+// in Instellingen — die is opgesplitst, de backupregels staan nu bij Backup).
+function refreshStatusReminder() {
+  const el = document.getElementById('archiveStatus');
   if (!el) return;
-  const rondes = loadSavedRounds().filter(roundHasPuttWarning);
-  window._puttWarnIds = new Set(rondes.map(r => String(r.id)));
-  if (!rondes.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
-  el.innerHTML = `<span style="color:#9b7fd4;font-weight:700">${rondes.length} ronde${rondes.length === 1 ? '' : 's'} met putts op sommige holes</span> (niet op alle) \u2014 tik om te bekijken`;
-  el.style.cursor = 'pointer';
+  const lijst = openStaandeMeldingen();
+  if (!lijst.length || window._warnFilterActive) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.innerHTML = lijst.map(m => {
+    const icoon = m.filter === 'putt' ? puttWarnIcon : statusWarnIcon;
+    return `<div onclick="statusReminderClick('${m.filter}')" style="display:flex;align-items:flex-start;gap:8px;font-size:17px;line-height:23px;color:var(--muted);cursor:pointer;padding:2px 0">`
+      + `<span style="display:flex;align-items:center;justify-content:center;width:15px;height:23px;flex:0 0 auto">${icoon}</span>`
+      + `<span style="flex:1;min-width:0"><span style="font-weight:700">${m.n}</span> ${m.tekst.replace(/^\d+\s*/, '')}</span>`
+      + `<span style="flex:0 0 auto;color:var(--muted)">\u203a</span></div>`;
+  }).join('');
   el.classList.remove('hidden');
 }
-function dataHealthPuttClick() {
-  if (!window._puttWarnIds || !window._puttWarnIds.size) return;
-  window._warnFilterActive = 'putt';
-  nav('archive');
+function statusReminderClick(filter) {
+  if (!filter) return;
+  window._warnFilterActive = filter;
   loadSaved();
 }
 
-function refreshDataHealthDup() {
-  const el = document.getElementById('dataHealthDupLine');
-  if (!el) return;
-  const ids = findDuplicateRounds();
-  if (!ids.size) { el.classList.add('hidden'); el.innerHTML = ''; return; }
-  el.innerHTML = `<span style="color:var(--orange);font-weight:700">${ids.size} mogelijke duplicaten</span> (zelfde datum, tijd en speler) — tik om te bekijken`;
-  el.style.cursor = 'pointer';
-  el.classList.remove('hidden');
+// Oranje stipjes op de tabs: Rondes bij openstaande datameldingen, Instellingen bij
+// een te oude backup (die balk stond eerst bovenaan Rondes; de stip is rustiger en
+// wijst meteen naar de plek waar je hem oplost — Marks keuze).
+// Na een geslaagde backup: de regels in het Backup-blok en het oranje stipje op de
+// Instellingen-tab meteen verversen — je blijft in Instellingen, dus de gebruikelijke
+// verversing bij een tabwissel komt niet langs.
+function naBackupBijwerken() {
+  if (typeof updateLastBackupDisplay === 'function') updateLastBackupDisplay();
+  if (typeof refreshTabDot === 'function') refreshTabDot();
 }
-function dataHealthClick() {
-  if (!window._dataHealthCount) return;
-  window._warnFilterActive = 'warn';
-  nav('archive');
-  loadSaved();
+
+function refreshTabDot() {
+  // Eerst de Instellingen-stip: die hangt alleen aan de backupstatus. Als de telling
+  // voor Rondes onverhoopt struikelt, blijft deze stip toch correct (Marks melding dat
+  // de stip na een backup bleef staan).
+  const tabSet0 = document.getElementById('tab-settings');
+  if (tabSet0) tabSet0.classList.toggle('has-dot', typeof isBackupOverdue === 'function' && isBackupOverdue());
+  const tab = document.getElementById('tab-archive');
+  if (tab) tab.classList.toggle('has-dot', openStaandeMeldingen().length > 0);
+  const tabSet = document.getElementById('tab-settings');
+  if (tabSet) tabSet.classList.toggle('has-dot', typeof isBackupOverdue === 'function' && isBackupOverdue());
 }
+
 // Mogelijke duplicaten: zelfde datum, tijd én speler. Komt normaal niet voor (de
 // import houdt ze al tegen), dus de regel verschijnt alleen als er echt iets is.
 function findDuplicateRounds() {
@@ -5409,14 +5463,6 @@ function findDuplicateRounds() {
   const ids = new Set();
   groepen.forEach(lijst => { if (lijst.length > 1) lijst.forEach(id => ids.add(id)); });
   return ids;
-}
-function dataHealthDupClick() {
-  const ids = findDuplicateRounds();
-  if (!ids.size) return;
-  window._dupIds = ids;
-  window._warnFilterActive = 'dup';
-  nav('archive');
-  loadSaved();
 }
 function clearWarnFilter() {
   window._warnFilterActive = false;
@@ -5744,17 +5790,17 @@ function buildGameAnalysis() {
         `Green in regulation: <b>${Math.round(gir / holes * 100)}%</b> van je holes (${gir} van ${holes}).`,
         `Drie putts of meer: <b>${drie}</b> keer, <b>${Math.round(drie / holes * 100)}%</b> van je holes.`
       ];
-      if (gir >= 5) regels.push(`Op greens die je in regulation raakte: <b>${fmt1(puttsOpGir / gir)}</b> putts gemiddeld \u2014 de zuiverste maat voor je putten.`);
+      if (gir >= minN) regels.push(`Op greens die je in regulation raakte: <b>${fmt1(puttsOpGir / gir)}</b> putts gemiddeld \u2014 de zuiverste maat voor je putten.`);
       // Greens per par-type: laat zien of een sterk par-type aan het bereiken van de
       // green ligt of pas aan wat je er daarna mee doet.
-      const parKeysGir = Object.keys(girPerPar).map(Number).sort().filter(p => girPerPar[p].n >= 9);
+      const parKeysGir = Object.keys(girPerPar).map(Number).sort().filter(p => girPerPar[p].n >= minN);
       if (parKeysGir.length >= 2) {
         regels.push('Greens in regulation per par-type: ' + parKeysGir
           .map(p => `par ${p} <b>${Math.round(girPerPar[p].gir / girPerPar[p].n * 100)}%</b>`).join(', ') + '.');
       }
       // Scrambling: green gemist en toch nog par. De officiële maat is voor een
       // handicap rond de 30 vaak bijna nul, dus staat de persoonlijke par erbij.
-      if (geenGir >= 9) {
+      if (geenGir >= minN) {
         regels.push(`Scrambling: <b>${Math.round(scramblePpar / geenGir * 100)}%</b> t.o.v. je persoonlijke par, <b>${Math.round(scramblePar / geenGir * 100)}%</b> t.o.v. de gewone par (${geenGir} holes zonder green in regulation).`);
       }
       secties.push({ kop: 'Putten en greens', regels });
@@ -5762,7 +5808,7 @@ function buildGameAnalysis() {
       // ── Waar verlies je je slagen? ──
       // Eigen sectie: dit is een conclusie over je hele spel, niet alleen over putten.
       // De twee bedragen tellen exact op tot je verlies t.o.v. par.
-      if (holes >= 18) {
+      if (holes >= minN) {
         const perHole = v => v / holes;
         const deel = Math.abs(verliesTotaal) > 0.001
           ? ` (${Math.round(Math.abs(verliesVoorGreen) / (Math.abs(verliesVoorGreen) + Math.abs(verliesOpGreen)) * 100)}% v\u00f3\u00f3r de green)` : '';
@@ -5779,7 +5825,7 @@ function buildGameAnalysis() {
       {
         if (drie / holes >= 0.12) aanbev.push(`Op ${Math.round(drie / holes * 100)}% van je holes heb je drie putts of meer nodig. Dat is de snelste winst die er is: oefen lange putts op afstand (lag putting) in plaats van korte putts.`);
         if (gir / holes <= 0.15) aanbev.push('Je raakt weinig greens in regulation. Dat wijst op het lange spel of de approach, niet op je putten \u2014 richt je oefentijd daar dus op.');
-        if (gir >= 5 && puttsOpGir / gir >= 2.1) aanbev.push('Op greens die je in regulation raakt heb je gemiddeld meer dan twee putts nodig. Daar liggen dus slagen op de green zelf, niet in het bereiken ervan.');
+        if (gir >= minN && puttsOpGir / gir >= 2.1) aanbev.push('Op greens die je in regulation raakt heb je gemiddeld meer dan twee putts nodig. Daar liggen dus slagen op de green zelf, niet in het bereiken ervan.');
       }
     }
   }
@@ -6307,7 +6353,7 @@ async function exportRoundIcs(roundId) {
 }
 
 function renderScore() {
-  if (!game.started) { scoreButtonsRow = null; renderScoreEmpty(); return; }
+  if (!game.started) { scoreButtonsRow = null; renderScoreEmpty(); document.getElementById('puttOverlay')?.remove(); return; }
 
   document.getElementById('statEmptyMsg').innerHTML = '';
   document.getElementById('scoreEmptyMsg').innerHTML = '';
@@ -6430,10 +6476,9 @@ function puttRowActief() {
 
 
 function scrollToCurrentRow() {
-  // Is er een puttregel, dan die in beeld brengen: hij staat ónder de scorerij, dus
-  // anders valt hij net buiten beeld als je onderaan de tabel zit (Marks vraag).
-  const doel = document.querySelector('.putt-row') || document.querySelector('.sum-tr.current-row');
-  doel?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+  // De zwevende puttregel wordt pas ná deze aanroep geplaatst en scrolt zichzelf dan
+  // bij; hier volstaat de actieve rij.
+  document.querySelector('.sum-tr.current-row')?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
 }
 
 
@@ -7041,9 +7086,11 @@ function doAdditiveImport(parsed) {
   // Vóór nav('archive') gezet, zodat de banner meteen met de juiste staat rendert.
   if (storage.getItem('golf_last_backup_date')) {
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+    naBackupBijwerken();
   } else {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+    naBackupBijwerken();
   }
   // Blijft in Instellingen staan (net als bij het importeren van clubs) i.p.v. weg te
   // navigeren naar Archief — de relevante onderdelen hier worden rechtstreeks ververst.
@@ -7069,6 +7116,7 @@ function doFullRestoreImport(parsed) {
   // geïmporteerde data feitelijk de meest actuele, volledige stand al vertegenwoordigt.
   storage.setItem('golf_last_backup_date', todayISO());
   storage.setItem('golf_last_backup_count', String(entries.length));
+  naBackupBijwerken();
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
   game = { started: false, holes: [] };
@@ -7627,7 +7675,7 @@ function updateComputedHcp() {
   // nog niet vastgesteld is — zelfde conditie als de WHS-hcp-KPI op Statistieken (hele
   // laatste 20, niet alleen de meetellende usedIds-deelverzameling).
   const triangle = (whs && last20.some(roundHasWarning))
-    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
+    ? '<svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> '
     : '';
   el.innerHTML = triangle + (whs ? fmt1(whs.value) : '—');
   const labelEl = document.getElementById('computedHcpLabel');
@@ -7936,11 +7984,18 @@ function loadSaved() {
   const activeId = storage.getItem('golf_active_id');
 
   const hasDateCriteria = !!(parsedSearch.dateFrom || parsedSearch.dateTo || parsedSearch.recurring);
-  const bron = window._warnFilterActive
-    ? saved.filter(r => window._warnFilterActive === 'dup' ? (window._dupIds && window._dupIds.has(String(r.id)))
+  let bron = window._warnFilterActive
+    ? (() => { const dupNu = window._warnFilterActive === 'dup' && typeof findDuplicateRounds === 'function' ? findDuplicateRounds() : null;
+        return saved.filter(r => window._warnFilterActive === 'dup' ? (dupNu && dupNu.has(String(r.id)))
         : window._warnFilterActive === 'putt' ? roundHasPuttWarning(r)
-        : roundHasWarning(r))
+        : roundHasWarning(r)); })()   // elke statusregel filtert zijn eigen categorie
     : saved;
+  // Is de melding intussen opgelost, dan levert het filter niets meer op en zou je naar
+  // een lege lijst kijken (Marks melding). Filter dan vanzelf opheffen en alles tonen.
+  if (window._warnFilterActive && !bron.length) {
+    window._warnFilterActive = null;
+    bron = saved;
+  }
   const filtered = (!parsedSearch.dateError && (query || hasDateCriteria))
     ? bron.filter(r => {
         if (query) {
@@ -7995,6 +8050,9 @@ function loadSaved() {
   // samenvattingstabel, i.p.v. een losse, lichtere benadering — zo kunnen de twee
   // plekken nooit meer verschillen.
   const hcpTrendMap = {};
+  // Geldende WHS-handicap per ronde-id voor rondes die zélf geen verloop hebben
+  // (niet-qualifying): de uitkomst van de laatste qualifying ronde ervóór.
+  const hcpGeldendMap = {};
   {
     const mainPlayer = startPlayerName();
     if (mainPlayer) {
@@ -8049,6 +8107,25 @@ function loadSaved() {
     }
   }
 
+  // Geldende handicap doorschuiven: loop chronologisch door alle rondes van de
+  // hoofdspeler; na elke qualifying ronde geldt die nieuwe stand voor alles wat volgt.
+  // Zo kan een niet-qualifying ronde (of een lopende ronde) de handicap tonen die op
+  // dat moment gold, zonder verloop — daar verandert immers niets.
+  {
+    const mainPlayer = startPlayerName();
+    if (mainPlayer) {
+      let geldend = null;
+      saved
+        .filter(x => x.player === mainPlayer)
+        .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`))
+        .forEach(x => {
+          const t = hcpTrendMap[x.id];
+          if (t && t.newHcp != null) { geldend = t.newHcp; return; } // qualifying: eigen verloop
+          if (geldend != null) hcpGeldendMap[x.id] = geldend;
+        });
+    }
+  }
+
   const makeCard = (r, i, short = false, expandedFromShort = false) => {
     const clubSafe = escapeHtml(r.club || 'Onbekende club');
     const playerSafe = escapeHtml(r.player || '—');
@@ -8070,7 +8147,7 @@ function loadSaved() {
     const playerNumLabel = (game2Id && isActive) ? ` · <span class="round-num-dot" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--gold);color:var(--green-deep);font-size:13px;font-weight:800;vertical-align:middle;margin-left:2px">${isPlayer2Active ? '2' : '1'}</span>` : '';
     // PCC/SD-fragment voor de laatste regel (alleen bij afgeronde ronde)
     let sdFrag = '';
-    if (done) {
+    if (done || playedCount > 0) {
       const asterisk = '<span style="font-weight:900">≈</span>';
       const check = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-left:1px"><polyline points="20 6 9 17 4 12"/></svg>';
       const _fromGame = isCurrentPlayer;
@@ -8078,10 +8155,10 @@ function loadSaved() {
       const _pcc = _fromGame ? (game.pcc ?? r.pcc) : r.pcc;
       const manVal = (_sdMan != null && _sdMan !== '' && isFinite(parseFloat(_sdMan))) ? parseFloat(_sdMan) : null;
       if (manVal != null) {
-        sdFrag = ` · Pcc ${formatPcc(_pcc ?? 0)} · Sd${check} ${fmt1(manVal)}`;
+        sdFrag = `Pcc ${formatPcc(_pcc ?? 0)} · Sd${check} ${fmt1(manVal)}`;
       } else {
         const c = computeSD({ holes: r.holes, CR: r.CR, SR: r.SR, hcp: r.hcp, pcc: _pcc });
-        sdFrag = c ? ` · Pcc ${formatPccOrUnknown(_pcc)} · Sd${asterisk} ${fmt1(c.value)}` : '';
+        sdFrag = c ? `Pcc ${formatPccOrUnknown(_pcc)} · Sd${asterisk} ${fmt1(c.value)}` : '';
       }
     }
     const dateLineInner = `
@@ -8089,8 +8166,6 @@ function loadSaved() {
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
-          ${roundHasPuttWarning(r) ? puttWarnIcon : ''}
-          ${done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })() ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
           ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi">L</span>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
           ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q">Q</span>' : ''}
@@ -8101,20 +8176,50 @@ function loadSaved() {
     // verkort en uitgebreid. Bewust een eigen knopje: de datumregel zelf doet nu
     // hetzelfde als de rest van de kaart (actieknoppen tonen), zodat twee plekken die
     // er identiek uitzien niet verschillend reageren (Marks consistentiepunt).
-    const dateLine = dateLineInner;
-    // Putts achter de slagen: alleen als ÉLKE gespeelde hole een puttwaarde heeft
-    // (half ingevulde rondes zouden een misleidend totaal geven — die krijgen het
-    // paarse waarschuwingsicoontje in de datumregel). Staat achter Str, en bij een
-    // afwijkende AGS ook achter dat getal, gescheiden door een schuine streep.
-    const gespeeldeHoles = (r.holes || []).filter(h => h && h.score != null);
-    const puttsTotaal = (gespeeldeHoles.length && gespeeldeHoles.every(h => h.putts != null))
-      ? gespeeldeHoles.reduce((s, h) => s + h.putts, 0) : null;
-    const puttFrag = puttsTotaal != null ? ` / ${puttsTotaal}` : '';
-    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${puttFrag}${sdFrag}</div>`;
+    // Waarschuwingsiconen op een eigen regel helemaal bovenaan (Marks keuze): het
+    // oranje driehoekje (qualifying ronde zonder vastgesteld dagresultaat) en het
+    // paarse rondje (putts op sommige holes, maar niet op alle). Alleen zichtbaar als
+    // er iets te melden is — dit is een signaalregel, geen vaste regel.
+    const warnIcons = [
+      roundHasPuttWarning(r) ? puttWarnIcon : '',
+      (done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })())
+        ? '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        : '',
+    ].filter(Boolean);
+    const warnLine = warnIcons.length
+      ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px">${warnIcons.join('')}</div>`
+      : '';
+    const dateLine = warnLine + dateLineInner;
+    // Eerste regel: de scoretotalen bij elkaar — Str, Ags (alleen als die afwijkt van
+    // Str) en Stb. Pcc en Sd staan eronder op een eigen regel: dat zijn WHS-uitkomsten,
+    // geen scoretotalen (Marks indeling). Putts stonden hier ook even, maar zijn er op
+    // Marks verzoek weer uit — die staan in het rondeoverzicht en de statistieken.
+    // Str met het pijltje naar de aangepaste bruto score (alleen als die afwijkt),
+    // gevolgd door Pcc en Sd op dezelfde regel (Marks indeling). Stb staat op de
+    // laatste regel, vóór de handicap. In de volledige kaart staan Pcc/Sd er altijd,
+    // desnoods met streepjes, zodat het regelaantal constant blijft; in de verkorte
+    // kaart vallen ze weg als er niets te tonen is.
+    const sdDeel = sdFrag || (short ? '' : 'Pcc — · Sd —');
+    // Putts achter het laatste scoregetal (Ags als die er is, anders Str), gescheiden
+    // door een schuine streep. Altijd zichtbaar — dit is rondeninformatie en staat dus
+    // los van de instellingen (Marks keuze). Een streepje als er geen putts zijn.
+    const puttHoles = (r.holes || []).filter(h => h && h.score != null && h.putts != null);
+    const puttTotaal = puttHoles.length ? puttHoles.reduce((s, h) => s + h.putts, 0) : null;
+    const puttFrag = puttTotaal ? ` / ${puttTotaal}` : '';
+    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${puttFrag}${sdDeel ? ` · ${sdDeel}` : ''}</div>`;
+    const sdLine = '';
     const stbHcpLine = (() => {
       // Stb + Hcp samen als aparte, laatste regel, direct boven de par-grafiek.
       const t = hcpTrendMap[r.id];
       let hcpPart = '';
+      // Geen eigen verloop (niet-qualifying, of nog lopend): dan alleen de handicap
+      // die op dat moment gold, zonder pijl — er verandert immers niets (Marks keuze).
+      if (!t || t.newHcp == null) {
+        const geldend = (r.player === startPlayerName()) ? hcpGeldendMap[r.id] : null;
+        if (geldend == null && short) return '';
+        const stbDeel = totalStb != null ? `Stb ${totalStb} · ` : '';
+        return `<div class="saved-meta">${stbDeel}Whs ${geldend != null ? fmt1(geldend) : '—'}</div>`;
+      }
       if (t && t.newHcp != null && r.player === startPlayerName()) {
         const diff = (t.oldHcp != null) ? Math.round((t.newHcp - t.oldHcp) * 10) / 10 : null;
         let diffFrag = '';
@@ -8131,10 +8236,10 @@ function loadSaved() {
         const esrFrag = t.esrApplied
           ? ' <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle" title="ESR toegepast"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg>'
           : '';
-        hcpPart = `Hcp ${t.oldHcp != null ? fmt1(t.oldHcp) : '—'}${hcpArrowSvg(t.oldHcp, t.newHcp, 16)}${fmt1(t.newHcp)}${capFrag}${esrFrag}${diffFrag}`;
+        hcpPart = `Whs ${t.oldHcp != null ? fmt1(t.oldHcp) : '—'}${hcpArrowSvg(t.oldHcp, t.newHcp, 16)}${fmt1(t.newHcp)}${capFrag}${esrFrag}${diffFrag}`;
       }
-      const stbPart = totalStb != null ? `Stb ${totalStb}` : '';
-      const line = [stbPart, hcpPart].filter(Boolean).join(' · ');
+      // Stb staat weer op deze regel, vóór het handicapverloop.
+      const line = [totalStb != null ? `Stb ${totalStb}` : '', hcpPart].filter(Boolean).join(' · ');
       return line ? `<div class="saved-meta">${line}</div>` : '';
     })();
     const actionsBlock = `
@@ -8159,6 +8264,7 @@ function loadSaved() {
     <div class="saved-item"${isActive ? ' style="border-left:3px solid var(--gold);padding-left:10px;border-right:3px solid var(--gold);padding-right:10px"' : ''}${!actionsAlwaysVisible() ? ' onclick="toggleRoundActions(event, this)"' : ''}>
       ${dateLine}
       ${strLine}
+      ${sdLine}
       ${stbHcpLine}
       ${r.note ? `<div style="font-size:15px;color:var(--muted);font-style:italic;margin-top:2px;overflow-wrap:break-word">${escapeHtml(r.note)}</div>` : ''}
       ${actionsBlock}
@@ -8177,6 +8283,7 @@ function loadSaved() {
       <div class="saved-meta">${trackSafe}${par != null ? ` · Par ${par}` : ''} · ${holesCount}h</div>
       <div class="saved-meta">${(r.gender || '').charAt(0)} · ${r.tee || '—'} · Chcp ${chcp ?? '—'}</div>
       ${strLine}
+      ${sdLine}
       ${stbHcpLine}
       <div style="margin-top:8px">${flatChartHtml(r.holes)}</div>
       ${r.note ? `<div style="font-size:15px;color:var(--muted);font-style:italic;margin-top:4px;overflow-wrap:break-word">${escapeHtml(r.note)}</div>` : ''}
@@ -8397,10 +8504,13 @@ function loadSaved() {
     html = `<div class="info-msg" style="font-size:17px;color:var(--muted);font-weight:700;margin-bottom:8px">${filtered.length} ronde${filtered.length !== 1 ? 's' : ''} gevonden</div>` + html;
   }
   if (window._warnFilterActive) {
-    html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:var(--orange);font-weight:700;margin-bottom:8px"><span style="flex:1">Gefilterd op ${window._warnFilterActive === 'dup' ? 'mogelijke duplicaten' : window._warnFilterActive === 'putt' ? 'rondes met deels ingevulde putts' : 'waarschuwingen'} (${filtered.length})</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
+    const bannerKleur = window._warnFilterActive === 'putt' ? '#9b7fd4' : 'var(--orange)';
+    html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:${bannerKleur};font-weight:700;margin-bottom:8px"><span style="flex:1">${filtered.length} ${window._warnFilterActive === 'dup' ? 'duplicaten' : window._warnFilterActive === 'putt' ? 'met onvolledige putts' : 'zonder vastgesteld dagresultaat'}</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
   }
   el.innerHTML = html;
   updateAppBadge();
+  if (typeof refreshStatusReminder === 'function') refreshStatusReminder();
+  if (typeof refreshTabDot === 'function') refreshTabDot();
 }
 
 
@@ -10999,7 +11109,7 @@ async function exportAllRounds() {
     // Back-upstatus vastleggen en herinnering verbergen
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
-    updateBackupReminder();
+    naBackupBijwerken();
     updateLastBackupDisplay();
   } catch(e) { console.error('Backup rondes mislukt:', e); }
 }
@@ -11021,37 +11131,14 @@ function isBackupOverdue() {
   return newRounds >= roundsThreshold || daysSince >= getBackupReminderDays();
 }
 
-function updateBackupReminder() {
-  const el = document.getElementById('backupReminder');
-  if (!el) return;
-  const rounds = loadSavedRounds();
-  const total = rounds.length;
-  if (total === 0) { el.classList.add('hidden'); return; }
-
-  // Alleen tonen als er minstens één afgeronde ronde is
-  const hasFinished = rounds.some(r => (r.holes || []).length > 0 && (r.holes || []).every(h => h.score !== null));
-  if (!hasFinished) { el.classList.add('hidden'); return; }
-
-  // Hooguit één keer per dag tonen
-  if (storage.getItem('golf_backup_reminder_shown') === todayISO()) { el.classList.add('hidden'); return; }
-
-  const show = isBackupOverdue();
-
-  if (show) {
-    el.innerHTML = `<span>Exporteer je rondes</span><button class="btn-secondary" style="padding:6px 14px;font-size:15px;color:var(--orange);border-color:var(--orange);flex-shrink:0" onclick="exportAllRounds()">Nu exporteren</button>`;
-    el.classList.remove('hidden');
-    storage.setItem('golf_backup_reminder_shown', todayISO());
-  } else {
-    el.classList.add('hidden');
-  }
-}
 
 // Toont 'Laatste backup: X dagen geleden' bovenaan Instellingen → Gegevens → Backup,
-// op basis van dezelfde golf_last_backup_date/-count die updateBackupReminder() ook
-// gebruikt voor de losse herinnering in Archief.
+// op basis van golf_last_backup_date/-count; de losse herinneringsbalk bovenaan Rondes
+// is vervallen, de signalering loopt nu via het oranje stipje op de Instellingen-tab.
 function updateLastBackupDisplay() {
+  if (typeof refreshTabDot === 'function') refreshTabDot();
   const el = document.getElementById('lastBackupInfo');
-  if (!el) return;
+  if (!el) return;   // regel bestaat alleen in Instellingen; de stip is hierboven al bijgewerkt
   const daysValEl = document.getElementById('backupReminderDaysVal');
   if (daysValEl) daysValEl.textContent = getBackupReminderDays();
   const roundsValEl = document.getElementById('backupReminderRoundsVal');
@@ -11060,24 +11147,36 @@ function updateLastBackupDisplay() {
   el.style.color = ''; // kleur zit in het kernbericht-span (zelfde patroon als de andere Controle-regels)
   const label = 'Backup rondes';
   const lastDate = storage.getItem('golf_last_backup_date');
-  if (!lastDate) { el.innerHTML = overdue ? `<span style="color:var(--orange);font-weight:700">${label}: geen</span>` : `${label}: geen`; return; }
+  if (!lastDate) {
+    el.innerHTML = overdue ? `<span style="color:var(--orange);font-weight:700">${label}: geen</span>` : `${label}: geen`;
+    toonNieuweRondesRegel(overdue);
+    return;
+  }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
   const daysText = daysSince <= 0 ? 'vandaag' : daysSince === 1 ? 'gisteren' : `${daysSince} dagen geleden`;
   // Bij oranje (drempel overschreden) ook het aantal nieuwe rondes tonen — anders lijkt
   // het onlogisch als bv. '4 dagen geleden' oranje is terwijl de dagen-limiet op 7 staat:
   // de rondes-drempel kan dan de eigenlijke reden zijn (het is een OF-voorwaarde), en dat
   // moet dan ook zichtbaar zijn i.p.v. alleen het dagen-getal.
-  if (overdue) {
-    const total = loadSavedRounds().length;
-    const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-    const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-    const kern = `<span style="color:var(--orange);font-weight:700">${label}: ${daysText}</span>`;
-    el.innerHTML = newRounds > 0
-      ? `${kern} · ${newRounds} nieuwe ronde${newRounds !== 1 ? 's' : ''}`
-      : kern;
-  } else {
-    el.innerHTML = `${label}: ${daysText}`;
-  }
+  el.innerHTML = overdue
+    ? `<span style="color:var(--orange);font-weight:700">${label}: ${daysText}</span>`
+    : `${label}: ${daysText}`;
+  toonNieuweRondesRegel(overdue);
+}
+
+// Aantal rondes dat sinds de laatste backup is bijgekomen — altijd zichtbaar zolang
+// er iets nieuws is (niet alleen bij een te oude backup), want dit is precies wat je
+// kwijtraakt als er iets misgaat. Oranje zodra de herinneringsdrempel is bereikt.
+function toonNieuweRondesRegel(overdue) {
+  const el = document.getElementById('newRoundsInfo');
+  if (!el) return;
+  const total = loadSavedRounds().length;
+  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
+  const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  if (!nieuw) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  const kleur = overdue ? 'var(--orange)' : 'var(--white)';
+  el.innerHTML = `<span style="color:${kleur};font-weight:700">${nieuw}</span> nieuwe ronde${nieuw !== 1 ? 's' : ''} sinds die backup`;
+  el.classList.remove('hidden');
 }
 
 // Minimum aantal rondes waarop een statistiek mag rusten (Instellingen > Weergave).
@@ -11104,14 +11203,12 @@ function adjustBackupReminderDays(delta) {
   const el = document.getElementById('backupReminderDaysVal');
   if (el) el.textContent = newVal;
   updateLastBackupDisplay();
-  updateBackupReminder();
 }
 function adjustBackupReminderRounds(delta) {
   const newVal = setBackupReminderRounds(getBackupReminderRounds() + delta);
   const el = document.getElementById('backupReminderRoundsVal');
   if (el) el.textContent = newVal;
   updateLastBackupDisplay();
-  updateBackupReminder();
 }
 
 async function exportAllClubs() {
@@ -11362,7 +11459,13 @@ function nav(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
-  if (id === 'settings') { refreshDataHealth(); refreshDataHealthDup(); refreshDataHealthPutts(); refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
+  if (id !== 'score') document.getElementById('puttOverlay')?.remove();
+  refreshTabDot();
+  if (id === 'settings') {
+    // Bij een te oude backup meteen de Gegevens-tab openen: daar staat de Status-kaart
+    // met de backup-ouderdom, dus je ziet direct waar het over gaat (Marks keuze).
+    if (typeof isBackupOverdue === 'function' && isBackupOverdue() && typeof switchSettingsTab === 'function') switchSettingsTab('data');
+    refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
   if (id === 'score' && game.started) renderScore();
   if (id === 'setup') {
     window.scrollTo(0, 0);
@@ -11415,7 +11518,7 @@ function nav(id) {
   }
   if (id === 'archive') {
     loadSaved();
-    updateBackupReminder();
+    refreshStatusReminder();
     window.scrollTo(0, 0);
   }
   if (id === 'settings') {
@@ -11887,6 +11990,7 @@ function togglePuttsStats() {
   const cb = document.getElementById('puttsStatsToggle');
   const on = cb ? cb.checked : storage.getItem('golf_putts_stats') === 'off';
   storage.setItem('golf_putts_stats', on ? 'on' : 'off');
+  if (typeof renderPlayerStats === 'function') renderPlayerStats();
 }
 
 function toggleTrackPutts() {
@@ -12165,7 +12269,7 @@ function refreshLowHiWarning(previewVal) {
     const derivedUncertain = d != null && whs && whs.value != null
       && Math.abs(d - whs.value) < 0.05 && hcpUncertain;
     if (derivedUncertain) {
-      dWarnEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      dWarnEl.innerHTML = '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
       dWarnEl.classList.remove('hidden');
     } else {
       dWarnEl.classList.add('hidden');
@@ -12173,7 +12277,7 @@ function refreshLowHiWarning(previewVal) {
   }
   const warnEl = document.getElementById('lowHiStaleWarning');
   if (!warnEl) return;
-  const triangle = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  const triangle = '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   // Check 0: onvoldoende eigen historie — dit geldt ongeacht of er al een handmatige
   // waarde is ingevuld (voorheen werd deze melding overgeslagen zodra het veld leeg was,
   // waardoor je dan alleen een kaal streepje zag zonder enige uitleg waarom).
