@@ -210,7 +210,7 @@
     .tab.active { color: var(--gold); border-top-color: var(--gold); }
     .tab:active { transform: scale(.93); }
 
-    .screen { display: none; padding: 12px 12px 90px; }
+    .screen { display: none; padding: 12px 12px calc(64px + env(safe-area-inset-bottom)); }
     .screen.active { display: block; animation: screenFadeIn .25s ease; }
     @keyframes screenFadeIn {
       from { opacity: 0; }
@@ -1161,7 +1161,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-081</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-086</div>
 </div>
 
 <script>
@@ -11340,10 +11340,34 @@ function toonNieuweRondesRegel(overdue) {
   const total = loadSavedRounds().length;
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  if (!nieuw) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  // De app weet WEL hoeveel rondes erbij kwamen, maar NIET hoeveel er bewerkt zijn —
+  // er is één tijdstempel voor de hele lijst, geen stempel per ronde. Daarom het
+  // aantal nieuwe rondes plus het moment van de laatste wijziging: samen vertelt dat
+  // of er werk is dat nog niet veilig staat, zonder extra administratie (Marks keuze).
+  const changedTs = storage.getItem('golf_rounds_changed');
+  const backupTs = storage.getItem('golf_last_backup_ts');
+  const gewijzigdNaBackup = !!changedTs && (!backupTs || changedTs > backupTs);
+  if (!nieuw && !gewijzigdNaBackup) { el.classList.add('hidden'); el.innerHTML = ''; return; }
   const kleur = overdue ? 'var(--orange)' : 'var(--white)';
-  el.innerHTML = `<span style="color:${kleur};font-weight:700">${nieuw}</span> nieuwe ronde${nieuw !== 1 ? 's' : ''} sinds die backup`;
+  const delen = [];
+  if (nieuw) delen.push(`<span style="color:${kleur};font-weight:700">${nieuw}</span> nieuw`);
+  if (gewijzigdNaBackup) delen.push(`${delen.length ? 'g' : 'G'}ewijzigd: ${formatWijzigMoment(changedTs)}`);
+  el.innerHTML = delen.join(' \u00b7 ');
   el.classList.remove('hidden');
+}
+
+// "vandaag 14:12", "gisteren 09:05" of "12 aug 14:12" — kort genoeg voor één regel.
+function formatWijzigMoment(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '\u2014';
+  const dag = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const vandaag = new Date();
+  const vandaagDag = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate());
+  const verschil = Math.round((vandaagDag - dag) / 86400000);
+  if (verschil === 0) return 'vandaag';
+  if (verschil === 1) return 'gisteren';
+  const maanden = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  return `${d.getDate()} ${maanden[d.getMonth()]}`;
 }
 
 // Minimum aantal rondes waarop een statistiek mag rusten (Instellingen > Weergave).
