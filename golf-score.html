@@ -207,6 +207,14 @@
     /* Oranje stipje op een tab: signaleert dat er iets te melden is (Status). */
     .tab { position: relative; }
     .tab.has-dot::after { content: ''; position: absolute; top: 8px; right: calc(50% - 14px); width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+    /* Icoon in een knop als blok i.p.v. op de tekstbasislijn: anders staat het icoon
+       systematisch iets te hoog, doordat de regel ruimte voor staartletters reserveert.
+       GEEN auto-marges hier: :only-child telt alleen elementen en niet de tekst, dus
+       deze selector raakt ook knoppen met een icoon én een kaal label — auto-marges
+       zouden daar icoon en label uit elkaar trekken. Horizontaal is er niets te doen:
+       bij icoonknoppen volgt de breedte het icoon, of de knop is zelf al flex. */
+    button > svg:only-child,
+    button > span:only-child > svg:only-child { display: block; }
     .tab.active { color: var(--gold); border-top-color: var(--gold); }
     .tab:active { transform: scale(.93); }
 
@@ -337,7 +345,7 @@
     #screen-score:has(#nineTabBar:not(.hidden)) { padding-top: 0; }
     @keyframes pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
     /* Wisknopje (×) rechts in een zoekveld */
-    .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:26px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
+    .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:24px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
     /* Plakkende jaarkop in het archief (blijft bovenin hangen tijdens scrollen) */
     .year-sep { position: sticky; top: var(--header-h, 60px); z-index: 90; background: var(--green-deep); color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: .7px; line-height: 1; padding: 12px 2px 8px; }
     /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
@@ -431,6 +439,20 @@
 
     .sum-table  { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     #sumRows { display: flex; flex-direction: column; gap: 5px; }
+    /* Scorerij en kolomkop delen één raster van 11 kolommen, waarvan er vier BEWUST
+       leeg zijn als tussenruimte. Niet vervangen door column-gap of padding, hoe
+       verleidelijk ook:
+       - de knopkolommen (56px) moeten op een vaste plek staan, ongeacht of er in de
+         cel ernaast een cijfer, een streepje of niets staat;
+       - flexibele 1fr-kolommen krimpen nooit onder hun inhoud, dus zodra de
+         tussenruimte uit padding komt, verschuiven de kolommen zodra de inhoud
+         verandert (precies waardoor de puttregel drie keer uit de pas liep);
+       - de puttregel spiegelt zich aan deze rij: maakPuttRij KLOONT hem.
+       De indeling heeft een week uitmeten gekost en klopt nu op de pixel. Opruimen
+       levert alleen kortere code op, geen zichtbaar voordeel.
+       De kolomkoppen staan bewust op 13px: het scorescherm mag tijdens een ronde NIET
+       scrollen — alle holes én de pauzeerknop moeten tegelijk zichtbaar blijven, en
+       elke pixel hier gaat ten koste van de rijen. */
     .sum-th, .sum-tr { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 56px 1fr 56px 1fr 1fr 1fr; font-size:24px; align-items: center; column-gap: 0; min-height: 47px; }
     .sum-th { padding: 9px 8px; align-items: center; background: rgba(0,0,0,.25); color: var(--muted); font-size:13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
     .sum-th span, .sum-tr span { text-align: center; }
@@ -548,7 +570,7 @@
 <!-- SETUP -->
 <div id="screen-setup" class="screen active">
 
-  <div class="card" id="playerCard">
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <h2 style="margin:0" id="player1Heading">Speler</h2>
       <button class="btn-secondary" id="addPlayer2Btn" onclick="togglePlayer2()" style="padding:8px 14px;font-size:20px" title="Speler 2 toevoegen"><svg id="addPlayer2IconPlus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><svg id="addPlayer2IconMinus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle" class="hidden"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
@@ -557,9 +579,9 @@
       <label>Naam</label>
       <input id="iName" type="text" placeholder="Jouw naam" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,''); savePlayerProfile()" onblur="this.value=this.value.trim(); savePlayerProfile()" />
     </div>
-    <div class="fg" id="hcpField">
+    <div class="fg">
       <label>Handicap</label>
-      <div id="computedHcpRow" style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="iHcp" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
@@ -577,8 +599,8 @@
       <div style="display:flex;align-items:center;justify-content:space-between">
         <h2 style="margin:0">Speler 2</h2>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn-secondary" id="favPlayer2Btn" onclick="fillPlayer2('fav')" style="padding:8px 14px" title="Favoriete speler 2 invullen"><svg id="favPlayer2Icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
-          <button class="btn-secondary" id="defaultPlayer2Btn" onclick="fillPlayer2('default')" style="padding:8px 14px" title="Standaard speler 2 invullen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg></button>
+          <button class="btn-secondary" onclick="fillPlayer2('fav')" style="padding:8px 14px" title="Favoriete speler 2 invullen"><svg id="favPlayer2Icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="btn-secondary" onclick="fillPlayer2('default')" style="padding:8px 14px" title="Standaard speler 2 invullen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg></button>
         </div>
       </div>
     </div>
@@ -594,7 +616,7 @@
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayer2Profile(); this.blur();}" />
     </div>
   </div>
-  <div class="card" id="dateTimeCard">
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <h2 style="margin:0">Datum & tijd</h2>
       <button class="btn-secondary" id="btnNow" onclick="setDateTimeNow(this)" style="padding:8px 14px"><svg id="btnNowIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
@@ -613,7 +635,7 @@
 
 
 
-  <div class="card" id="clubBaanCard">
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <h2 style="margin:0">Club & baan</h2>
       <button class="btn-secondary" id="btnHomeClub" onclick="useHomeClub()" style="padding:8px 14px" title="Gebruik thuisclub"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg></button>
@@ -658,7 +680,7 @@
       </div>
     </div>
     <div class="chcp-override-row hidden" id="chcpOverrideRow">
-      <span id="chcpOverrideNote" class="info-msg" style="color:var(--info-grey)">Handmatig aangepast</span>
+      <span class="info-msg" style="color:var(--info-grey)">Handmatig aangepast</span>
       <button class="btn-secondary" style="padding:8px 14px;opacity:.6" onclick="resetChcpOverride()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
     </div>
   </div>
@@ -696,6 +718,7 @@
   </div>
 
   <div id="startRoundError" class="orange-msg hidden" style="color:var(--orange);font-size:20px;font-weight:700;margin-bottom:8px"></div>
+  <div id="herplanBanner" class="hidden orange-msg" style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:17px;font-weight:700;color:var(--orange);margin-bottom:10px"></div>
   <button class="btn-primary" id="startRoundBtn" onclick="startRound()">Nieuwe ronde</button>
 </div>
 
@@ -716,7 +739,7 @@
 
 <!-- ARCHIEF -->
 <div id="screen-archive" class="screen">
-  <div id="exportRoundsMsg" class="export-rounds-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
+  <div class="export-rounds-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;justify-content:flex-end">
     <button id="groupByCategoryBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByCategory()" title="Groepeer op categorie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
     <button id="groupByTrackBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByTrack()" title="Groepeer op club"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12h18"/><path d="M3 6l9-3 9 3"/><path d="M3 18l9 3 9-3"/></svg></button>
@@ -744,7 +767,7 @@
   <div id="storageWarning" class="hidden" style="margin-bottom:14px;padding:12px 14px;background:rgba(192,57,43,.18);border-radius:var(--radius);border:2px solid var(--red);font-size:20px;font-weight:700;color:var(--red)">
     ⚠️ Wijzigingen blijven niet bewaard na het sluiten van de app (geen permanente opslag beschikbaar op dit toestel/deze browser).
   </div>
-  <div id="exportClubsMsg" class="export-clubs-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
+  <div class="export-clubs-error hidden orange-msg" style="font-size:20px;font-weight:700;color:var(--orange);text-align:right;margin-bottom:4px"></div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
     <div style="flex:1"></div>
     <input type="file" id="importClubFile" accept=".json" onchange="importCourseData(this)" style="display:none">
@@ -914,7 +937,7 @@
     <div class="fg" style="margin-bottom:0">
       <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
-      <div id="derivedLowHiRow" style="font-size:17px;color:var(--muted);font-weight:700;margin-top:6px"><span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span>Low HI <span id="derivedLowHiVal" style="color:var(--green-light)">—</span><span id="derivedLowHiDate"></span></div>
+      <div style="font-size:17px;color:var(--muted);font-weight:700;margin-top:6px"><span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span>Low HI <span id="derivedLowHiVal" style="color:var(--green-light)">—</span><span id="derivedLowHiDate"></span></div>
       <div id="derivedLowHiSpan" style="font-size:15px;color:var(--muted);margin-top:2px"></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
     </div>
@@ -1155,13 +1178,13 @@
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="resetAllBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
+        <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
     </div>
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-08B</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0B8</div>
 </div>
 
 <script>
@@ -1733,9 +1756,15 @@ const storage = (() => {
     return {
       getItem:    k     => ls.getItem(k),
       removeItem: k     => ls.removeItem(k),
+      // Geeft true/false terug: aanroepers die iets ONOMKEERBAARS doen na het opslaan
+      // (zoals de oude planning verwijderen) moeten kunnen controleren of het gelukt is.
+      // Bij een volle opslag mislukt een grotere lijst wegschrijven, terwijl een
+      // kleinere lijst (verwijderen) juist wél slaagt — precies de volgorde waarin
+      // gegevens verloren zouden gaan.
       setItem:    (k,v) => {
         try {
           ls.setItem(k, v);
+          return true;
         } catch(e) {
           console.error('localStorage vol of geblokkeerd:', e);
           // Toon eenmalige melding
@@ -1743,10 +1772,11 @@ const storage = (() => {
             storage._fullWarned = true;
             const el = document.createElement('div');
             el.textContent = 'Opslaan mislukt — geheugen vol';
-            el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#b41e1e;color:#fff;font-size:18px;font-weight:700;padding:10px 20px;border-radius:10px;z-index:9999';
+            el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#b41e1e;color:#fff;font-size:17px;font-weight:700;padding:10px 20px;border-radius:10px;z-index:9999';
             document.body.appendChild(el);
             setTimeout(() => { el.remove(); storage._fullWarned = false; }, 2000);
           }
+          return false;
         }
       }
     };
@@ -1754,7 +1784,7 @@ const storage = (() => {
     storageIsPersistent = false;
   }
   const mem = {};
-  return { getItem: k => k in mem ? mem[k] : null, setItem: (k,v) => { mem[k]=String(v); }, removeItem: k => { delete mem[k]; } };
+  return { getItem: k => k in mem ? mem[k] : null, setItem: (k,v) => { mem[k]=String(v); return true; }, removeItem: k => { delete mem[k]; } };
 })();
 
 // Veilig opgeslagen rondes inladen: valt terug op een lege lijst bij corrupte data,
@@ -2863,7 +2893,8 @@ function startRound() {
   // Eerst controleren op een bestaande ronde op dezelfde datum en tijd
   const dupDt = document.getElementById('iDate').value;
   const dupTime = document.getElementById('iTime').value;
-  const duplicate = saved.find(r => (r.date || '') === (dupDt || '') && (r.time || '') === (dupTime || ''));
+  const herplanSet = new Set(_herplanIds || []);   // deze worden vervangen, dus geen botsing
+  const duplicate = saved.find(r => !herplanSet.has(String(r.id)) && (r.date || '') === (dupDt || '') && (r.time || '') === (dupTime || ''));
   if (duplicate) {
     const formattedDate = formatFullDate(dupDt);
     const formattedTime = dupTime ? ` om ${dupTime}` : '';
@@ -2872,7 +2903,7 @@ function startRound() {
   }
 
   const roundsToAdd = player2Visible ? 2 : 1;
-  if (saved.length + roundsToAdd > getRoundStorageLimit()) {
+  if (saved.length - herplanSet.size + roundsToAdd > getRoundStorageLimit()) {
     document.getElementById('roundLimitMessage').textContent =
       `Je hebt het maximum van ${getRoundStorageLimit()} opgeslagen rondes bereikt. Als je doorgaat, wordt${roundsToAdd > 1 ? 'en de oudste rondes' : ' de oudste ronde'} automatisch verwijderd. Je kunt ook eerst rondes verwijderen bij Rondes.`;
     document.getElementById('roundLimitModal').classList.remove('hidden');
@@ -2986,6 +3017,156 @@ function proceedStartRoundAfterLimitWarning() {
   startRoundConfirmed();
 }
 
+// Keuze tussen "Ronde bewerken" (speler, datum, tijd, hcp, qualifying, notitie) en
+// "Ronde resultaat" (PCC en dagresultaat). Zelfde vorm als het menu voor geplande
+// rondes, zodat de kaart één knop minder telt zonder dat er iets verdwijnt.
+function openRoundEditChoice(idx) {
+  const r = loadSavedRounds()[idx];
+  if (!r) return;
+  const titel = document.getElementById('roundEditChoiceTitle');
+  if (titel) {
+    const dagKort = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '')
+      ? WEEKDAY_ABBR[new Date(r.date + 'T00:00:00').getDay()] + ' \u00b7 ' : '';
+    titel.textContent = `${dagKort}${formatFullDate(r.date)}${r.time ? ' \u00b7 ' + r.time : ''}`;
+  }
+  const infoBtn = document.getElementById('roundEditChoiceInfo');
+  if (infoBtn) {
+    infoBtn.innerHTML = `${EDIT_ICON}<span>Ronde bewerken</span>`;
+    infoBtn.onclick = () => { sluitRoundEditChoice(); openRoundInfoModal(idx); };
+  }
+  const resBtn = document.getElementById('roundEditChoiceResult');
+  if (resBtn) {
+    resBtn.innerHTML = `${RESULT_ICON}<span>Ronde resultaat</span>`;
+    resBtn.onclick = () => { sluitRoundEditChoice(); openRoundResultModal(idx); };
+  }
+  document.getElementById('roundEditChoiceModal').classList.remove('hidden');
+}
+function sluitRoundEditChoice() {
+  document.getElementById('roundEditChoiceModal').classList.add('hidden');
+}
+const EDIT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
+const RESULT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+
+// Menu met de zelden gebruikte acties van een ronde zonder scores. De agenda-regel
+// verschijnt alleen bij een ronde die nog moet komen.
+function openPlanActions(id) {
+  const r = loadSavedRounds().find(x => String(x.id) === String(id));
+  if (!r) return;
+  const titel = document.getElementById('planActionsTitle');
+  const dagKort = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '')
+    ? WEEKDAY_ABBR[new Date(r.date + 'T00:00:00').getDay()] + ' · ' : '';
+  if (titel) titel.textContent = `${dagKort}${formatFullDate(r.date)}${r.time ? ' \u00b7 ' + r.time : ''}`;
+  const toekomst = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now();
+  const agendaBtn = document.getElementById('planActionAgenda');
+  if (agendaBtn) {
+    agendaBtn.innerHTML = `${AGENDA_ICON}<span>Zet in agenda</span>`;
+    agendaBtn.classList.toggle('hidden', !toekomst);
+    agendaBtn.onclick = () => { sluitPlanActions(); exportRoundIcs(String(id)); };
+  }
+  const herplanBtn = document.getElementById('planActionHerplan');
+  if (herplanBtn) {
+    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Opnieuw plannen</span>`;
+    herplanBtn.onclick = () => { sluitPlanActions(); herplanRonde(String(id)); };
+  }
+  document.getElementById('planActionsModal').classList.remove('hidden');
+}
+function sluitPlanActions() {
+  document.getElementById('planActionsModal').classList.add('hidden');
+}
+const HERPLAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 12 13 15 16"/><line x1="12" y1="13" x2="12" y2="19"/></svg>';
+const AGENDA_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>';
+
+// ── Ronde opnieuw plannen ────────────────────────────────────────────────
+// Alleen voor rondes zonder ENKELE score (gepland of allang verstreken): dan is er
+// niets te vervalsen. Bij een gespeelde ronde zou dit de omstandigheden achteraf
+// herschrijven en klopt het dagresultaat niet meer met wat je speelde.
+// Het startscherm wordt gevuld met de bestaande keuzes (ook die van speler 2), en de
+// oude planning verdwijnt pas als de nieuwe wordt vastgelegd — breek je af, dan blijft
+// alles staan.
+let _herplanIds = null;
+
+function herplanRonde(id) {
+  const saved = loadSavedRounds();
+  const r = saved.find(x => String(x.id) === String(id));
+  if (!r) return;
+  if ((r.playedCount ?? 0) > 0) return;
+
+  // Gekoppelde ronde op dezelfde datum en tijd (speler 2) gaat mee.
+  const maat = saved.find(x => String(x.id) !== String(r.id) && (x.playedCount ?? 0) === 0 &&
+    (x.date || '') === (r.date || '') && (x.time || '') === (r.time || ''));
+  _herplanIds = [String(r.id)].concat(maat ? [String(maat.id)] : []);
+
+  // Startscherm vullen met de bestaande keuzes. Bestaat de baan of de tee niet meer
+  // (verwijderd, of hernoemd zonder de historie mee te nemen), dan blijft de huidige
+  // keuze staan — en dat melden we, anders zie je zonder uitleg iets anders staan.
+  const kwijt = [];
+  if (r.track && COURSES[r.track]) sel.track = r.track;
+  else if (r.track) kwijt.push(`baan ${r.track}`);
+  if (r.gender) sel.gender = r.gender;
+  const teesVanBaan = (COURSES[sel.track] && COURSES[sel.track].tees) ? (COURSES[sel.track].tees[sel.gender] || {}) : {};
+  if (r.tee && teesVanBaan[r.tee]) sel.tee = r.tee;
+  else if (r.tee && COURSES[r.track]) kwijt.push(`tee ${r.tee}`);
+  if (r.date) sel.date = r.date;
+  if (r.time) sel.time = r.time;
+  sel.dateTimeEdited = true;
+  sel.qualifying = !!r.qualifying;
+  sel.chcpOverride = null;
+  const naam = document.getElementById('iName');
+  if (naam && r.player) naam.value = r.player;
+  const hcpVeld = document.getElementById('iHcp');
+  if (hcpVeld && r.hcp != null) hcpVeld.value = r.hcp;
+
+  // Speler 2 meenemen als die er was.
+  player2Visible = !!maat;
+  if (maat) {
+    if (maat.gender) sel2.gender = maat.gender;
+    if (maat.tee) sel2.tee = maat.tee;
+    sel2.qualifying = !!maat.qualifying;
+    sel2.chcpOverride = null;
+    const naam2 = document.getElementById('iName2');
+    if (naam2 && maat.player) naam2.value = maat.player;
+    const hcp2 = document.getElementById('iHcp2');
+    if (hcp2 && maat.hcp != null) hcp2.value = maat.hcp;
+  }
+
+  toonHerplanBanner(r, maat, kwijt);
+  if (typeof updatePlayer2CardVisibility === 'function') updatePlayer2CardVisibility();
+  if (typeof updatePlayer2Titles === 'function') updatePlayer2Titles();
+  rebuildAll();
+  nav('setup');
+}
+
+function toonHerplanBanner(r, maat, kwijt) {
+  const el = document.getElementById('herplanBanner');
+  if (!el) return;
+  if (!_herplanIds) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  const wanneer = `${formatFullDate(r.date)}${r.time ? ' om ' + r.time : ''}`;
+  const kwijtTekst = (kwijt && kwijt.length)
+    ? `<div style="font-weight:400;margin-top:4px">${escapeHtml(kwijt.join(' en '))} bestaat niet meer \u2014 kies opnieuw</div>` : '';
+  el.innerHTML = `<span style="flex:1">Opnieuw plannen: de ronde van ${wanneer}${maat ? ` (met ${escapeHtml(maat.player || 'speler 2')})` : ''} wordt vervangen${kwijtTekst}</span>`
+    + `<button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="annuleerHerplan()">\u00d7</button>`;
+  el.classList.remove('hidden');
+}
+
+function annuleerHerplan() {
+  _herplanIds = null;
+  const el = document.getElementById('herplanBanner');
+  if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+}
+
+// Wordt aangeroepen zodra de nieuwe ronde is vastgelegd: pas dán verdwijnt de oude.
+function ruimHerplanOp() {
+  if (!_herplanIds) return;
+  const weg = new Set(_herplanIds);
+  const saved = loadSavedRounds();
+  // De nieuwe ronde moet er echt staan voordat de oude planning verdwijnt: is het
+  // opslaan mislukt (volle opslag), dan zou verwijderen je zonder ronde achterlaten.
+  const nieuweAanwezig = saved.some(r => !weg.has(String(r.id)) && String(r.id) === String(game.id));
+  if (!nieuweAanwezig) { annuleerHerplan(); return; }
+  setRoundsAndMark(JSON.stringify(saved.filter(r => !weg.has(String(r.id)))));
+  annuleerHerplan();
+}
+
 function startRoundConfirmed() {
   const course = COURSES[sel.track];
   if (!course) return;
@@ -3086,6 +3267,7 @@ function startRoundConfirmed() {
     storage.removeItem('golf_game2_id');
   }
 
+  ruimHerplanOp();
   updatePlayerSwitchBar();
   loadSaved();
   nav('score');
@@ -3449,14 +3631,14 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       })()],
       ['PCC & Dagresultaat', null],
       ['Spelcondities (PCC)',    formatPccOrUnknown(game.pcc)],
-      ['Voorlopig (SD<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
+      ['Voorlopig (Sd<span style="font-weight:900;margin:0 3px">≈</span>)' + ((played.length === 0 || game.holes.length === 0 || played.length !== game.holes.length || (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal)))) ? '' : ' <svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'), (() => {
         const done = game.holes.length > 0 && played.length === game.holes.length;
         if (!done) return '—';
         const c = computeSD({ holes: game.holes, CR: game.CR, SR: game.SR, hcp: game.hcp, pcc: game.pcc });
         if (!c) return '—';
         return fmt1(c.value);
       })()],
-      ['Vastgesteld (SD<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 3px"><polyline points="20 6 9 17 4 12"/></svg>)', (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? fmt1(parseFloat(game.sdFinal)) : '—'],
+      ['Vastgesteld (Sd<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 3px"><polyline points="20 6 9 17 4 12"/></svg>)', (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? fmt1(parseFloat(game.sdFinal)) : '—'],
     ]],
   ];
 
@@ -3467,7 +3649,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
     rows.map(([label, value]) => {
       // value === null → groen subkopje binnen de sectie
       if (value === null) {
-        return `<div style="font-size:18px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 4px">${label}</div>`;
+        return `<div style="font-size:17px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 4px">${label}</div>`;
       }
       const cls = (alt++ % 2 === 0) ? ' alt' : '';
       return `<div class="sum-info-row${cls}">` +
@@ -3814,7 +3996,7 @@ function renderPlayerStats() {
   const periodBtn = (label, key) => {
     const disabled = pointsOf(key) < 2;
     const active = period === key && !disabled;
-    const style = `flex:1;padding:8px;font-size:15px`
+    const style = `flex:1;padding:10px 4px;font-size:17px;font-weight:700;white-space:nowrap`
       + (active ? ';background:var(--gold);color:var(--green-deep)' : '')
       + (disabled ? ';opacity:.4;pointer-events:none' : '');
     return `<button class="btn-secondary" style="${style}" ${disabled ? 'disabled' : ''} onclick="window._statChartPeriod='${key}';renderPlayerStats()">${label}</button>`;
@@ -3903,7 +4085,7 @@ function renderPlayerStats() {
   };
   const t1Avg = three(0), t2Avg = three(1), t3Avg = three(2);
 
-  const kpi = (label, val, opts = {}) => `<div style="flex:1;min-width:90px;text-align:center"><div style="font-size:26px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${opts.prefix || ''}${val}${opts.suffix || ''}</div><div style="font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
+  const kpi = (label, val, opts = {}) => `<div style="flex:1;min-width:90px;text-align:center"><div style="font-size:24px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${opts.prefix || ''}${val}${opts.suffix || ''}</div><div style="font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
   // Verwachte hcp: oranje driehoekje bij onbevestigde meetellende SD
   const hcpColor = 'var(--green-light)';
   const hcpUncertain = last20.some(roundHasWarning);
@@ -4567,8 +4749,8 @@ function renderPlayerStats() {
         const tAvg = avgSdOf(trs);
         const tDiff = avgDiffOf(trs);
         return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0 3px 24px">`
-          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:16px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}${trs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
-          + `<span style="min-width:52px;text-align:right;font-size:16px;font-weight:700">${tAvg != null ? tAvg.toFixed(1) : '—'}</span>`
+          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:17px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}${trs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
+          + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${tAvg != null ? tAvg.toFixed(1) : '—'}</span>`
           + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${tDiff != null ? fmtDiff(tDiff) : '—'}</span>`
           + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${trs.length}×</span></div>`;
       }).join('');
@@ -4723,6 +4905,7 @@ function renderPlayerStats() {
     }));
     if (!pHoles) return '';
     const drempel = getMinRoundsStat(); // zelfde drempel als overal (Marks regel)
+    const drempelHoles = drempel * 9;  // tellingen over holes rekenen in holes
 
     // Blok 1: kerngetallen, in de rijstijl van Vorm & consistentie
     const rij = (label, waarde, zebra) =>
@@ -4734,11 +4917,11 @@ function renderPlayerStats() {
     const kern = [
       ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
       ['Putts per hole', fmt1(pTot / pHoles)],
-      ...(pGir >= drempel ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
+      ...(pGir >= drempelHoles ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
       ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
       ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
-      ...(pGeenGir >= drempel ? [['Scrambling (t.o.v. ppar)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
-      ...(pGeenGir >= drempel ? [['Scrambling (t.o.v. par)', Math.round(pScramblePar / pGeenGir * 100) + '%']] : []),
+      ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. ppar)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
+      ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. par)', Math.round(pScramblePar / pGeenGir * 100) + '%']] : []),
     ].map(([l, v]) => rij(l, v, z++ % 2 === 0)).join('');
 
     // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
@@ -4793,7 +4976,7 @@ function renderPlayerStats() {
     ? { value: lowHiManualForGraph, roundId: null }
     : derivedLowHiDetailed(player, all);
   const lowHiToggleBtn = lowHiDetailForGraph.value != null
-    ? `<button onclick="toggleLowHiGraph()" title="${lowHiGraphEnabled() ? 'Low HI verbergen' : 'Low HI tonen'}" style="background:${lowHiGraphEnabled() ? 'var(--purple, #9b7fd4)' : 'none'};border:1.5px solid var(--purple, #9b7fd4);border-radius:4px;padding:2px 7px;cursor:pointer;font-size:12px;font-weight:700;color:${lowHiGraphEnabled() ? '#fff' : 'var(--purple, #9b7fd4)'}">Low HI</button>`
+    ? `<button onclick="toggleLowHiGraph()" title="${lowHiGraphEnabled() ? 'Low HI verbergen' : 'Low HI tonen'}" style="background:${lowHiGraphEnabled() ? 'var(--purple, #9b7fd4)' : 'none'};border:1.5px solid var(--purple, #9b7fd4);border-radius:4px;padding:2px 7px;cursor:pointer;font-size:13px;font-weight:700;color:${lowHiGraphEnabled() ? '#fff' : 'var(--purple, #9b7fd4)'}">Low HI</button>`
     : '';
   // Datum van de ronde die Low HI opleverde — alleen te tonen als de weergave aan staat
   // én er een gekoppelde ronde is (bij een handmatig ingevulde Low HI is die er niet).
@@ -4801,7 +4984,7 @@ function renderPlayerStats() {
     ? all.find(r => r.id === lowHiDetailForGraph.roundId)
     : null;
   const lowHiDateLine = lowHiDateRound
-    ? `<div style="font-size:14px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
+    ? `<div style="font-size:15px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
     : '';
   // ── Drie inklapbare hoofdgroepen (stand in storage, blijft dus staan tussen
   // sessies; standaard: Handicap open, Prestaties en Banen & tees dicht). De
@@ -4992,7 +5175,7 @@ function renderPlayerStats() {
     + stickyPeriodBar
     + grpHeader('handicap', 'Handicap')
     + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}><div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdChart"></div></div><div id="sdDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>${lowHiDateLine}<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
-        const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
+        const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:13px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', 'Prestaties')
@@ -5570,8 +5753,11 @@ function buildGameAnalysis() {
   const secties = [];
   const aanbev = [];
   const minN = getMinRoundsStat();
-  if (rondes.length < 3) {
-    return { secties: [{ kop: 'Nog te weinig gegevens', regels: ['Er zijn minder dan 3 afgeronde qualifying rondes. Speel er een paar en kom terug.'] }], aanbev: [], leeg: true };
+  // Drempel voor tellingen die over HOLES gaan i.p.v. over rondes: hetzelfde aantal
+  // rondes, omgerekend naar holes (negen per ronde).
+  const minHoles = minN * 9;
+  if (rondes.length < minN) {
+    return { secties: [{ kop: 'Nog te weinig gegevens', regels: [`Er ${rondes.length === 1 ? 'is' : 'zijn'} <b>${rondes.length}</b> afgeronde qualifying ronde${rondes.length === 1 ? '' : 's'}; de statistieken beginnen bij <b>${minN}</b>.`] }], aanbev: [], leeg: true };
   }
 
   // fmtDiff bestaat alleen binnen renderPlayerStats, dus hier een eigen exemplaar
@@ -5626,8 +5812,8 @@ function buildGameAnalysis() {
     const metDatum = rondes.filter(r => r.date && sdOf(r) != null);
     const groepen = [
       { label: 'Binnen 3 dagen', max: 3, sds: [] },
-      { label: '4 tot 7 dagen', max: 7, sds: [] },
-      { label: '8 tot 14 dagen', max: 14, sds: [] },
+      { label: '4 t/m 7 dagen', max: 7, sds: [] },
+      { label: '8 t/m 14 dagen', max: 14, sds: [] },
       { label: 'Langer dan 14 dagen', max: Infinity, sds: [] },
     ];
     const gaten = [];
@@ -5833,17 +6019,17 @@ function buildGameAnalysis() {
         `Green in regulation: <b>${Math.round(gir / holes * 100)}%</b> van je holes (${gir} van ${holes}).`,
         `Drie putts of meer: <b>${drie}</b> keer, <b>${Math.round(drie / holes * 100)}%</b> van je holes.`
       ];
-      if (gir >= minN) regels.push(`Op greens die je in regulation raakte: <b>${fmt1(puttsOpGir / gir)}</b> putts gemiddeld \u2014 de zuiverste maat voor je putten.`);
+      if (gir >= minHoles) regels.push(`Op greens die je in regulation raakte: <b>${fmt1(puttsOpGir / gir)}</b> putts gemiddeld \u2014 de zuiverste maat voor je putten.`);
       // Greens per par-type: laat zien of een sterk par-type aan het bereiken van de
       // green ligt of pas aan wat je er daarna mee doet.
-      const parKeysGir = Object.keys(girPerPar).map(Number).sort().filter(p => girPerPar[p].n >= minN);
+      const parKeysGir = Object.keys(girPerPar).map(Number).sort().filter(p => girPerPar[p].n >= minHoles);
       if (parKeysGir.length >= 2) {
         regels.push('Greens in regulation per par-type: ' + parKeysGir
           .map(p => `par ${p} <b>${Math.round(girPerPar[p].gir / girPerPar[p].n * 100)}%</b>`).join(', ') + '.');
       }
       // Scrambling: green gemist en toch nog par. De officiële maat is voor een
       // handicap rond de 30 vaak bijna nul, dus staat de persoonlijke par erbij.
-      if (geenGir >= minN) {
+      if (geenGir >= minHoles) {
         regels.push(`Scrambling: <b>${Math.round(scramblePpar / geenGir * 100)}%</b> t.o.v. je persoonlijke par, <b>${Math.round(scramblePar / geenGir * 100)}%</b> t.o.v. de gewone par (${geenGir} holes zonder green in regulation).`);
       }
       secties.push({ kop: 'Putten en greens', regels });
@@ -5851,7 +6037,7 @@ function buildGameAnalysis() {
       // ── Waar verlies je je slagen? ──
       // Eigen sectie: dit is een conclusie over je hele spel, niet alleen over putten.
       // De twee bedragen tellen exact op tot je verlies t.o.v. par.
-      if (holes >= minN) {
+      if (holes >= minHoles) {
         const perHole = v => v / holes;
         const deel = Math.abs(verliesTotaal) > 0.001
           ? ` (${Math.round(Math.abs(verliesVoorGreen) / (Math.abs(verliesVoorGreen) + Math.abs(verliesOpGreen)) * 100)}% v\u00f3\u00f3r de green)` : '';
@@ -5868,7 +6054,7 @@ function buildGameAnalysis() {
       {
         if (drie / holes >= 0.12) aanbev.push(`Op ${Math.round(drie / holes * 100)}% van je holes heb je drie putts of meer nodig. Dat is de snelste winst die er is: oefen lange putts op afstand (lag putting) in plaats van korte putts.`);
         if (gir / holes <= 0.15) aanbev.push('Je raakt weinig greens in regulation. Dat wijst op het lange spel of de approach, niet op je putten \u2014 richt je oefentijd daar dus op.');
-        if (gir >= minN && puttsOpGir / gir >= 2.1) aanbev.push('Op greens die je in regulation raakt heb je gemiddeld meer dan twee putts nodig. Daar liggen dus slagen op de green zelf, niet in het bereiken ervan.');
+        if (gir >= minHoles && puttsOpGir / gir >= 2.1) aanbev.push('Op greens die je in regulation raakt heb je gemiddeld meer dan twee putts nodig. Daar liggen dus slagen op de green zelf, niet in het bereiken ervan.');
       }
     }
   }
@@ -7122,7 +7308,10 @@ function doAdditiveImport(parsed) {
     imported++;
   });
   if (imported > 0) {
-    setRoundsAndMark( JSON.stringify(current.slice(0, getRoundStorageLimit())));
+    if (setRoundsAndMark(JSON.stringify(current.slice(0, getRoundStorageLimit()))) === false) {
+      showStatus('Importeren mislukt — er is niet genoeg opslagruimte.', true);
+      return;
+    }
     loadSaved();
   }
   // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
@@ -7159,7 +7348,14 @@ function doAdditiveImport(parsed) {
 function doFullRestoreImport(parsed) {
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
-  setRoundsAndMark( JSON.stringify(entries.slice(0, getRoundStorageLimit())));
+  // Vervangen is onomkeerbaar: eerst controleren of de nieuwe lijst er echt in staat.
+  // Bij een volle opslag mislukt juist de grote schrijfactie, terwijl het wissen van de
+  // actieve ronde en het bijwerken van de backupstand daarna wél zouden slagen — dan
+  // sta je met je oude archief én een verkeerde backupstand.
+  if (setRoundsAndMark(JSON.stringify(entries.slice(0, getRoundStorageLimit()))) === false) {
+    showStatus('Herstellen mislukt — er is niet genoeg opslagruimte. Je bestaande rondes zijn ongewijzigd.', true);
+    return;
+  }
   // Een volledige herstel-import ís zelf een complete backup-momentopname — ongeacht of er
   // al eerder een backup-datum bekend was. Anders zou de app direct na een schone import
   // (bv. op een nieuw toestel) ten onrechte 'geen backup' melden, terwijl de zojuist
@@ -8305,15 +8501,15 @@ function loadSaved() {
     const actionsBlock = `
       <div class="hidden orange-msg" data-round-save-msg="${r.id}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="saved-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
-        ${(!done && new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now()) ? `<button class="btn-secondary" style="padding:8px 14px" onclick="exportRoundIcs('${r.id}')" title="Zet in agenda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg></button>` : ''}<button class="btn-secondary" style="padding:8px 14px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
-        <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundInfoModal(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
-        <button class="btn-secondary" style="padding:8px 14px" onclick="openRoundResultModal(${saved.indexOf(r)})" title="Ronde resultaat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></button>
+        ${playedCount === 0 ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="event.stopPropagation(); openPlanActions('${r.id}')" title="Meer acties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>` : ''}<button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+        <button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="openRoundEditChoice(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        
         ${isActive
           ? isPlayer2Active
-            ? `<button class="btn-secondary" style="padding:8px 14px" data-round-id="${r.id}" onclick="saveAndClearPlayer2Round(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
-            : `<button class="btn-secondary" style="padding:8px 14px" data-round-id="${r.id}" onclick="saveAndClearActiveRound(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
-          : `<button class="btn-secondary" style="padding:8px 14px" onclick="loadRound(${saved.indexOf(r)})" title="Laad"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
-             ${r._justImported ? `<button class="btn-secondary" style="padding:8px 14px" data-round-id="${r.id}" onclick="archiveImportedRound(${saved.indexOf(r)}, this)" title="Sla op"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>` : ''}`}
+            ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" data-round-id="${r.id}" onclick="saveAndClearPlayer2Round(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
+            : `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" data-round-id="${r.id}" onclick="saveAndClearActiveRound(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
+          : `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="loadRound(${saved.indexOf(r)})" title="Laad"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+             ${r._justImported ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px" data-round-id="${r.id}" onclick="archiveImportedRound(${saved.indexOf(r)}, this)" title="Sla op"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>` : ''}`}
       </div>`;
     if (short) {
       // Verkorte kaart (long-press op 'groepeer op WHS'): alleen de datumregel en de
@@ -9146,6 +9342,10 @@ function openCourseEditor(courseName) {
   }
   const data = CLUBS[editorClub];
   document.getElementById('courseEditorClubName').value = data?.club || editorClub;
+  // Zelfde onderscheid als bij de clubeditor: bij een nog niet bestaande baan heet de
+  // modal "Nieuwe baan", zodat je meteen ziet dat je iets toevoegt in plaats van wijzigt.
+  const baanTitel = document.getElementById('courseEditorTitle');
+  if (baanTitel) baanTitel.textContent = courseName === '__new__' ? 'Nieuwe baan' : 'Baan bewerken';
   if (courseName === '__new__') {
     editorOrigCourseName = null;
     document.getElementById('editorCourseName').value = '';
@@ -10461,7 +10661,6 @@ function doOpenRoundResultModal(idx) {
   document.getElementById('editPccBtn').textContent = formatPcc(_editPccVal);
   const sdSrc = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
   setValidatedInput(document.getElementById('editSdInput'), (sdSrc != null && sdSrc !== '') ? String(sdSrc) : '');
-  document.getElementById('resultNoteInput').value = (isActive ? (game.note ?? round.note) : round.note) || '';
   updateEditSdHint(round);
   document.getElementById('roundResultModal').classList.remove('hidden');
 }
@@ -10633,6 +10832,8 @@ function closeRoundResultModal() {
   _roundInfoOrig = null;
 }
 
+
+
 function confirmRoundInfo() {
   const idx = _roundInfoIdx;
   if (idx === null) return;
@@ -10719,6 +10920,7 @@ function applyRoundInfo(saved, round, date, time) {
     }
   }
 }
+
 
 function confirmRoundResult() {
   const idx = _roundInfoIdx;
@@ -11333,8 +11535,9 @@ async function exportAllRounds() {
 // nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
 // van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
 function setRoundsAndMark(json) {
-  storage.setItem('golf_rounds', json);
+  const gelukt = storage.setItem('golf_rounds', json) !== false;
   try { storage.setItem('golf_rounds_changed', new Date().toISOString()); } catch (e) { /* opslag vol: niet kritiek */ }
+  return gelukt;
 }
 
 function isBackupOverdue() {
@@ -11709,6 +11912,7 @@ function nav(id) {
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
   if (id !== 'score') document.getElementById('puttOverlay')?.remove();
+  if (id !== 'setup' && typeof annuleerHerplan === 'function') annuleerHerplan();
   refreshTabDot();
   if (id === 'settings') {
     // Bij een te oude backup meteen de Gegevens-tab openen: daar staat de Status-kaart
@@ -12797,7 +13001,7 @@ document.addEventListener('focusin', (e) => {
 </script>
 <!-- Tap-to-edit modal voor kleine tee/hole invoervelden -->
 <div id="valueEditModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px;transition:transform .2s ease">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px;transition:transform .2s ease">
     <div id="valueEditLabel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center;overflow-wrap:break-word"></div>
     <div class="fg" style="margin-bottom:8px">
       <input id="valueEditInput" type="text" oninput="onValueEditInput(this)" onkeydown="if(event.key==='Enter'){confirmValueEdit();}" onblur="if(this.type==='text') this.value=this.value.trim()">
@@ -12814,7 +13018,7 @@ document.addEventListener('focusin', (e) => {
 
 <!-- Keuze-modal voor vaste waarden (geslacht, par) -->
 <div id="choiceEditModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div id="choiceEditLabel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center;overflow-wrap:break-word"></div>
     <div id="choiceEditOptions" style="display:flex;flex-direction:column;gap:8px"></div>
     <div id="choiceEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;margin-top:8px"></div>
@@ -12829,7 +13033,7 @@ document.addEventListener('focusin', (e) => {
 
 <!-- Waarschuwing: opslaglimiet voor rondes bijna bereikt -->
 <div id="roundLimitModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div class="error-msg" style="font-size:20px;color:var(--red);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Opslaglimiet bereikt</div>
     <div id="roundLimitMessage" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5;overflow-wrap:break-word"></div>
     <div style="display:flex;gap:8px">
@@ -12840,7 +13044,7 @@ document.addEventListener('focusin', (e) => {
 </div>
 
 <div id="confirmModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:700;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div id="confirmModalTitle" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Dubbele datum & tijd</div>
     <div id="confirmModalMessage" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5;overflow-wrap:break-word"></div>
     <div style="display:flex;gap:8px">
@@ -12864,7 +13068,7 @@ document.addEventListener('focusin', (e) => {
 
 <!-- Bevestigingsmodal voor alles wissen (rode stijl) -->
 <div id="resetAllModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div class="error-msg" id="dangerModalTitle" style="font-size:20px;color:var(--red);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Alles wissen</div>
     <div id="dangerModalMessage" style="font-size:20px;font-weight:400;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Alle clubs, rondes en instellingen worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</div>
     <div style="display:flex;gap:8px">
@@ -12873,16 +13077,44 @@ document.addEventListener('focusin', (e) => {
     </div>
   </div>
 </div>
+<!-- Menu met de acties die je zelden gebruikt (agenda-export, opnieuw plannen).
+     Bewust géén twee-staps-bevestiging: die is in deze app voorbehouden aan keuzes die
+     iets veranderen of vernietigen, en dat doet geen van beide hier. -->
+<!-- Keuze tussen de twee bewerkvensters. Ze zijn bewust NIET samengevoegd tot één
+     venster met tabbladen: het Ronde-venster heeft zes velden en het Resultaat-venster
+     drie, waardoor de modal bij elke tabwissel in hoogte verspringt. -->
+<div id="roundEditChoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
+    <div id="roundEditChoiceTitle" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-secondary" id="roundEditChoiceInfo" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
+      <button class="btn-secondary" id="roundEditChoiceResult" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
+      <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px" onclick="sluitRoundEditChoice()">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<div id="planActionsModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
+    <div id="planActionsTitle" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-secondary" id="planActionAgenda" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
+      <button class="btn-secondary" id="planActionHerplan" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
+      <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px" onclick="sluitPlanActions()">Annuleren</button>
+    </div>
+  </div>
+</div>
+
 <!-- Clubnaam gewijzigd: bestaande rondes meenemen of niet? Rondes bewaren de clubnaam
      als KOPIE (net als CR/SR/par), zodat een ronde blijft kloppen als de club later
      verandert of verdwijnt. Bij hernoemen moet je dus kiezen wat er met de historie
      gebeurt — anders staat dezelfde club straks dubbel in de statistieken. -->
 <div id="clubRenameModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:360px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Naam gewijzigd</div>
     <div id="clubRenameText" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn-primary" style="width:100%;padding:12px;font-size:17px" onclick="clubRenameKeuze(true)">Alles aanpassen</button>
+      <button class="btn-primary" style="width:100%;padding:12px;font-size:20px" onclick="clubRenameKeuze(true)">Alles aanpassen</button>
       <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px" onclick="clubRenameKeuze(false)">Alleen nieuwe rondes</button>
     </div>
   </div>
@@ -12890,7 +13122,7 @@ document.addEventListener('focusin', (e) => {
 
 <!-- Bevestigingsmodal voor editor sluiten met onopgeslagen wijzigingen -->
 <div id="closeEditorWarningModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:650;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:320px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div class="error-msg" style="font-size:20px;color:var(--red);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Niet opgeslagen</div>
     <div style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Je hebt wijzigingen die nog niet zijn opgeslagen. Weet je zeker dat je wilt sluiten?</div>
     <div style="display:flex;gap:8px">
@@ -12902,14 +13134,14 @@ document.addEventListener('focusin', (e) => {
 
 <div id="clubSearchModalOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;overflow-y:auto;padding:12px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
-    <h2 style="margin:0 0 14px;font-size:20px;font-weight:800;color:var(--white)">Kies een club</h2>
+    <h2 style="margin:0 0 14px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Kies een club</h2>
     <div class="fg" style="margin-bottom:14px">
       <input id="clubSearchModalInput" type="text" placeholder="Zoek een club..." oninput="renderClubSearchModalList()">
     </div>
     <div id="clubSearchModalList" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px" onclick="closeClubSearchModal()">Annuleren</button>
-      <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="confirmClubSearchModal()">OK</button>
+      <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="confirmClubSearchModal()">OK</button>
     </div>
   </div>
 </div>
@@ -12917,7 +13149,7 @@ document.addEventListener('focusin', (e) => {
 <div id="clubEditorOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;overflow-y:auto;padding:12px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h2 id="clubEditorTitle" style="margin:0;font-size:20px;font-weight:800;color:var(--white)">Club bewerken</h2>
+      <h2 id="clubEditorTitle" style="margin:0;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Club bewerken</h2>
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeClubEditor()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:10px">
@@ -12935,7 +13167,7 @@ document.addEventListener('focusin', (e) => {
     <div id="clubEditorStatus" style="font-size:17px;font-weight:700;text-align:center;display:none;margin-bottom:8px"></div>
     <div id="clubDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:18px">
-      <button class="btn-secondary" id="deleteClubBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteClubFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
+      <button class="btn-secondary" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteClubFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
       <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="saveClubFromEditor()">Opslaan</button>
     </div>
 
@@ -12948,7 +13180,7 @@ document.addEventListener('focusin', (e) => {
 <div id="courseEditorOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:450;overflow-y:auto;padding:12px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--white)" id="courseEditorTitle">Baan bewerken</h2>
+      <h2 id="courseEditorTitle" style="margin:0;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Baan bewerken</h2>
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeCourseEditor()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:14px">
@@ -12962,7 +13194,7 @@ document.addEventListener('focusin', (e) => {
     <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('tees')">
       <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Tees</span>
       <span id="editorTeesCount" style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px"></span>
-      <span class="editor-section-arrow" data-section="tees" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
+      <span class="editor-section-arrow" data-section="tees" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;line-height:0;color:var(--green-light);vertical-align:middle"><svg width="14" height="14" viewBox="0 0 10 10" style="display:block"><polygon points="2,1.5 2,8.5 8,5" fill="currentColor"/></svg></span></span>
     </div>
     <div id="editorTeesWrap" class="hidden">
       <div id="editorTees" style="margin:4px 0 8px;display:flex;flex-direction:column;gap:6px"></div>
@@ -12978,7 +13210,7 @@ document.addEventListener('focusin', (e) => {
     <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('holes')">
       <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Holes</span>
       <span id="editorHolesCount" style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px"></span>
-      <span class="editor-section-arrow" data-section="holes" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
+      <span class="editor-section-arrow" data-section="holes" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;line-height:0;color:var(--green-light);vertical-align:middle"><svg width="14" height="14" viewBox="0 0 10 10" style="display:block"><polygon points="2,1.5 2,8.5 8,5" fill="currentColor"/></svg></span></span>
     </div>
     <div id="editorHolesWrap" class="hidden">
       <div id="editorHoles"></div>
@@ -12988,8 +13220,8 @@ document.addEventListener('focusin', (e) => {
       <div id="editorStatus" style="font-size:20px;font-weight:700;text-align:center;display:none"></div>
       <div id="courseDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:20px;font-weight:700;text-align:center">Tik nogmaals om te bevestigen</div>
       <div style="display:flex;gap:8px;align-items:stretch">
-        <button class="btn-secondary" id="deleteCourseBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteCourseFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
-        <button class="btn-primary" id="editorSaveBtn" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="saveCourseFromEditor()">Opslaan</button>
+        <button class="btn-secondary" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteCourseFromEditor(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
+        <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="saveCourseFromEditor()">Opslaan</button>
       </div>
     </div>
   </div>
@@ -12997,7 +13229,7 @@ document.addEventListener('focusin', (e) => {
 <!-- Datum/tijd bewerken modal -->
 <div id="roundInfoModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--white)">Ronde bewerken</h2>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Ronde bewerken</h2>
     <div class="fg" style="margin-bottom:14px">
       <label>Speler</label>
       <input id="editPlayerInput" type="text" maxlength="50" placeholder="Naam speler" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()" onchange="if(!this.value && _roundInfoOrig) this.value=_roundInfoOrig.player||''">
@@ -13028,16 +13260,15 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
     <div style="display:flex;gap:8px;align-items:stretch">
-      <button class="btn-secondary" id="deleteRoundBtn" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteRoundFromInfoModal(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
+      <button class="btn-secondary" style="width:56px;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteRoundFromInfoModal(this)"><span class="delete-icon" style="vertical-align:middle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></span></button>
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeRoundInfoModal()">Annuleren</button>
       <button class="btn-primary" style="flex:1;padding:12px;margin-top:0;font-size:20px" onclick="confirmRoundInfo()">Opslaan</button>
     </div>
   </div>
 </div>
-
 <div id="roundResultModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--white)">Ronde resultaat</h2>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Ronde resultaat</h2>
     <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
       <tr>
         <td style="padding:0 0 10px;vertical-align:middle"><label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Spelcondities (PCC)</label></td>
@@ -13074,10 +13305,50 @@ document.addEventListener('focusin', (e) => {
     </div>
   </div>
 </div>
+
+<!-- Keuze-modal voor vaste waarden (geslacht, par) -->
+
+
+
+
+<!-- Waarschuwing: opslaglimiet voor rondes bijna bereikt -->
+
+
+
+
+<!-- Analyse van je spel: regelgebaseerd rapport + kopieerknop voor een AI-gesprek -->
+
+
+<!-- Bevestigingsmodal voor alles wissen (rode stijl) -->
+
+<!-- Menu met de acties die je zelden gebruikt (agenda-export, opnieuw plannen).
+     Bewust géén twee-staps-bevestiging: die is in deze app voorbehouden aan keuzes die
+     iets veranderen of vernietigen, en dat doet geen van beide hier. -->
+
+
+<!-- Clubnaam gewijzigd: bestaande rondes meenemen of niet? Rondes bewaren de clubnaam
+     als KOPIE (net als CR/SR/par), zodat een ronde blijft kloppen als de club later
+     verandert of verdwijnt. Bij hernoemen moet je dus kiezen wat er met de historie
+     gebeurt — anders staat dezelfde club straks dubbel in de statistieken. -->
+
+
+<!-- Bevestigingsmodal voor editor sluiten met onopgeslagen wijzigingen -->
+
+
+
+
+
+
+
+<!-- Datum/tijd bewerken modal -->
+
+</div>
+
+
 <!-- Speler 2 instellen modal (favoriet/standaard) -->
 <div id="player2SettingsModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
-    <h2 id="player2ModalTitle" style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--white)"></h2>
+    <h2 id="player2ModalTitle" style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px"></h2>
     <div class="fg" style="margin-bottom:14px">
       <label>Naam</label>
       <input id="player2ModalName" type="text" maxlength="50" placeholder="Naam speler 2" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()">
