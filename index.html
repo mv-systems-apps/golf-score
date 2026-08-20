@@ -24,7 +24,7 @@
     // Registreer de service worker al hier, zodat installatie/offline-gebruik
     // ook werkt als de gebruiker precies op index.html landt vóór de doorverwijzing.
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('./sw-golf-score.js')
         .catch(() => { /* service worker niet beschikbaar (bijv. file://) */ });
     }
     // Vervang de historie-ingang, zodat "terug" niet in een lus belandt.
