@@ -1184,7 +1184,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0B8</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0BA</div>
 </div>
 
 <script>
@@ -12988,12 +12988,13 @@ document.addEventListener('focusin', (e) => {
   setTimeout(() => { adjustThirdHeaderRow(); updateHeaderHeight(); }, 100);
 
   // ── PWA: registreer service worker voor offline gebruik ──
-  // Vereist een los bestand sw.js naast dit HTML-bestand (werkt op https / GitHub Pages,
-  // niet vanaf file://). Registratie via een echt bestand geeft de juiste scope zodat
-  // paginanavigatie offline wordt onderschept.
+  // Vereist een los bestand sw-golf-score.js naast dit HTML-bestand (werkt op https /
+  // GitHub Pages, niet vanaf file://). Registratie via een echt bestand geeft de juiste
+  // scope zodat paginanavigatie offline wordt onderschept. De naam bevat de app, zodat
+  // meerdere apps in dezelfde repo elkaars service worker niet overschrijven.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('./sw-golf-score.js')
         .catch(() => { /* service worker niet beschikbaar (bijv. file://) */ });
     });
   }
@@ -13330,19 +13331,6 @@ document.addEventListener('focusin', (e) => {
      als KOPIE (net als CR/SR/par), zodat een ronde blijft kloppen als de club later
      verandert of verdwijnt. Bij hernoemen moet je dus kiezen wat er met de historie
      gebeurt — anders staat dezelfde club straks dubbel in de statistieken. -->
-
-
-<!-- Bevestigingsmodal voor editor sluiten met onopgeslagen wijzigingen -->
-
-
-
-
-
-
-
-<!-- Datum/tijd bewerken modal -->
-
-</div>
 
 
 <!-- Speler 2 instellen modal (favoriet/standaard) -->
