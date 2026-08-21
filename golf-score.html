@@ -338,6 +338,12 @@
     .active-bg { background: rgba(255,255,255,.28) !important; border-color: rgba(255,255,255,.45) !important; }
     .delete-icon { color: var(--white); }
     .btn-secondary:active { transform: scale(.95); }
+    /* Hoofdactie op een kaart (laden, pauzeren, gereed). Bewust een KLASSE en geen
+       eigen stijl op het element: de bevestigingslogica zet tijdelijk een oranje
+       achtergrond via een eigen stijl en wist die daarna weer — stond het goud daar
+       ook, dan verdween het mee en bleef de knop grijs achter. Het extra gewicht
+       (html …) is nodig omdat de lichte modus .btn-secondary specifieker aanspreekt. */
+    html .btn-secondary.btn-main { background: var(--gold); color: var(--green-deep); border-color: var(--gold); }
     .btn-secondary.confirm { background: rgba(201,168,76,.22); border-color: rgba(201,168,76,.5); color: var(--gold); font-size:24px; padding: 6px 14px; }
     /* hole cards */
 
@@ -1184,7 +1190,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0BA</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0C4</div>
 </div>
 
 <script>
@@ -2874,6 +2880,9 @@ function startRound() {
   if (player2Visible) {
     const name2 = document.getElementById('iName2').value.trim();
     if (!name2) { showStartError('Voer een naam in voor speler 2'); return; }
+    // Twee keer dezelfde naam levert twee identieke rondes op dezelfde datum en tijd op,
+    // en die worden verderop als duplicaat gemeld. Hier tegenhouden is duidelijker.
+    if (name2 === name) { showStartError('Speler 2 heeft dezelfde naam als speler 1'); return; }
     const hcp2 = parseFloat(document.getElementById('iHcp2').value.replace(',', '.'));
     if (isNaN(hcp2)) { showStartError('Vul handicap in voor speler 2'); return; }
     if (hcp2 < -10 || hcp2 > 54) { showStartError('<span style="color:var(--red)">Hcp van speler 2 moet tussen -10.0 en 54.0 liggen</span>'); return; }
@@ -3087,14 +3096,27 @@ let _herplanIds = null;
 
 function herplanRonde(id) {
   const saved = loadSavedRounds();
-  const r = saved.find(x => String(x.id) === String(id));
+  let r = saved.find(x => String(x.id) === String(id));
   if (!r) return;
   if ((r.playedCount ?? 0) > 0) return;
 
-  // Gekoppelde ronde op dezelfde datum en tijd (speler 2) gaat mee.
-  const maat = saved.find(x => String(x.id) !== String(r.id) && (x.playedCount ?? 0) === 0 &&
-    (x.date || '') === (r.date || '') && (x.time || '') === (r.time || ''));
-  _herplanIds = [String(r.id)].concat(maat ? [String(maat.id)] : []);
+  // Gekoppelde ronde op dezelfde datum en tijd (speler 2) gaat mee. Wel van een ÁNDERE
+  // speler: staat er om wat voor reden dan ook een tweede ronde van dezelfde persoon op
+  // dat tijdstip, dan zou die als "speler 2" worden ingevuld en ontstaan er bij het
+  // starten twee rondes van dezelfde speler — een echt duplicaat.
+  let hoofd = r;
+  let maat = saved.find(x => String(x.id) !== String(r.id) && (x.playedCount ?? 0) === 0 &&
+    (x.date || '') === (r.date || '') && (x.time || '') === (r.time || '') &&
+    (x.player || '') !== (r.player || ''));
+  // Tik je op de kaart van de medespeler, dan zou die als speler 1 worden ingevuld en
+  // jij als speler 2. De eigen speler hoort altijd speler 1 te zijn.
+  const eigenNaam = typeof startPlayerName === 'function' ? startPlayerName() : null;
+  if (maat && eigenNaam && maat.player === eigenNaam && r.player !== eigenNaam) {
+    hoofd = maat;
+    maat = r;
+  }
+  r = hoofd;
+  _herplanIds = [String(hoofd.id)].concat(maat ? [String(maat.id)] : []);
 
   // Startscherm vullen met de bestaande keuzes. Bestaat de baan of de tee niet meer
   // (verwijderd, of hernoemd zonder de historie mee te nemen), dan blijft de huidige
@@ -3118,6 +3140,7 @@ function herplanRonde(id) {
 
   // Speler 2 meenemen als die er was.
   player2Visible = !!maat;
+  storage.setItem('golf_player2_visible', maat ? '1' : '0');
   if (maat) {
     if (maat.gender) sel2.gender = maat.gender;
     if (maat.tee) sel2.tee = maat.tee;
@@ -8506,9 +8529,9 @@ function loadSaved() {
         
         ${isActive
           ? isPlayer2Active
-            ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" data-round-id="${r.id}" onclick="saveAndClearPlayer2Round(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
-            : `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" data-round-id="${r.id}" onclick="saveAndClearActiveRound(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
-          : `<button class="btn-secondary" style="padding:8px 14px;min-height:39px;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="loadRound(${saved.indexOf(r)})" title="Laad"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+            ? `<button class="btn-secondary btn-main" style="padding:8px 14px;min-height:39px" data-round-id="${r.id}" onclick="saveAndClearPlayer2Round(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
+            : `<button class="btn-secondary btn-main" style="padding:8px 14px;min-height:39px" data-round-id="${r.id}" onclick="saveAndClearActiveRound(this)" title="${done ? 'Gereed' : 'Pauzeren'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle">${done ? '<rect x="5" y="5" width="14" height="14" rx="1"/>' : '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'}</svg></button>`
+          : `<button class="btn-secondary btn-main" style="padding:8px 14px;min-height:39px" onclick="loadRound(${saved.indexOf(r)})" title="Laad"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
              ${r._justImported ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px" data-round-id="${r.id}" onclick="archiveImportedRound(${saved.indexOf(r)}, this)" title="Sla op"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>` : ''}`}
       </div>`;
     if (short) {
