@@ -1190,7 +1190,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0C6</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0C7</div>
 </div>
 
 <script>
@@ -7346,12 +7346,12 @@ function doAdditiveImport(parsed) {
   // beeld — dan mag de backup-datum niet 'ongewijzigd' blijven, want die bestond nog niet.
   // Vóór nav('archive') gezet, zodat de banner meteen met de juiste staat rendert.
   if (storage.getItem('golf_last_backup_date')) {
-    storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+    storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
     naBackupBijwerken();
   } else {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
-    storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+    storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
     naBackupBijwerken();
   }
   // Blijft in Instellingen staan (net als bij het importeren van clubs) i.p.v. weg te
@@ -7385,7 +7385,7 @@ function doFullRestoreImport(parsed) {
   // geïmporteerde data feitelijk de meest actuele, volledige stand al vertegenwoordigt.
   storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
-  storage.setItem('golf_last_backup_count', String(entries.length));
+  storage.setItem('golf_last_backup_count', String(afgerondeRondesCount(entries)));
   naBackupBijwerken();
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
@@ -11544,7 +11544,7 @@ async function exportAllRounds() {
     // Back-upstatus vastleggen en herinnering verbergen
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
-    storage.setItem('golf_last_backup_count', String(loadSavedRounds().length));
+    storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
     naBackupBijwerken();
     updateLastBackupDisplay();
   } catch(e) { console.error('Backup rondes mislukt:', e); }
@@ -11563,9 +11563,21 @@ function setRoundsAndMark(json) {
   return gelukt;
 }
 
+// Aantal rondes dat een backup daadwerkelijk meeneemt: alleen afgeronde rondes, dus
+// niet de actieve, de geplande, de gepauzeerde of de zojuist geïmporteerde.
+function afgerondeRondesCount(lijst) {
+  const activeId = storage.getItem('golf_active_id');
+  return (lijst || loadSavedRounds()).filter(r => {
+    if (String(r.id) === activeId) return false;
+    if (r._justImported) return false;
+    const gespeeld = r.playedCount ?? r.holes?.filter(h => h.score !== null).length ?? 0;
+    const totaal = r.holesCount ?? r.holes?.length ?? 0;
+    return totaal > 0 && gespeeld >= totaal;
+  }).length;
+}
+
 function isBackupOverdue() {
-  const rounds = loadSavedRounds();
-  const total = rounds.length;
+  const total = afgerondeRondesCount();
   if (total === 0) return false;
   const lastDate = storage.getItem('golf_last_backup_date');
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
@@ -11621,7 +11633,7 @@ function updateLastBackupDisplay() {
 function toonNieuweRondesRegel(overdue) {
   const el = document.getElementById('newRoundsInfo');
   if (!el) return;
-  const total = loadSavedRounds().length;
+  const total = afgerondeRondesCount();
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
   // De app weet WEL hoeveel rondes erbij kwamen, maar NIET hoeveel er bewerkt zijn —
