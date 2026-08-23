@@ -900,7 +900,9 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Naar volgende hole</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: na het bevestigen van een score springt de app naar de eerstvolgende hole zonder score. Corrigeer je een hole die al een score had, dan blijf je staan. Werkt niet samen met putts bijhouden: dan blijft de puttregel in beeld.</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: na het bevestigen van een score springt de app naar de eerstvolgende hole zonder score.</div>
+            <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="more-full">Corrigeer je een hole die al een score had, dan blijf je staan. Bij een gat in de rij wordt vooruit gekeken: je springt niet terug naar een overgeslagen hole. Werkt niet samen met putts bijhouden — dan blijft de puttregel bij de hole in beeld staan.</div>
       </div>
       <label class="switch"><input type="checkbox" id="autoNextToggle" onchange="toggleAutoNext()"><span class="slider"></span></label>
     </div>
@@ -911,7 +913,9 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Putts bijhouden</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: bij het invullen van een score kun je in hetzelfde venster het aantal putts kiezen (0 t/m 5). Tel alleen slagen vanaf de green — een chip of putt vanaf de fringe telt dus niet mee. Rondes zonder putts blijven zonder putts.</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: bij het invullen van een score kun je ook putts invullen.</div>
+            <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="more-full">Je kiest 0 tot en met 5 putts. Tel alleen slagen vanaf de green: een chip of een putt vanaf de fringe telt dus niet mee. Rondes die je eerder speelde blijven zonder putts; pas als je een hole aanpast krijgt die een puttwaarde. Zet je de instelling weer uit, dan blijven de putts die je al invulde gewoon bewaard.</div>
       </div>
       <label class="switch"><input type="checkbox" id="trackPuttsToggle" onchange="toggleTrackPutts()"><span class="slider"></span></label>
     </div>
@@ -921,7 +925,9 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Putts in statistieken</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: rondes waarin je alle putts hebt ingevuld leveren extra cijfers op in "Analyseer mijn spel" — putts per ronde, greens in regulation, drie-putts en putts per green.</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: rondes met volledige putts leveren extra cijfers op.</div>
+            <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="more-full">Het gaat om putts per ronde, greens in regulation, drie-putts en putts per green. Ze verschijnen op het Statistieken-scherm en in "Analyseer mijn spel". Alleen rondes waarin élke gespeelde hole een puttwaarde heeft tellen mee.</div>
       </div>
       <label class="switch"><input type="checkbox" id="puttsStatsToggle" onchange="togglePuttsStats()"><span class="slider"></span></label>
     </div>
@@ -1210,7 +1216,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0EB</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F0</div>
 </div>
 
 <script>
