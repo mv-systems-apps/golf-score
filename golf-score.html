@@ -582,14 +582,14 @@
       <button class="btn-secondary" id="addPlayer2Btn" onclick="togglePlayer2()" style="padding:8px 14px;font-size:20px" title="Speler 2 toevoegen"><svg id="addPlayer2IconPlus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><svg id="addPlayer2IconMinus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle" class="hidden"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
     </div>
     <div class="fg">
-      <label>Naam</label>
+      <label for="iName">Naam</label>
       <input id="iName" type="text" placeholder="Jouw naam" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,''); savePlayerProfile()" onblur="this.value=this.value.trim(); savePlayerProfile()" />
     </div>
     <div class="fg">
       <label>Handicap</label>
       <div style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
-      <input id="iHcp" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
+      <input id="iHcp" type="text" aria-label="Handicap" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayerProfile(); this.blur();}" />
       <div class="chcp-override-row hidden" id="hcpOverrideRow">
@@ -611,11 +611,11 @@
       </div>
     </div>
     <div class="fg">
-      <label>Naam</label>
+      <label for="iName2">Naam</label>
       <input id="iName2" type="text" placeholder="Naam speler 2" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,''); savePlayer2Profile(); updateFavPlayer2Star()" onblur="this.value=this.value.trim(); savePlayer2Profile(); updateFavPlayer2Star()" />
     </div>
     <div class="fg">
-      <label>Handicap</label>
+      <label for="iHcp2">Handicap</label>
       <div id="hcpRangeMsg2" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="iHcp2" type="text" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayer2Profile()" onchange="onHcpBlur(this)"
@@ -627,13 +627,13 @@
       <h2 style="margin:0">Datum & tijd</h2>
       <button class="btn-secondary" id="btnNow" onclick="setDateTimeNow(this)" style="padding:8px 14px"><svg id="btnNowIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
     </div>
-    <div id="dateFutureWarn" class="hidden orange-msg" style="color:var(--orange);font-size:20px;font-weight:700;margin-bottom:12px">Let op: de gekozen datum ligt verder dan volgende week zondag</div>
+    <div id="dateFutureWarn" class="hidden orange-msg" style="color:var(--orange);font-size:20px;font-weight:700;margin-bottom:12px">Na volgende week</div>
     <div style="display:flex;gap:8px">
       <div class="fg" style="flex:1;margin-bottom:0">
-        <input id="iDate" type="date" onchange="onDateTimeChange()" />
+        <input id="iDate" type="date" aria-label="Datum van de ronde" onchange="onDateTimeChange()" />
       </div>
       <div class="fg" style="flex:1;margin-bottom:0">
-        <input id="iTime" type="time" onchange="onDateTimeChange()" />
+        <input id="iTime" type="time" aria-label="Starttijd van de ronde" onchange="onDateTimeChange()" />
       </div>
     </div>
     <input id="iDateTime" type="datetime-local" style="display:none" />
@@ -758,7 +758,7 @@
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
     <div id="archiveDateErrMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">Ongeldige datum</div>
     <div style="position:relative">
-      <input id="archiveSearch" type="text" placeholder="Club, baan, speler, notitie, datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
+      <input id="archiveSearch" aria-label="Zoeken in rondes" type="text" placeholder="Club, baan, speler, notitie, datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
       <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', loadSaved)" title="Wissen">&times;</button>
     </div>
   </div>
@@ -783,7 +783,7 @@
   </div>
   <div class="fg hidden" id="clubSearchWrap" style="margin-bottom:14px">
     <div style="position:relative">
-      <input id="clubSearch" type="text" placeholder="Club" oninput="buildClubList()" style="padding-right:40px">
+      <input id="clubSearch" aria-label="Zoeken in clubs" type="text" placeholder="Club" oninput="buildClubList()" style="padding-right:40px">
       <button id="clubSearchClear" class="search-clear hidden" onclick="clearSearchField('clubSearch', buildClubList)" title="Wissen">&times;</button>
     </div>
   </div>
@@ -810,10 +810,18 @@
 
 <div id="screen-settings" class="screen">
   <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Instellingen</button>
+    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Algemeen</button>
     <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">WHS</button>
     <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Gegevens</button>
   </div>
+  <!-- Backupstand: koploos blokje onder de tabknoppen, BUITEN de drie tabbladen zodat
+       het overal zichtbaar is. Stond eerst achter de kop "Backup" op de Gegevens-tab
+       en zat daar verstopt — zeker nu de secties standaard ingeklapt zijn. -->
+  <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Backup', 'exportCard');">
+    <div id="lastBackupInfoTop" style="font-size:17px;color:var(--muted)"></div>
+    <div id="newRoundsInfoTop" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px"></div>
+  </div>
+
   <div id="settingsTabMain">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Weergave</div>
   <div class="card">
@@ -888,6 +896,15 @@
       <label class="switch"><input type="checkbox" id="badWeatherToggle" onchange="toggleBadWeather()"><span class="slider"></span></label>
     </div>
   </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Naar volgende hole</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: na het bevestigen van een score springt de app naar de eerstvolgende hole zonder score. Corrigeer je een hole die al een score had, dan blijf je staan. Werkt niet samen met putts bijhouden: dan blijft de puttregel in beeld.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="autoNextToggle" onchange="toggleAutoNext()"><span class="slider"></span></label>
+    </div>
+  </div>
 
     <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Putts en greens</div>
   <div class="card">
@@ -942,7 +959,7 @@
     </div>
     <div class="fg" style="margin-bottom:0">
       <div id="lowHiRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
-      <input id="lowHiInput" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
+      <input id="lowHiInput" aria-label="Laagste handicap (Low HI)" type="text" inputmode="decimal" placeholder="bijv. 12.4" oninput="previewLowHi(this)" onblur="saveLowHi(this)">
       <div style="font-size:17px;color:var(--muted);font-weight:700;margin-top:6px"><span id="derivedLowHiWarn" class="hidden" style="margin-right:4px"></span>Low HI <span id="derivedLowHiVal" style="color:var(--green-light)">—</span><span id="derivedLowHiDate"></span></div>
       <div id="derivedLowHiSpan" style="font-size:15px;color:var(--muted);margin-top:2px"></div>
       <div id="lowHiStaleWarning" class="hidden" style="font-size:17px;color:var(--orange);font-weight:700;margin-top:6px"></div>
@@ -1093,9 +1110,12 @@
   </div>
   <div id="settingsTabData" class="hidden">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
-  <div class="card">
-    <div id="lastBackupInfo" style="font-size:17px;color:var(--muted);margin-bottom:4px">Nog nooit geëxporteerd</div>
-    <div id="newRoundsInfo" class="hidden" style="font-size:17px;color:var(--muted);margin-bottom:10px"></div>
+  <div class="card" id="exportCard">
+    <!-- De backupstand staat nu in het blokje bovenaan (backupStatusTop), zichtbaar op
+         alle drie de tabbladen. Deze twee elementen blijven bestaan maar zijn verborgen:
+         updateLastBackupDisplay vult ze en kopieert de inhoud naar boven. -->
+    <div id="lastBackupInfo" style="display:none"></div>
+    <div id="newRoundsInfo" class="hidden" style="display:none"></div>
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
@@ -1154,7 +1174,7 @@
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-          <input type="range" id="roundLimitSlider" min="20" max="500" step="20" value="300" style="flex:1;touch-action:pan-y" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
+          <input type="range" id="roundLimitSlider" aria-label="Maximum aantal opgeslagen rondes" min="20" max="500" step="20" value="300" style="flex:1;touch-action:pan-y" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
           <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
         </div>
         <div style="font-size:17px;color:var(--muted)">Je hebt <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
@@ -1190,7 +1210,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0C7</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0EB</div>
 </div>
 
 <script>
@@ -1232,6 +1252,10 @@ function rebuildCourseLookup() {
 }
 
 function saveClubsToStorage() {
+  if (clubsOnleesbaar) {
+    console.warn('Opslaan geweigerd: de opgeslagen clubgegevens zijn niet leesbaar.');
+    return;
+  }
   try {
     storage.setItem('golf_clubs', JSON.stringify(CLUBS));
   } catch(e) {
@@ -1243,6 +1267,8 @@ function saveClubsToStorage() {
     }
   }
 }
+
+let clubsOnleesbaar = false;
 
 function loadClubsFromStorage() {
   try {
@@ -1263,7 +1289,12 @@ function loadClubsFromStorage() {
         }
       });
     });
-  } catch(e) { /* corrupte data, val terug op ingebouwde data */ }
+  } catch(e) {
+    // Zelfde bescherming als bij de rondes: melden en niet meer over de opgeslagen
+    // clubgegevens heen schrijven, zodat ze met een backup te herstellen blijven.
+    console.error('Clubgegevens konden niet worden gelezen (corrupte data):', e);
+    if (!clubsOnleesbaar) { clubsOnleesbaar = true; meldOnleesbaar('clubs'); }
+  }
 }
 // Initiële club-data wordt geladen nadat 'storage' is gedefinieerd (zie verderop)
 
@@ -1369,6 +1400,8 @@ function roundHasWarning(r) {
   // Alleen waarschuwen als de ronde qua scores af is: bij geplande en lopende rondes
   // is een ontbrekend dagresultaat vanzelfsprekend, geen probleem.
   const holesW = isCurrentPlayerR ? (game.holes || []) : (r.holes || []);
+  // Bewust GEEN isRondeAf(r): holesW is voor de huidige speler het LIVE game-object,
+  // waarvan de tellers pas bij het opslaan worden bijgewerkt.
   const isDoneW = holesW.length > 0 && holesW.every(h => h.score !== null);
   return !!(isDoneW && qualifying && !hasValidSd);
 }
@@ -1564,7 +1597,7 @@ function computeEsrAdjustmentsIncremental(chronoRounds) {
 // Bouwt voor een speler de volledige chronologische (oudst-eerst) reeks dagresultaten op
 // en berekent daarmee de esrMap voor whsHandicap() — de vervanging van de oude priorHiFor().
 function esrMapFor(player, allRounds) {
-  const isDoneR = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDoneR = r => isRondeAf(r);
   const chrono = allRounds
     .filter(r => r.player === player && r.qualifying && isDoneR(r))
     .map(r => {
@@ -1628,7 +1661,7 @@ function whsHandicap(rounds, lowHi = null, esrMap = null) {
 
 // Verzamelt de laatste 20 afgeronde qualifying rondes van een speler (nieuwste eerst).
 function last20Qualifying(player, allRounds, activeId, game2Id_) {
-  const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDone = r => isRondeAf(r);
   return allRounds
     .filter(r => r.player === player && r.qualifying && isDone(r)
       && !(game2Id_ && r.id === game2Id_))
@@ -1649,7 +1682,7 @@ function last20Qualifying(player, allRounds, activeId, game2Id_) {
 // zodat een ervaren speler die net begint met de app niet meteen tegen een voorbarige
 // waarschuwing aanloopt op basis van een paar net-gelogde rondes.
 function lowHiCheckStatus(player, allRounds) {
-  const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDone = r => isRondeAf(r);
   const qual = allRounds.filter(r => r.player === player && r.qualifying && isDone(r));
   const roundsCount = qual.length;
   let daysSinceFirst = 0;
@@ -1679,7 +1712,7 @@ function currentOfficialHcp(player, allRounds) {
 // opleverde — nodig om dat punt in de verloopgrafiek te kunnen markeren. derivedLowHi()
 // zelf blijft een dunne wrapper hieromheen, zodat bestaande aanroepen ongewijzigd werken.
 function derivedLowHiDetailed(player, allRounds) {
-  const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDone = r => isRondeAf(r);
   const qual = allRounds
     .filter(r => r.player === player && r.qualifying && isDone(r))
     .sort((a, b) => {
@@ -1795,14 +1828,40 @@ const storage = (() => {
 
 // Veilig opgeslagen rondes inladen: valt terug op een lege lijst bij corrupte data,
 // in plaats van de hele app te laten crashen op een kapotte JSON.parse.
+// Staat op true zodra de opgeslagen rondes onleesbaar bleken. Zolang dat zo is, mag
+// er NIETS meer over de rondes heen geschreven worden: de oorspronkelijke gegevens
+// staan dan nog in de opslag en zijn met een backup te herstellen. Zonder deze rem
+// maakte de eerstvolgende opslagactie het verlies definitief.
+let rondesOnleesbaar = false;
+
 function loadSavedRounds() {
   try {
-    const parsed = JSON.parse(storage.getItem('golf_rounds') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    const ruw = storage.getItem('golf_rounds');
+    const parsed = JSON.parse(ruw || '[]');
+    if (!Array.isArray(parsed)) throw new Error('geen lijst');
+    rondesOnleesbaar = false;
+    return parsed;
   } catch(e) {
     console.error('Opgeslagen rondes konden niet worden gelezen (corrupte data):', e);
+    if (!rondesOnleesbaar) {
+      rondesOnleesbaar = true;
+      meldOnleesbaar('rondes');
+    }
     return [];
   }
+}
+
+// Eén melding per keer, en pas als het scherm er is (bij het opstarten kan dit vóór
+// de eerste tekening vallen).
+function meldOnleesbaar(wat) {
+  const toon = () => {
+    const tekst = wat === 'rondes'
+      ? 'Je opgeslagen rondes zijn niet leesbaar. De app toont daarom een lege lijst, maar schrijft niets weg: je gegevens staan nog in het geheugen van de browser. Herstel ze via Instellingen \u2192 Gegevens \u2192 Importeren met je laatste backup.'
+      : 'Je clubgegevens zijn niet leesbaar. De app gebruikt tijdelijk de standaardbanen en slaat geen wijzigingen op. Herstel ze via Instellingen \u2192 Gegevens met je laatste backup.';
+    showInfoModal('Gegevens niet leesbaar', tekst, 'red');
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', toon, { once: true });
+  else setTimeout(toon, 300);
 }
 
 // Prioriteitsketen voor 'welke club krijgt voorrang' bij groeperen op club in Archief —
@@ -2249,7 +2308,7 @@ function buildRoundEntry() {
     club: game.club, clubShort: game.clubShort,
     total: played.reduce((s, h) => s + h.score, 0),
     totalStb: game.holes.reduce((s, h) => s + stbFor(h), 0),
-    playedCount: played.length, holesCount: game.holes.length,
+    holesCount: game.holes.length,
     currentHole, started: true,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
     note: game.note || undefined,
@@ -3098,19 +3157,19 @@ function herplanRonde(id) {
   const saved = loadSavedRounds();
   let r = saved.find(x => String(x.id) === String(id));
   if (!r) return;
-  if ((r.playedCount ?? 0) > 0) return;
+  if (gespeeldeHoles(r) > 0) return;
 
   // Gekoppelde ronde op dezelfde datum en tijd (speler 2) gaat mee. Wel van een ÁNDERE
   // speler: staat er om wat voor reden dan ook een tweede ronde van dezelfde persoon op
   // dat tijdstip, dan zou die als "speler 2" worden ingevuld en ontstaan er bij het
   // starten twee rondes van dezelfde speler — een echt duplicaat.
   let hoofd = r;
-  let maat = saved.find(x => String(x.id) !== String(r.id) && (x.playedCount ?? 0) === 0 &&
+  let maat = saved.find(x => String(x.id) !== String(r.id) && gespeeldeHoles(x) === 0 &&
     (x.date || '') === (r.date || '') && (x.time || '') === (r.time || '') &&
     (x.player || '') !== (r.player || ''));
   // Tik je op de kaart van de medespeler, dan zou die als speler 1 worden ingevuld en
   // jij als speler 2. De eigen speler hoort altijd speler 1 te zijn.
-  const eigenNaam = typeof startPlayerName === 'function' ? startPlayerName() : null;
+  const eigenNaam = startPlayerName();
   if (maat && eigenNaam && maat.player === eigenNaam && r.player !== eigenNaam) {
     hoofd = maat;
     maat = r;
@@ -3153,8 +3212,8 @@ function herplanRonde(id) {
   }
 
   toonHerplanBanner(r, maat, kwijt);
-  if (typeof updatePlayer2CardVisibility === 'function') updatePlayer2CardVisibility();
-  if (typeof updatePlayer2Titles === 'function') updatePlayer2Titles();
+  updatePlayer2CardVisibility();
+  updatePlayer2Titles();
   rebuildAll();
   nav('setup');
 }
@@ -3271,7 +3330,7 @@ function startRoundConfirmed() {
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
         CR: teeData2.CR, SR: teeData2.SR, PAR: teeData2.PAR, chcp: chcp2,
         qualifying: !!sel2.qualifying,
-        total: 0, totalStb: 0, playedCount: 0, holesCount: n,
+        total: 0, totalStb: 0, holesCount: n,
         currentHole: 0, started: true,
         holes: course.holes.map((h, i) => ({
           id: h.id, par: h.par, si: h.si,
@@ -3456,6 +3515,9 @@ function pulseScore(i) {
 function clearScoreTap(revert) {
   if (scoreTapHole === null) return;
   const i = scoreTapHole;
+  // Was deze hole nog leeg vóór de wijziging? Alleen dán doorspringen — bij een
+  // correctie op een al ingevulde hole blijf je staan, anders wordt corrigeren onwerkbaar.
+  const wasLeeg = scoreTapChanged === null;
   if (revert) game.holes[i].score = scoreTapChanged;
   syncPuttsWithScore(i);
   scoreTapHole = null;
@@ -3463,6 +3525,10 @@ function clearScoreTap(revert) {
   pulseScore(i);
   updateHeader();
   updateHeaderScore();
+  if (!revert && wasLeeg && autoNextEnabled() && game.holes[i].score !== null) {
+    const volgende = volgendeLegeHole(i);
+    if (volgende >= 0) setCurrentHole(volgende);
+  }
   renderScore();
   saveActiveRound();
 }
@@ -3595,7 +3661,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
         if (!done || !game.qualifying) return [];
         const sdFixed = game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal));
         const all = loadSavedRounds();
-        const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+        const isDone = r => isRondeAf(r);
         const others = all.filter(r => r.player === game.player && String(r.id) !== String(game.id) && r.qualifying && isDone(r));
         const pool = [{ ...game }, ...others]
           .sort((a, b) => new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`) - new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`))
@@ -3893,6 +3959,664 @@ function renderPuttOverlay() {
 
 // Meervoudige statistieken voor de hoofdspeler (naam in iName), op basis van
 // qualifying rondes — consistent met de WHS-logica. Alleen zichtbaar zonder actieve ronde.
+// Kaart "Putten en greens" voor het Statistieken-scherm. Uit renderPlayerStats gehaald
+// (die functie is ruim 1300 regels); de inhoud is woordelijk overgenomen. Alles wat het
+// blok uit de omliggende functie gebruikte, komt nu als parameter binnen — er is geen
+// verborgen afhankelijkheid meer, en de uitkomst is byte-voor-byte gelijk gebleven.
+// Kaart "Gemiddelde per SI" voor het Statistieken-scherm: gemiddelde score t.o.v. par
+// voor de zwaarste, middelste en makkelijkste derde van de holes. Uit renderPlayerStats
+// gehaald; de inhoud is woordelijk overgenomen en geeft nu terug in plaats van een
+// variabele buiten zichzelf te vullen. Levert een lege tekst als er te weinig te tonen is.
+// Kaart "Gemiddelde per par-type" voor het Statistieken-scherm. Uit renderPlayerStats
+// gehaald; inhoud woordelijk overgenomen, met de toekenning omgezet in een teruggave.
+// LET OP bij verder opsplitsen: tien namen in dit blok (range, step, axisLo, axisHi, v,
+// yTop, yBottom, yMid, x, bg) bestaan óók buiten het blok met een andere betekenis —
+// die mogen nooit als parameter worden meegegeven, dat zou de eigen declaratie
+// afschermen (dat ging bij een eerdere poging mis en brak het hele scherm).
+// Kaart "Gemiddelde per dag" voor het Statistieken-scherm (weekdagen of week/weekend,
+// afhankelijk van de knop erboven). Uit renderPlayerStats gehaald; inhoud woordelijk.
+// Leest window._weekdayViewMode — dat is de stand van de eigen knop en hoort bij deze
+// kaart, dus die blijft hier waar hij hoort. Alles wat het blok verder gebruikt komt
+// als parameter binnen; groupLabels en groupMembers worden intern gedeclareerd.
+// Eén club met zijn banen en tees voor de kaart "Per club" op het Statistieken-scherm.
+// Uit renderPlayerStats gehaald; inhoud woordelijk overgenomen.
+// De in- en uitgeklapte stand (window._statClubCollapsed en _statTrackCollapsed) hoort
+// bij deze kaart en blijft daarom hier. Interne lusvariabelen (track, tee, arr) zijn
+// GEEN parameters: die worden hieronder zelf gedeclareerd.
+// De regelkaart-grafiek van de dagresultaten (losse rondes, per maand of per kwartaal).
+// Uit renderPlayerStats gehaald; inhoud woordelijk overgenomen.
+//
+// window._ccData en window._ccJump worden hier GEVULD: dat zijn de punten van de
+// grafiek en de ronde waar je heen springt als je een punt aantikt. Die horen bij deze
+// grafiek en blijven daarom hier staan — ze worden elders alleen gelezen.
+//
+// LET OP bij verder opsplitsen: acht namen in dit blok (j, i, b, m, lo, d, n, s)
+// bestaan óók buiten dit blok met een andere betekenis; die mogen nooit als parameter
+// worden meegegeven.
+// Grafiek "Gemiddelde per tee" voor het Statistieken-scherm. Uit renderPlayerStats
+// gehaald; inhoud woordelijk overgenomen, met de toekenning omgezet in een teruggave.
+// teeColorOf is een hulpfunctie uit de omliggende code en komt als parameter binnen;
+// alle overige namen (minV, maxV, range, step, axisLo, axisHi, v ...) worden hier zelf
+// gedeclareerd en mogen dus nooit parameter worden.
+// De kaart "Wat als...?" op het Statistieken-scherm: wat er met je handicap gebeurt als
+// je volgende ronde een bepaald dagresultaat oplevert. Uit renderPlayerStats gehaald;
+// inhoud woordelijk overgenomen. lowHiEff en esrMapStats worden doorgegeven aan de
+// handicapberekening en komen daarom als parameter binnen.
+function bouwVooruitblik({ last20, whs, lowHiEff, esrMapStats }) {
+    if (!last20.length) return '';
+    let body = '';
+    if (last20.length < 20) {
+      body = `<div style="font-size:17px;color:var(--muted)">Je venster is nog niet vol (${last20.length} van 20) — er valt nog niets uit.</div>`;
+    } else {
+      const oldest = last20[last20.length - 1]; // last20 is nieuwste-eerst
+      const oldestLabel = `Je ronde van <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
+      const counts = whs && whs.usedIds.has(oldest.id);
+      if (!counts) {
+        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} valt straks uit je laatste 20, maar telt niet mee — je hcp verandert daardoor niet.</div>`;
+      } else {
+        const remaining = last20.slice(0, last20.length - 1);
+        const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
+        const scenario = whsHandicap([dummy, ...remaining], lowHiEff, esrMapStats);
+        const remSds = remaining
+          .map(r => { const e = effectiveSD(r); return e == null ? null : e.value + (esrMapStats ? (esrMapStats.get(r.id) || 0) : 0); })
+          .filter(v => v != null)
+          .sort((a, b) => a - b);
+        const threshold = remSds.length >= 8 ? remSds[7] : null;
+        let scenarioLine = '';
+        if (scenario && whs) {
+          const delta = Math.round((scenario.value - whs.value) * 10) / 10;
+          if (delta > 0) {
+            scenarioLine = ` Speel je ${threshold != null ? `geen dagresultaat onder <b>${fmt1(threshold)}</b>` : 'geen voldoende goed dagresultaat'}, dan gaat je hcp naar <span style="color:var(--orange);font-weight:700">${fmt1(scenario.value)} (+${fmt1(delta)})</span>.`;
+          } else {
+            scenarioLine = ` Je hcp blijft dan <b>${fmt1(scenario.value)}</b>.`;
+          }
+        }
+        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} <span class="tee-badge badge-whs">1</span> valt straks uit je laatste 20.${scenarioLine}</div>`;
+      }
+    }
+    return body;
+}
+
+function bouwTeeGrafiek({ teeSdKeys, teeAvgs, teeColorOf }) {
+  if (teeSdKeys.length) {
+    const teeVals = teeSdKeys.map(t => teeAvgs[t].avg);
+    const minV = Math.min(0, ...teeVals);
+    const maxV = Math.max(0, ...teeVals);
+    const range = maxV - minV;
+    const step = range <= 7.5 ? 2.5 : (range <= 15 ? 5 : 10);
+    let axisLo = Math.floor(minV / step) * step;
+    let axisHi = Math.ceil(maxV / step) * step;
+    if (axisHi <= maxV) axisHi += step;
+    if (axisLo < 0 && axisLo >= minV) axisLo -= step;
+    if (axisHi === axisLo) axisHi += step;
+    const nTee = teeSdKeys.length;
+    const w3 = 320, padL3 = 46, padR3 = 12, tickTop3 = 10, labelYoff3 = 18;
+    const laneGap3 = 5, laneH3 = 18;
+    const laneSpan3 = nTee * laneH3 + (nTee - 1) * laneGap3;
+    const tickBottom3 = tickTop3 + laneSpan3;
+    const labelY3 = tickBottom3 + labelYoff3;
+    const h3 = labelY3 + 10;
+    const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
+    // Let op: er zijn in dit bestand meerdere gelijksoortig genoemde fmt*-functies
+    // (fmtV3 hier, fmtV bij de weekdag-kaart, fmtAxis/fmtDev bij de par-kaart) — elk lokaal
+    // aan zijn eigen grafiek, met net een andere regel (compact voor assen, altijd 1
+    // decimaal voor kolommen). Hergebruik nooit een fmt*-functie uit een andere kaart:
+    // dat veroorzaakte al eens een bug (fmtDev werd per ongeluk zowel voor de as als de
+    // kolom gebruikt, met als gevolg dat de as ineens onnodig '+1.0' i.p.v. '+1' toonde).
+    const fmtV3 = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
+    const ticks3 = [];
+    for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
+    const gridSvg3 = ticks3.map(v =>
+      `<line x1="${xOf3(v).toFixed(1)}" y1="${tickTop3}" x2="${xOf3(v).toFixed(1)}" y2="${tickBottom3}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
+      + `<text x="${xOf3(v).toFixed(1)}" y="${labelY3}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtV3(v)}</text>`
+    ).join('');
+    const stripesSvg3 = teeSdKeys.map((t, i) => {
+      if (i % 2 === 1) return '';
+      const yTop = tickTop3 + i * (laneH3 + laneGap3) - laneGap3 / 2;
+      const yBottom = yTop + laneH3 + laneGap3;
+      return `<rect x="0" y="${yTop.toFixed(1)}" width="${w3}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
+    }).join('');
+    const labelsSvg3 = teeSdKeys.map((t, i) => {
+      const yMid = (tickTop3 + i * (laneH3 + laneGap3) + laneH3 / 2).toFixed(1);
+      return `<text x="${padL3 - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${escapeHtml(t)}</text>`;
+    }).join('');
+    const barsSvg3 = teeSdKeys.map((t, i) => {
+      const x = xOf3(teeAvgs[t].avg).toFixed(1);
+      const yTop = (tickTop3 + i * (laneH3 + laneGap3)).toFixed(1);
+      const yBottom = (tickTop3 + i * (laneH3 + laneGap3) + laneH3).toFixed(1);
+      return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="${teeColorOf(t)}" stroke-width="5" stroke-linecap="butt"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 ${w3} ${h3}" style="width:100%;height:auto">${stripesSvg3}${gridSvg3}${labelsSvg3}${barsSvg3}</svg>`;
+  }
+  return '';
+}
+
+function bouwRegelkaartGrafiek({ period, periodRounds, sdView }) {
+    const pairs = periodRounds.map((r, i) => ({ date: (r && r.date) || null, time: (r && r.time) || '', v: sdView[i], id: (r && r.id) != null ? r.id : null }))
+      .filter(p => p.v != null && p.date);
+    const aggMode = period === 'l20' ? 'ronde' : (period === 'jaar' ? 'maand' : 'kwartaal');
+    const maandNamen = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+    const dmOf = d => `${+d.slice(8, 10)}-${+d.slice(5, 7)}`;
+    // Buckets: { v, n, label, jaarStart } — v null = leeg (lijnbreuk + leeg plekje)
+    let buckets = [];
+    if (aggMode === 'ronde') {
+      buckets = pairs.map(p => ({ v: p.v, n: 1, label: dmOf(p.date) + '-' + p.date.slice(0, 4), tijd: p.time, id: p.id, jaarStart: null }));
+    } else if (pairs.length) {
+      const perY = aggMode === 'maand' ? 12 : 4;
+      const keyOf = d => {
+        const y = +d.slice(0, 4), m = +d.slice(5, 7);
+        return aggMode === 'maand' ? y * 12 + (m - 1) : y * 4 + Math.floor((m - 1) / 3);
+      };
+      const sums = new Map();
+      pairs.forEach(p => {
+        const k = keyOf(p.date);
+        if (!sums.has(k)) sums.set(k, { s: 0, n: 0, firstDate: null, firstTime: '', id: null });
+        const b = sums.get(k); b.s += p.v; b.n++;
+        // Oudste ronde van de bucket onthouden: daar springt de detailregel heen.
+        const nieuwerVroeger = b.firstDate == null || (p.date + p.time) < (b.firstDate + b.firstTime);
+        if (nieuwerVroeger) { b.firstDate = p.date; b.firstTime = p.time; b.id = p.id; }
+      });
+      const keys = [...sums.keys()];
+      const kMin = Math.min(...keys), kMax = Math.max(...keys);
+      for (let k = kMin; k <= kMax; k++) {
+        const b = sums.get(k);
+        const label = aggMode === 'maand'
+          ? `${maandNamen[k % 12]} ${Math.floor(k / 12)}`
+          : `Q${(k % 4) + 1} ${Math.floor(k / 4)}`;
+        // Aslabel compact: mm-yyyy bij maanden, yyyyQn bij kwartalen (alleen eerste/laatste)
+        const axisLabel = aggMode === 'maand'
+          ? `${String((k % 12) + 1).padStart(2, '0')}-${Math.floor(k / 12)}`
+          : `${Math.floor(k / 4)}-Q${(k % 4) + 1}`;
+        buckets.push({ v: b ? b.s / b.n : null, n: b ? b.n : 0, label, axisLabel, id: b ? b.id : null, jaarStart: (k % perY === 0) ? String(Math.floor(k / perY)) : null });
+      }
+    }
+    const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
+    const filled = filledIdx.map(i => buckets[i].v);
+    const inner = (() => {
+      if (filled.length < 2) return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div style="font-size:17px;color:var(--muted);padding:12px 0">Te weinig rondes in deze periode voor een regelkaart.</div></div>`;
+      const n = filled.length;
+      const mean = filled.reduce((s, v) => s + v, 0) / n;
+      const sdInfo = Math.sqrt(filled.reduce((s, v) => s + (v - mean) * (v - mean), 0) / (n - 1));
+      let mrSum = 0;
+      for (let i = 1; i < filled.length; i++) mrSum += Math.abs(filled[i] - filled[i - 1]);
+      const mrBar = mrSum / (filled.length - 1);
+      const lim3 = 2.66 * mrBar, lim2 = 1.77 * mrBar;
+      // Signalering per gevuld punt: 0 = normaal, 1 = oranje (run-regel), 2 = rood (buiten 3σ)
+      const flags = filled.map(v => Math.abs(v - mean) > lim3 ? 2 : 0);
+      // Run-regel 1: 8 opeenvolgende punten aan één kant van x̄ (exact x̄ breekt de run)
+      let side = 0, runLen = 0, runStart = 0;
+      for (let i = 0; i < filled.length; i++) {
+        const s = Math.sign(filled[i] - mean);
+        if (s !== 0 && s === side) runLen++;
+        else { side = s; runLen = s === 0 ? 0 : 1; runStart = i; }
+        if (runLen >= 8) for (let j = runStart; j <= i; j++) if (flags[j] < 1) flags[j] = 1;
+      }
+      // Run-regel 2: 2 van 3 opeenvolgende punten voorbij 2σ aan dezelfde kant
+      for (let i = 2; i < filled.length; i++) {
+        [1, -1].forEach(sgn => {
+          const beyond = [i - 2, i - 1, i].filter(j => sgn * (filled[j] - mean) > lim2);
+          if (beyond.length >= 2) beyond.forEach(j => { if (flags[j] < 1) flags[j] = 1; });
+        });
+      }
+      const w = 320, h = 184, padL = 34, padR = 8, padT = 10, padB = 32; // padB gelijk aan de verloopgrafiek: beide tekenvlakken lopen nu van y=10 tot y=152
+      const chartBottom = h - padB;
+      const lo = Math.min(mean - lim3, ...filled), hi = Math.max(mean + lim3, ...filled);
+      const span = (hi - lo) || 1;
+      const m = buckets.length;
+      const xOf = i => padL + (m === 1 ? 0 : i * (w - padL - padR) / (m - 1));
+      const yOf = v => padT + (hi - v) / span * (chartBottom - padT);
+      const limOpacity = n < 10 ? '.55' : '1';
+      const limLine = (v, color) => `<line x1="${padL}" y1="${yOf(v).toFixed(1)}" x2="${w - padR}" y2="${yOf(v).toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 3" opacity="${limOpacity}"/>`;
+      const labelFor = (v, txt) => `<text x="2" y="${(yOf(v) + 4).toFixed(1)}" font-size="10" fill="var(--muted)">${txt}</text>`;
+      let svg = limLine(mean + lim3, 'var(--red)') + limLine(mean - lim3, 'var(--red)')
+        + limLine(mean + lim2, 'var(--orange)') + limLine(mean - lim2, 'var(--orange)')
+        + `<line x1="${padL}" y1="${yOf(mean).toFixed(1)}" x2="${w - padR}" y2="${yOf(mean).toFixed(1)}" stroke="var(--gold)" stroke-width="1.5"/>`
+        + labelFor(mean + lim3, '+3σ̂') + labelFor(mean + lim2, '+2σ̂') + labelFor(mean, 'x̄')
+        + labelFor(mean - lim2, '-2σ̂') + labelFor(mean - lim3, '-3σ̂');
+      // X-as-labels: bij aggregatie de jaargrenzen (jan / Q1); zonder jaargrens in
+      // beeld, en bij losse rondes, alleen het eerste en laatste punt.
+      const axisY = h - 4;
+      const axisText = (i, txt, anchor) => `<text x="${xOf(i).toFixed(1)}" y="${axisY}" font-size="10" fill="var(--muted)" text-anchor="${anchor}">${txt}</text>`;
+      if (aggMode === 'ronde') {
+        svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
+      } else {
+        // Alleen de eerste en laatste periode, compact: mm-yyyy of yyyyQn (Marks keuze;
+        // verving de jaargrens-labels, die niet lieten zien wélke maand/kwartaal het was).
+        svg += axisText(0, buckets[0].axisLabel, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].axisLabel, 'end') : '');
+      }
+      // Lijn met breuken: alleen segmenten tussen direct opeenvolgende gevulde buckets
+      let d = '', prevFilled = false;
+      buckets.forEach((b, i) => {
+        if (b.v == null) { prevFilled = false; return; }
+        d += `${prevFilled ? 'L' : 'M'}${xOf(i).toFixed(1)} ${yOf(b.v).toFixed(1)} `;
+        prevFilled = true;
+      });
+      svg += `<path d="${d.trim()}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`; // gelijk aan de verloopgrafiek
+      // Punten + tik-vlakken; dunne buckets (minder rondes dan de ingestelde drempel)
+      // krijgen een OPEN stip van dezelfde grootte — zelfde idioom als de omlijnde
+      // staafjes in de baananalyse, en beter zichtbaar/aantikbaar dan een klein stipje
+      window._ccData = [];
+      window._ccJump = []; // ronde-id per punt (alleen bij losse rondes; bij maand/kwartaal null)
+      const slotHalf = m > 1 ? (w - padL - padR) / (m - 1) / 2 : (w - padL - padR) / 2;
+      filledIdx.forEach((bi, fi) => {
+        const b = buckets[bi];
+        const flag = flags[fi];
+        const dun = aggMode !== 'ronde' && b.n < getMinRoundsStat();
+        const r = 3.5; // één grootte voor alle punten: kleur en positie t.o.v. de grenzen
+        // maken een signaal al duidelijk (Marks keuze), en groter leest/tikt prettiger
+        const kleur = flag === 2 ? 'var(--red)' : (flag === 1 ? 'var(--orange)' : 'var(--green-light)');
+        // Open punt: gevuld met de effen kaartkleur zodat de lijn er niet doorheen loopt
+        // (met fill="none" liep de lijn er dwars doorheen — Marks leesbaarheidsmelding).
+        svg += dun
+          ? `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="var(--card-solid)" stroke="${kleur}" stroke-width="1.5"/>`
+          : `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
+        const groen = v => `<b style="color:var(--green-light)">${fmt1(v)}</b>`;
+        window._ccData.push(aggMode === 'ronde'
+          ? `<b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · ${groen(b.v)}`
+          : `<b>${b.label}</b>: gem. ${groen(b.v)} · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
+        window._ccJump.push(b.id != null ? b.id : null); // bij maand/kwartaal: de oudste ronde uit die periode
+        svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
+      });
+      const stats = `<div style="font-size:15px;color:var(--muted);margin-top:4px">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
+      const detail = `<div id="ccDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
+      // Uitleg achter een "Legenda"-uitklapper, net als bij de verloopgrafiek: zo hebben
+      // beide weergaven exact dezelfde opbouw (grafiek → informatieblok → legendaknop)
+      // en verspringt de kaart niet meer bij het wisselen (Marks meting).
+      const legendaItem = (swatch, tekst) => `<span style="display:flex;align-items:center;gap:6px">${swatch}${tekst}</span>`;
+      const stip = (fill, stroke) => `<span style="width:9px;height:9px;border-radius:50%;background:${fill};border:1.5px solid ${stroke};display:inline-block;box-sizing:border-box"></span>`;
+      const streep = kleur => `<span style="width:14px;height:0;border-top:2px dashed ${kleur};display:inline-block"></span>`;
+      const ccLegenda = `<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>`
+        + `<div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap">`
+        + legendaItem(`<span style="width:14px;height:2px;background:var(--gold);display:inline-block;border-radius:2px"></span>`, 'x̄ (gem.)')
+        + legendaItem(streep('var(--red)'), '±3σ̂')
+        + legendaItem(streep('var(--orange)'), '±2σ̂ (σ̂ = r̄/1.128)')
+        + legendaItem(stip('var(--green-light)', 'var(--green-light)'), `${getMinRoundsStat()} of meer rondes`)
+        + legendaItem(stip('var(--card-solid)', 'var(--green-light)'), `Minder dan ${getMinRoundsStat()} ronde${getMinRoundsStat() === 1 ? '' : 's'}`)
+        + `</div>`
+        + (n < 10 ? `<div style="margin-top:8px;font-size:15px;color:var(--muted)">Bij minder dan 10 punten zijn de grenzen indicatief.</div>` : '')
+        + `</div>`;
+      // Volgorde onder de grafiek: detailregel, statregel, legendaknop. Boven de grafiek
+      // staat in geen van beide weergaven iets, dus die begint overal op dezelfde hoogte;
+      // de ruimte eronder is bewust NIET vastgezet (Marks keuze).
+      return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg></div>` + detail + stats + ccLegenda;
+    })();
+    return inner;
+}
+
+function bouwClubBlok(club, { byClub, avgSdOf, avgDiffOf, fmtDiff }) {
+    const tracks = byClub[club];
+    const total = Object.values(tracks).reduce((s, x) => s + x.length, 0);
+    const ck = club.replace(/\W/g, '_');
+    const collapsed = window._statClubCollapsed[ck] !== false; // standaard ingeklapt
+    window._statTrackCollapsed = window._statTrackCollapsed || {};
+    // Banen alfabetisch: terugvinden weegt hier zwaarder dan aantal rondes (Marks keuze).
+    // Tees blijven bewust op aantal gesorteerd — die volgorde zit er bij Mark in.
+    const trackRows = Object.keys(tracks).sort((a, b) => a.localeCompare(b, 'nl')).map(track => {
+      const rs = tracks[track];
+      const avg = avgSdOf(rs);
+      const tk = ck + '_' + track.replace(/\W/g, '_');
+      const tCollapsed = window._statTrackCollapsed[tk] === true; // standaard opengeklapt (i.t.t. clubs zelf)
+      // Tee-subgroepen: gemiddeld dagresultaat per tee op deze baan
+      const byTee = {};
+      rs.forEach(r => { const t = r.tee || 'Onbekend'; (byTee[t] = byTee[t] || []).push(r); });
+      const teeRows = Object.keys(byTee).sort((a, b) => byTee[b].length - byTee[a].length).map(tee => {
+        const trs = byTee[tee];
+        const tAvg = avgSdOf(trs);
+        const tDiff = avgDiffOf(trs);
+        return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0 3px 24px">`
+          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:17px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}${trs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
+          + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${tAvg != null ? tAvg.toFixed(1) : '—'}</span>`
+          + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${tDiff != null ? fmtDiff(tDiff) : '—'}</span>`
+          + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${trs.length}×</span></div>`;
+      }).join('');
+      const trackDiff = avgDiffOf(rs);
+      const trackHeader = `<div onclick="window._statTrackCollapsed['${tk}']=window._statTrackCollapsed['${tk}']!==true;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 4px 12px">`
+        + `<span style="flex:1;font-size:17px;display:flex;align-items:center;gap:6px">${escapeHtml(track)}${rs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
+        + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${avg != null ? avg.toFixed(1) : '—'}</span>`
+        + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${trackDiff != null ? fmtDiff(trackDiff) : '—'}</span>`
+        + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${rs.length}×</span>`
+        + `${arrowSvg(13, !tCollapsed)}</div>`;
+      return trackHeader + (tCollapsed ? '' : teeRows);
+    }).join('');
+    const clubHasWarning = Object.values(tracks).some(arr => arr.some(roundHasWarning));
+    const header = `<div onclick="window._statClubCollapsed['${ck}']=window._statClubCollapsed['${ck}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0">`
+      + `<span style="flex:1;font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px">${escapeHtml(club)}${clubHasWarning ? warningIconSmall : ''}</span>`
+      + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${total}×</span>`
+      + `${arrowSvg(15, !collapsed)}</div>`;
+    return header + (collapsed ? '' : `<div>${trackRows}</div>`);
+  }
+
+function bouwDagKaart({ periodRounds }) {
+    const viewMode = window._weekdayViewMode === 'days' ? 'days' : 'weekend';
+    const dayBuckets = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    periodRounds.forEach(r => {
+      const e = effectiveSD(r);
+      if (!e || e.value == null) return;
+      const d = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`);
+      if (!isFinite(d.getTime())) return;
+      dayBuckets[d.getDay()].push({ value: e.value, warn: roundHasWarning(r) });
+    });
+    // Groepindeling hangt af van de weergavestand: 7 losse dagen, of doordeweeks (ma-vr)
+    // samengevoegd tegenover weekend (za+zo) samengevoegd. Alle groepen delen nu dezelfde
+    // accentkleur (--weekday-accent) — de positie/het label maakt het onderscheid, niet
+    // meer de kleur, dus geen aparte kleur per dag meer nodig.
+    let groupOrder, groupLabels, groupMembers;
+    if (viewMode === 'weekend') {
+      groupOrder = ['week', 'weekend'];
+      groupLabels = { week: 'Ma - Vr', weekend: 'Za - Zo' };
+      groupMembers = { week: [1, 2, 3, 4, 5], weekend: [6, 0] };
+    } else {
+      groupOrder = [1, 2, 3, 4, 5, 6, 0]; // Ma..Zo
+      const dayLabels = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
+      groupLabels = Object.fromEntries(groupOrder.map(dn => [dn, dayLabels[dn]]));
+      groupMembers = Object.fromEntries(groupOrder.map(dn => [dn, [dn]]));
+    }
+    const groupAvgs = {};
+    groupOrder.forEach(gk => {
+      const arr = groupMembers[gk].flatMap(dn => dayBuckets[dn]);
+      groupAvgs[gk] = arr.length ? { avg: arr.reduce((s, x) => s + x.value, 0) / arr.length, n: arr.length, warn: arr.some(x => x.warn) } : { avg: null, n: 0, warn: false };
+    });
+    const nGroups = groupOrder.length;
+    const groupVals = Object.values(groupAvgs).filter(d => d.avg != null).map(d => d.avg);
+    const toggleBtn = (mode, label) => `<button class="btn-secondary" style="flex:1;padding:8px;font-size:15px${viewMode === mode ? ';background:var(--gold);color:var(--green-deep)' : ''}" onclick="window._weekdayViewMode='${mode}';renderPlayerStats()">${label}</button>`;
+    const toggleRow = `<div style="display:flex;gap:6px;margin:0 0 4px">${toggleBtn('weekend', 'Werkweek/weekend')}${toggleBtn('days', 'Weekdag')}</div>`;
+    if (groupVals.length) {
+      const minV = Math.min(0, ...groupVals);
+      const maxV = Math.max(0, ...groupVals);
+      const range = maxV - minV;
+      const step = range <= 7.5 ? 2.5 : (range <= 15 ? 5 : 10);
+      let axisLo = Math.floor(minV / step) * step;
+      let axisHi = Math.ceil(maxV / step) * step;
+      if (axisHi <= maxV) axisHi += step;
+      if (axisLo < 0 && axisLo >= minV) axisLo -= step;
+      if (axisHi === axisLo) axisHi += step;
+      // padL2 breder dan bij 'Gemiddelde per par': hier moet ook nog het dag-label
+      // (bv. 'Wo' of 'Za - Zo') links van de as passen.
+      const w2 = 320, h2 = 118, padL2 = 46, padR2 = 12, tickTop2 = 10, tickBottom2 = 90, labelY2 = 108;
+      const xOf2 = v => padL2 + ((v - axisLo) / (axisHi - axisLo)) * (w2 - padL2 - padR2);
+      const fmtV = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
+      const ticks2 = [];
+      for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks2.push(Math.round(v * 100) / 100);
+      const gridSvg2 = ticks2.map(v =>
+        `<line x1="${xOf2(v).toFixed(1)}" y1="${tickTop2}" x2="${xOf2(v).toFixed(1)}" y2="${tickBottom2}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
+        + `<text x="${xOf2(v).toFixed(1)}" y="${labelY2}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtV(v)}</text>`
+      ).join('');
+      const laneGap2 = 5;
+      const laneSpan2 = tickBottom2 - tickTop2;
+      const laneH2 = (laneSpan2 - laneGap2 * (nGroups - 1)) / nGroups;
+      // Afwisselende, lichte rijachtergrond per baan (zebra-striping) — helpt een streepje
+      // te koppelen aan zijn label, nu alle banen dezelfde kleur delen.
+      const stripesSvg2 = groupOrder.map((gk, i) => {
+        if (i % 2 === 1) return '';
+        const yTop = tickTop2 + i * (laneH2 + laneGap2) - laneGap2 / 2;
+        const yBottom = yTop + laneH2 + laneGap2;
+        return `<rect x="0" y="${yTop.toFixed(1)}" width="${w2}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
+      }).join('');
+      const labelsSvg2 = groupOrder.map((gk, i) => {
+        const yMid = (tickTop2 + i * (laneH2 + laneGap2) + laneH2 / 2).toFixed(1);
+        return `<text x="${padL2 - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${groupLabels[gk]}</text>`;
+      }).join('');
+      const barsSvg2 = groupOrder.map((gk, i) => {
+        if (groupAvgs[gk].avg == null) return '';
+        const x = xOf2(groupAvgs[gk].avg).toFixed(1);
+        const yTop = (tickTop2 + i * (laneH2 + laneGap2)).toFixed(1);
+        const yBottom = (tickTop2 + i * (laneH2 + laneGap2) + laneH2).toFixed(1);
+        return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="4" stroke-linecap="butt"/>`;
+      }).join('');
+      const legendHeader2 = `<span></span>`
+        + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Gem. Sd</span>`
+        + `<span></span>`;
+      const legendRows2 = groupOrder.map((gk, i) => {
+        const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
+        return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${groupLabels[gk]}</span>`
+          + `<span style="${bg}font-weight:700${groupAvgs[gk].avg == null ? ';color:var(--muted);font-weight:400' : ''};text-align:right;padding:4px 8px 4px 0;display:flex;align-items:center;justify-content:flex-end;gap:5px">${groupAvgs[gk].warn ? warningIconSmall : ''}${groupAvgs[gk].avg != null ? fmt1(groupAvgs[gk].avg) : '—'}</span>`
+          + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${groupAvgs[gk].n}×</span>`;
+      }).join('');
+      return `<div class="card"><h2>Gemiddelde per dag</h2>${toggleRow}`
+        + `<svg viewBox="0 0 ${w2} ${h2}" style="width:100%;height:auto">${stripesSvg2}${gridSvg2}${labelsSvg2}${barsSvg2}</svg>`
+        + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader2}${legendRows2}</div></div>`;
+    }
+  return '';
+}
+
+function bouwParTypeKaart({ parDevs, presentPars, parDevVals }) {
+  if (parDevVals.length) {
+    const minDev = Math.min(0, ...parDevVals);
+    const maxDev = Math.max(0, ...parDevVals);
+    const range = maxDev - minDev;
+    const step = range <= 1.5 ? 0.5 : (range <= 4 ? 1 : 2);
+    let axisLo = Math.floor(minDev / step) * step;
+    let axisHi = Math.ceil(maxDev / step) * step;
+    if (axisHi <= maxDev) axisHi += step;
+    if (axisLo < 0 && axisLo >= minDev) axisLo -= step;
+    if (axisHi === axisLo) axisHi += step;
+    // Vaste labels per holetype, net als bij 'Gemiddelde per weekdag' — direct op de y-as
+    // i.p.v. alleen in de tabel eronder.
+    const parLabels = { 3: 'Par 3', 4: 'Par 4', 5: 'Par 5', 6: 'Par 6' };
+    // Zelfde canvasgrootte/opmaak als 'Gemiddelde per weekdag': bredere linkermarge voor
+    // de y-as-labels, grotere baanafstand, en zebra-striping in de grafiek zelf.
+    const w = 320, h = 118, padL = 46, padR = 12, tickTop = 10, tickBottom = 90, labelY = 108;
+    const xOf = v => padL + ((v - axisLo) / (axisHi - axisLo)) * (w - padL - padR);
+    const fmtDev = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+    // Aparte, compacte variant voor de aslabels — daar mag een rond getal zonder
+    // decimaal (bv. '+5' i.p.v. '+5.0'), anders wordt de as al snel te druk.
+    const fmtAxis = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
+    const ticks = [];
+    for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
+    const gridSvg = ticks.map(v =>
+      `<line x1="${xOf(v).toFixed(1)}" y1="${tickTop}" x2="${xOf(v).toFixed(1)}" y2="${tickBottom}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
+      + `<text x="${xOf(v).toFixed(1)}" y="${labelY}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis(v)}</text>`
+    ).join('');
+    // Elk aanwezig holetype krijgt een eigen, vaste 'baan' binnen de totale hoogte
+    // (kleinste par boven, grootste onder) — zo kunnen de streepjes elkaar nooit
+    // overlappen, ook niet als twee holetypes toevallig dezelfde afwijking hebben.
+    const laneGap = 5;
+    const laneSpan = tickBottom - tickTop;
+    const laneCount = presentPars.length;
+    const laneH = (laneSpan - laneGap * (laneCount - 1)) / laneCount;
+    const stripesSvg = presentPars.map((p, i) => {
+      if (i % 2 === 1) return '';
+      const yTop = tickTop + i * (laneH + laneGap) - laneGap / 2;
+      const yBottom = yTop + laneH + laneGap;
+      return `<rect x="0" y="${yTop.toFixed(1)}" width="${w}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
+    }).join('');
+    const labelsSvg = presentPars.map((p, i) => {
+      const yMid = (tickTop + i * (laneH + laneGap) + laneH / 2).toFixed(1);
+      return `<text x="${padL - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${parLabels[p]}</text>`;
+    }).join('');
+    const barsSvg = presentPars.map((p, i) => {
+      const x = xOf(parDevs[p].dev).toFixed(1);
+      const yTop = (tickTop + i * (laneH + laneGap)).toFixed(1);
+      const yBottom = (tickTop + i * (laneH + laneGap) + laneH).toFixed(1);
+      return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="5" stroke-linecap="butt"/>`;
+    }).join('');
+    // Legenda als 4-koloms-tabel: elk holetype op een eigen regel, kolommen netjes
+    // uitgelijnd (kleur+label / gem per par / gem t.o.v. par / aantal).
+    const legendHeader = `<span></span>`
+      + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Per par</span>`
+      + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
+      + `<span></span>`;
+    const legendRows = presentPars.map((p, i) => {
+      const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
+      return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>Par ${p}</span>`
+        + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${(p + parDevs[p].dev).toFixed(1)}</span>`
+        + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${fmtDev(parDevs[p].dev)}</span>`
+        + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${parDevs[p].n}×</span>`;
+    }).join('');
+    return `<div class="card"><h2>Gemiddelde per par</h2>`
+      + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">${stripesSvg}${gridSvg}${labelsSvg}${barsSvg}</svg>`
+      + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader}${legendRows}</div></div>`;
+  }
+  return '';
+}
+
+function bouwSiKaart({ periodRounds }) {
+  const siBuckets = { hard: [], mid: [], easy: [] };
+  periodRounds.forEach(r => {
+    const validHoles = r.holes.filter(h => h.score != null && h.si != null);
+    if (!validHoles.length) return;
+    const sortedBySi = [...validHoles].sort((a, b) => a.si - b.si);
+    const third = Math.ceil(sortedBySi.length / 3);
+    sortedBySi.forEach((h, i) => {
+      const bucket = i < third ? 'hard' : (i < third * 2 ? 'mid' : 'easy');
+      siBuckets[bucket].push(h.score - h.par);
+    });
+  });
+  const siLabels = { hard: 'Moeilijkste', mid: 'Middelste', easy: 'Makkelijkste' };
+  const siDevs = {};
+  ['hard', 'mid', 'easy'].forEach(k => {
+    const arr = siBuckets[k];
+    if (arr.length) siDevs[k] = { dev: arr.reduce((s, x) => s + x, 0) / arr.length, n: arr.length };
+  });
+  const presentSi = ['hard', 'mid', 'easy'].filter(k => siDevs[k]);
+  const siDevVals = Object.values(siDevs).map(d => d.dev);
+  if (siDevVals.length) {
+    const minDev = Math.min(0, ...siDevVals);
+    const maxDev = Math.max(0, ...siDevVals);
+    const range = maxDev - minDev;
+    const step = range <= 1.5 ? 0.5 : (range <= 4 ? 1 : 2);
+    let axisLo = Math.floor(minDev / step) * step;
+    let axisHi = Math.ceil(maxDev / step) * step;
+    if (axisHi <= maxDev) axisHi += step;
+    if (axisLo < 0 && axisLo >= minDev) axisLo -= step;
+    if (axisHi === axisLo) axisHi += step;
+    const w3 = 320, h3 = 118, padL3 = 90, padR3 = 12, tickTop3 = 10, tickBottom3 = 90, labelY3 = 108;
+    const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
+    const fmtDev3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+    const fmtAxis3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
+    const ticks3 = [];
+    for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
+    const gridSvg3 = ticks3.map(v =>
+      `<line x1="${xOf3(v).toFixed(1)}" y1="${tickTop3}" x2="${xOf3(v).toFixed(1)}" y2="${tickBottom3}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
+      + `<text x="${xOf3(v).toFixed(1)}" y="${labelY3}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis3(v)}</text>`
+    ).join('');
+    const laneGap3 = 5;
+    const laneSpan3 = tickBottom3 - tickTop3;
+    const laneCount3 = presentSi.length;
+    const laneH3 = (laneSpan3 - laneGap3 * (laneCount3 - 1)) / laneCount3;
+    const stripesSvg3 = presentSi.map((k, i) => {
+      if (i % 2 === 1) return '';
+      const yTop = tickTop3 + i * (laneH3 + laneGap3) - laneGap3 / 2;
+      const yBottom = yTop + laneH3 + laneGap3;
+      return `<rect x="0" y="${yTop.toFixed(1)}" width="${w3}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
+    }).join('');
+    const labelsSvg3 = presentSi.map((k, i) => {
+      const yMid = (tickTop3 + i * (laneH3 + laneGap3) + laneH3 / 2).toFixed(1);
+      return `<text x="4" y="${yMid}" font-size="11" fill="var(--muted)" text-anchor="start" dominant-baseline="middle">${siLabels[k]}</text>`;
+    }).join('');
+    const barsSvg3 = presentSi.map((k, i) => {
+      const x = xOf3(siDevs[k].dev).toFixed(1);
+      const yTop = (tickTop3 + i * (laneH3 + laneGap3)).toFixed(1);
+      const yBottom = (tickTop3 + i * (laneH3 + laneGap3) + laneH3).toFixed(1);
+      return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="5" stroke-linecap="butt"/>`;
+    }).join('');
+    const legendHeader3 = `<span></span>`
+      + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
+      + `<span></span>`;
+    const legendRows3 = presentSi.map((k, i) => {
+      const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
+      return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${siLabels[k]}</span>`
+        + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${fmtDev3(siDevs[k].dev)}</span>`
+        + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${siDevs[k].n}×</span>`;
+    }).join('');
+    return `<div class="card"><h2>Gemiddelde per SI</h2>`
+      + `<svg viewBox="0 0 ${w3} ${h3}" style="width:100%;height:auto">${stripesSvg3}${gridSvg3}${labelsSvg3}${barsSvg3}</svg>`
+      + `<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader3}${legendRows3}</div></div>`;
+  }
+  return '';
+}
+
+function bouwPuttKaart({ periodRounds, dataRow, balkSvg, subHead, fmtDiff }) {
+
+  if (typeof puttsStatsEnabled !== 'function' || !puttsStatsEnabled()) return '';
+  const metPutts = periodRounds.filter(r => {
+    const gespeeld = (r.holes || []).filter(h => h && h.score != null);
+    return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
+  });
+  if (metPutts.length < getMinRoundsStat()) return '';
+  let pHoles = 0, pTot = 0, pGir = 0, pDrie = 0, pOpGir = 0, pGeenGir = 0, pScramble = 0, pScramblePar = 0;
+  let vTot = 0, vVoor = 0, vOp = 0;
+  const puttVerdeling = {};
+  metPutts.forEach(r => (r.holes || []).forEach(h => {
+    if (!h || h.score == null || h.putts == null || h.par == null) return;
+    pHoles++;
+    pTot += h.putts;
+    if (h.putts >= 3) pDrie++;
+    const bucket = Math.min(h.putts, 4);
+    puttVerdeling[bucket] = (puttVerdeling[bucket] || 0) + 1;
+    const totGreen = h.score - h.putts;
+    const isGir = totGreen <= h.par - 2;
+    if (isGir) { pGir++; pOpGir += h.putts; }
+    else {
+      pGeenGir++;
+      if (h.phcp != null && h.score <= h.par + h.phcp) pScramble++;
+      if (h.score <= h.par) pScramblePar++;   // officiële maat: de echte par
+    }
+    vTot += h.score - h.par;
+    vVoor += totGreen - (h.par - 2);
+    vOp += h.putts - 2;
+  }));
+  if (!pHoles) return '';
+  const drempel = getMinRoundsStat(); // zelfde drempel als overal (Marks regel)
+  const drempelHoles = drempel * 9;  // tellingen over holes rekenen in holes
+
+  // Blok 1: kerngetallen, in de rijstijl van Vorm & consistentie
+  const rij = (label, waarde, zebra) =>
+    `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
+    + `<span style="flex:1;font-size:17px;color:var(--muted)">${label}</span>`
+    + `<span style="font-size:17px;font-weight:700">${waarde}</span></div>`;
+  // Zebra begint mét accentkleur op de eerste rij, net als dataRow elders in de app.
+  let z = 0;
+  const kern = [
+    ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
+    ['Putts per hole', fmt1(pTot / pHoles)],
+    ...(pGir >= drempelHoles ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
+    ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
+    ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
+    ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. ppar)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
+    ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. par)', Math.round(pScramblePar / pGeenGir * 100) + '%']] : []),
+  ].map(([l, v]) => rij(l, v, z++ % 2 === 0)).join('');
+
+  // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
+  const verdRij = (label, n, kleur) => {
+    const pct = pHoles ? Math.round(n / pHoles * 100) : 0;
+    return `<div style="display:contents">`
+      + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+      + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
+      + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
+      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+  };
+  // Eigen raster zonder buitenmarge: zo bepaalt alleen subHead (10px boven, 4px onder)
+  // de ruimte rond de groene subkoppen, gelijk aan Vorm & consistentie.
+  const puttGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center">${binnen}</div>`;
+  const verdeling = puttGrid(
+    verdRij('1 putt', puttVerdeling[1] || 0, 'var(--dist-birdie)')
+    + verdRij('2 putts', puttVerdeling[2] || 0, 'var(--res-par)')
+    + verdRij('3 putts', puttVerdeling[3] || 0, 'var(--dist-bogey)')
+    + verdRij('4 of meer', puttVerdeling[4] || 0, 'var(--dist-worse)')
+    + ((puttVerdeling[0] || 0) ? verdRij('0 putts', puttVerdeling[0], 'var(--dist-eagle)') : ''));
+
+  // Blok 3: waar verlies je je slagen — twee balken die samen 100% vormen
+  const absVoor = Math.abs(vVoor), absOp = Math.abs(vOp), absSom = absVoor + absOp;
+  const pctVoor = absSom ? Math.round(absVoor / absSom * 100) : 0;
+  const splitRij = (label, pct, perHole, kleur) => `<div style="display:contents">`
+    + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
+    + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
+    + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${fmtDiff(perHole)}</span>`
+    + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
+    + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
+  const split = subHead('Waar verlies je je slagen') + puttGrid(
+    splitRij('V\u00f3\u00f3r de green', pctVoor, vVoor / pHoles, 'var(--green-light)')
+    + splitRij('Op de green', 100 - pctVoor, vOp / pHoles, 'var(--gold)'));
+
+  return `<div class="card"><h2>Putten en greens</h2>`
+    + kern
+    + subHead('Putts per hole') + verdeling
+    + split
+    + `<div style="font-size:15px;color:var(--muted);margin-top:6px">${pHoles} holes over ${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts</div></div>`;
+}
+
 function renderPlayerStats() {
   const el = document.getElementById('playerStats');
   if (!el) return;
@@ -3906,7 +4630,7 @@ function renderPlayerStats() {
   }
 
   const all = loadSavedRounds();
-  const isDone = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDone = r => isRondeAf(r);
   const rounds = all
     .filter(r => r.player === player && isDone(r) && r.qualifying)
     .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`));
@@ -4167,40 +4891,7 @@ function renderPlayerStats() {
   // (esr-gecorrigeerde) SD van de overblijvende 19: alleen een nieuw dagresultaat
   // dat dáár strikt onder ligt, neemt de vrijgekomen plek in de beste 8 over (bij
   // gelijke SD's wint de oudste ronde, dus precies gelijkspelen is niet genoeg).
-  const vooruitblikBody = (() => {
-    if (!last20.length) return '';
-    let body = '';
-    if (last20.length < 20) {
-      body = `<div style="font-size:17px;color:var(--muted)">Je venster is nog niet vol (${last20.length} van 20) — er valt nog niets uit.</div>`;
-    } else {
-      const oldest = last20[last20.length - 1]; // last20 is nieuwste-eerst
-      const oldestLabel = `Je ronde van <b>${formatFullDate(oldest.date)}</b>${oldest.time ? ` om <b>${oldest.time}</b>` : ''}`;
-      const counts = whs && whs.usedIds.has(oldest.id);
-      if (!counts) {
-        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} valt straks uit je laatste 20, maar telt niet mee — je hcp verandert daardoor niet.</div>`;
-      } else {
-        const remaining = last20.slice(0, last20.length - 1);
-        const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
-        const scenario = whsHandicap([dummy, ...remaining], lowHiEff, esrMapStats);
-        const remSds = remaining
-          .map(r => { const e = effectiveSD(r); return e == null ? null : e.value + (esrMapStats ? (esrMapStats.get(r.id) || 0) : 0); })
-          .filter(v => v != null)
-          .sort((a, b) => a - b);
-        const threshold = remSds.length >= 8 ? remSds[7] : null;
-        let scenarioLine = '';
-        if (scenario && whs) {
-          const delta = Math.round((scenario.value - whs.value) * 10) / 10;
-          if (delta > 0) {
-            scenarioLine = ` Speel je ${threshold != null ? `geen dagresultaat onder <b>${fmt1(threshold)}</b>` : 'geen voldoende goed dagresultaat'}, dan gaat je hcp naar <span style="color:var(--orange);font-weight:700">${fmt1(scenario.value)} (+${fmt1(delta)})</span>.`;
-          } else {
-            scenarioLine = ` Je hcp blijft dan <b>${fmt1(scenario.value)}</b>.`;
-          }
-        }
-        body = `<div style="font-size:17px;color:var(--muted)">${oldestLabel} <span class="tee-badge badge-whs">1</span> valt straks uit je laatste 20.${scenarioLine}</div>`;
-      }
-    }
-    return body;
-  })();
+  const vooruitblikBody = bouwVooruitblik({ last20, whs, lowHiEff, esrMapStats });
 
   // ══ WAT ALS...? ═══════════════════════════════════════════════════════
   // Simuleert het effect van een hypothetische extra ronde op de handicap, zonder ook
@@ -4302,56 +4993,7 @@ function renderPlayerStats() {
   });
 
   let teeChartSvg = '';
-  if (teeSdKeys.length) {
-    const teeVals = teeSdKeys.map(t => teeAvgs[t].avg);
-    const minV = Math.min(0, ...teeVals);
-    const maxV = Math.max(0, ...teeVals);
-    const range = maxV - minV;
-    const step = range <= 7.5 ? 2.5 : (range <= 15 ? 5 : 10);
-    let axisLo = Math.floor(minV / step) * step;
-    let axisHi = Math.ceil(maxV / step) * step;
-    if (axisHi <= maxV) axisHi += step;
-    if (axisLo < 0 && axisLo >= minV) axisLo -= step;
-    if (axisHi === axisLo) axisHi += step;
-    const nTee = teeSdKeys.length;
-    const w3 = 320, padL3 = 46, padR3 = 12, tickTop3 = 10, labelYoff3 = 18;
-    const laneGap3 = 5, laneH3 = 18;
-    const laneSpan3 = nTee * laneH3 + (nTee - 1) * laneGap3;
-    const tickBottom3 = tickTop3 + laneSpan3;
-    const labelY3 = tickBottom3 + labelYoff3;
-    const h3 = labelY3 + 10;
-    const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
-    // Let op: er zijn in dit bestand meerdere gelijksoortig genoemde fmt*-functies
-    // (fmtV3 hier, fmtV bij de weekdag-kaart, fmtAxis/fmtDev bij de par-kaart) — elk lokaal
-    // aan zijn eigen grafiek, met net een andere regel (compact voor assen, altijd 1
-    // decimaal voor kolommen). Hergebruik nooit een fmt*-functie uit een andere kaart:
-    // dat veroorzaakte al eens een bug (fmtDev werd per ongeluk zowel voor de as als de
-    // kolom gebruikt, met als gevolg dat de as ineens onnodig '+1.0' i.p.v. '+1' toonde).
-    const fmtV3 = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
-    const ticks3 = [];
-    for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
-    const gridSvg3 = ticks3.map(v =>
-      `<line x1="${xOf3(v).toFixed(1)}" y1="${tickTop3}" x2="${xOf3(v).toFixed(1)}" y2="${tickBottom3}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
-      + `<text x="${xOf3(v).toFixed(1)}" y="${labelY3}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtV3(v)}</text>`
-    ).join('');
-    const stripesSvg3 = teeSdKeys.map((t, i) => {
-      if (i % 2 === 1) return '';
-      const yTop = tickTop3 + i * (laneH3 + laneGap3) - laneGap3 / 2;
-      const yBottom = yTop + laneH3 + laneGap3;
-      return `<rect x="0" y="${yTop.toFixed(1)}" width="${w3}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
-    }).join('');
-    const labelsSvg3 = teeSdKeys.map((t, i) => {
-      const yMid = (tickTop3 + i * (laneH3 + laneGap3) + laneH3 / 2).toFixed(1);
-      return `<text x="${padL3 - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${escapeHtml(t)}</text>`;
-    }).join('');
-    const barsSvg3 = teeSdKeys.map((t, i) => {
-      const x = xOf3(teeAvgs[t].avg).toFixed(1);
-      const yTop = (tickTop3 + i * (laneH3 + laneGap3)).toFixed(1);
-      const yBottom = (tickTop3 + i * (laneH3 + laneGap3) + laneH3).toFixed(1);
-      return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="${teeColorOf(t)}" stroke-width="5" stroke-linecap="butt"/>`;
-    }).join('');
-    teeChartSvg = `<svg viewBox="0 0 ${w3} ${h3}" style="width:100%;height:auto">${stripesSvg3}${gridSvg3}${labelsSvg3}${barsSvg3}</svg>`;
-  }
+  teeChartSvg = bouwTeeGrafiek({ teeSdKeys, teeAvgs, teeColorOf });
 
   const teeRow = (tee, i) => {
     const sdArr = teeBuckets[tee] || [];
@@ -4395,73 +5037,7 @@ function renderPlayerStats() {
   const presentPars = [3, 4, 5, 6].filter(p => parDevs[p]);
   const parDevVals = Object.values(parDevs).map(d => d.dev);
   let parDotsCard = '';
-  if (parDevVals.length) {
-    const minDev = Math.min(0, ...parDevVals);
-    const maxDev = Math.max(0, ...parDevVals);
-    const range = maxDev - minDev;
-    const step = range <= 1.5 ? 0.5 : (range <= 4 ? 1 : 2);
-    let axisLo = Math.floor(minDev / step) * step;
-    let axisHi = Math.ceil(maxDev / step) * step;
-    if (axisHi <= maxDev) axisHi += step;
-    if (axisLo < 0 && axisLo >= minDev) axisLo -= step;
-    if (axisHi === axisLo) axisHi += step;
-    // Vaste labels per holetype, net als bij 'Gemiddelde per weekdag' — direct op de y-as
-    // i.p.v. alleen in de tabel eronder.
-    const parLabels = { 3: 'Par 3', 4: 'Par 4', 5: 'Par 5', 6: 'Par 6' };
-    // Zelfde canvasgrootte/opmaak als 'Gemiddelde per weekdag': bredere linkermarge voor
-    // de y-as-labels, grotere baanafstand, en zebra-striping in de grafiek zelf.
-    const w = 320, h = 118, padL = 46, padR = 12, tickTop = 10, tickBottom = 90, labelY = 108;
-    const xOf = v => padL + ((v - axisLo) / (axisHi - axisLo)) * (w - padL - padR);
-    const fmtDev = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
-    // Aparte, compacte variant voor de aslabels — daar mag een rond getal zonder
-    // decimaal (bv. '+5' i.p.v. '+5.0'), anders wordt de as al snel te druk.
-    const fmtAxis = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
-    const ticks = [];
-    for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
-    const gridSvg = ticks.map(v =>
-      `<line x1="${xOf(v).toFixed(1)}" y1="${tickTop}" x2="${xOf(v).toFixed(1)}" y2="${tickBottom}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
-      + `<text x="${xOf(v).toFixed(1)}" y="${labelY}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis(v)}</text>`
-    ).join('');
-    // Elk aanwezig holetype krijgt een eigen, vaste 'baan' binnen de totale hoogte
-    // (kleinste par boven, grootste onder) — zo kunnen de streepjes elkaar nooit
-    // overlappen, ook niet als twee holetypes toevallig dezelfde afwijking hebben.
-    const laneGap = 5;
-    const laneSpan = tickBottom - tickTop;
-    const laneCount = presentPars.length;
-    const laneH = (laneSpan - laneGap * (laneCount - 1)) / laneCount;
-    const stripesSvg = presentPars.map((p, i) => {
-      if (i % 2 === 1) return '';
-      const yTop = tickTop + i * (laneH + laneGap) - laneGap / 2;
-      const yBottom = yTop + laneH + laneGap;
-      return `<rect x="0" y="${yTop.toFixed(1)}" width="${w}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
-    }).join('');
-    const labelsSvg = presentPars.map((p, i) => {
-      const yMid = (tickTop + i * (laneH + laneGap) + laneH / 2).toFixed(1);
-      return `<text x="${padL - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${parLabels[p]}</text>`;
-    }).join('');
-    const barsSvg = presentPars.map((p, i) => {
-      const x = xOf(parDevs[p].dev).toFixed(1);
-      const yTop = (tickTop + i * (laneH + laneGap)).toFixed(1);
-      const yBottom = (tickTop + i * (laneH + laneGap) + laneH).toFixed(1);
-      return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="5" stroke-linecap="butt"/>`;
-    }).join('');
-    // Legenda als 4-koloms-tabel: elk holetype op een eigen regel, kolommen netjes
-    // uitgelijnd (kleur+label / gem per par / gem t.o.v. par / aantal).
-    const legendHeader = `<span></span>`
-      + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Per par</span>`
-      + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
-      + `<span></span>`;
-    const legendRows = presentPars.map((p, i) => {
-      const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
-      return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>Par ${p}</span>`
-        + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${(p + parDevs[p].dev).toFixed(1)}</span>`
-        + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${fmtDev(parDevs[p].dev)}</span>`
-        + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${parDevs[p].n}×</span>`;
-    }).join('');
-    parDotsCard = `<div class="card"><h2>Gemiddelde per par</h2>`
-      + `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">${stripesSvg}${gridSvg}${labelsSvg}${barsSvg}</svg>`
-      + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader}${legendRows}</div></div>`;
-  }
+  parDotsCard = bouwParTypeKaart({ parDevs, presentPars, parDevVals });
 
   // ══ STROKE-INDEX-ANALYSE ═══════════════════════════════════════════════
   // Zelfde soort streepjes-grafiek als 'Gemiddelde per par', maar nu gegroepeerd op
@@ -4476,176 +5052,13 @@ function renderPlayerStats() {
   // een scheve, misleidende indeling krijgen. Zelfde principe als distributeChcp() elders
   // in de app: alleen de onderlinge volgorde telt, niet de absolute getallen.
   let siDotsCard = '';
-  {
-    const siBuckets = { hard: [], mid: [], easy: [] };
-    periodRounds.forEach(r => {
-      const validHoles = r.holes.filter(h => h.score != null && h.si != null);
-      if (!validHoles.length) return;
-      const sortedBySi = [...validHoles].sort((a, b) => a.si - b.si);
-      const third = Math.ceil(sortedBySi.length / 3);
-      sortedBySi.forEach((h, i) => {
-        const bucket = i < third ? 'hard' : (i < third * 2 ? 'mid' : 'easy');
-        siBuckets[bucket].push(h.score - h.par);
-      });
-    });
-    const siLabels = { hard: 'Moeilijkste', mid: 'Middelste', easy: 'Makkelijkste' };
-    const siDevs = {};
-    ['hard', 'mid', 'easy'].forEach(k => {
-      const arr = siBuckets[k];
-      if (arr.length) siDevs[k] = { dev: arr.reduce((s, x) => s + x, 0) / arr.length, n: arr.length };
-    });
-    const presentSi = ['hard', 'mid', 'easy'].filter(k => siDevs[k]);
-    const siDevVals = Object.values(siDevs).map(d => d.dev);
-    if (siDevVals.length) {
-      const minDev = Math.min(0, ...siDevVals);
-      const maxDev = Math.max(0, ...siDevVals);
-      const range = maxDev - minDev;
-      const step = range <= 1.5 ? 0.5 : (range <= 4 ? 1 : 2);
-      let axisLo = Math.floor(minDev / step) * step;
-      let axisHi = Math.ceil(maxDev / step) * step;
-      if (axisHi <= maxDev) axisHi += step;
-      if (axisLo < 0 && axisLo >= minDev) axisLo -= step;
-      if (axisHi === axisLo) axisHi += step;
-      const w3 = 320, h3 = 118, padL3 = 90, padR3 = 12, tickTop3 = 10, tickBottom3 = 90, labelY3 = 108;
-      const xOf3 = v => padL3 + ((v - axisLo) / (axisHi - axisLo)) * (w3 - padL3 - padR3);
-      const fmtDev3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
-      const fmtAxis3 = v => v === 0 ? 'Par' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
-      const ticks3 = [];
-      for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks3.push(Math.round(v * 100) / 100);
-      const gridSvg3 = ticks3.map(v =>
-        `<line x1="${xOf3(v).toFixed(1)}" y1="${tickTop3}" x2="${xOf3(v).toFixed(1)}" y2="${tickBottom3}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
-        + `<text x="${xOf3(v).toFixed(1)}" y="${labelY3}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtAxis3(v)}</text>`
-      ).join('');
-      const laneGap3 = 5;
-      const laneSpan3 = tickBottom3 - tickTop3;
-      const laneCount3 = presentSi.length;
-      const laneH3 = (laneSpan3 - laneGap3 * (laneCount3 - 1)) / laneCount3;
-      const stripesSvg3 = presentSi.map((k, i) => {
-        if (i % 2 === 1) return '';
-        const yTop = tickTop3 + i * (laneH3 + laneGap3) - laneGap3 / 2;
-        const yBottom = yTop + laneH3 + laneGap3;
-        return `<rect x="0" y="${yTop.toFixed(1)}" width="${w3}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
-      }).join('');
-      const labelsSvg3 = presentSi.map((k, i) => {
-        const yMid = (tickTop3 + i * (laneH3 + laneGap3) + laneH3 / 2).toFixed(1);
-        return `<text x="4" y="${yMid}" font-size="11" fill="var(--muted)" text-anchor="start" dominant-baseline="middle">${siLabels[k]}</text>`;
-      }).join('');
-      const barsSvg3 = presentSi.map((k, i) => {
-        const x = xOf3(siDevs[k].dev).toFixed(1);
-        const yTop = (tickTop3 + i * (laneH3 + laneGap3)).toFixed(1);
-        const yBottom = (tickTop3 + i * (laneH3 + laneGap3) + laneH3).toFixed(1);
-        return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="5" stroke-linecap="butt"/>`;
-      }).join('');
-      const legendHeader3 = `<span></span>`
-        + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">T.o.v. par</span>`
-        + `<span></span>`;
-      const legendRows3 = presentSi.map((k, i) => {
-        const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
-        return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${siLabels[k]}</span>`
-          + `<span style="${bg}font-weight:700;text-align:right;padding:4px 8px 4px 0">${fmtDev3(siDevs[k].dev)}</span>`
-          + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${siDevs[k].n}×</span>`;
-      }).join('');
-      siDotsCard = `<div class="card"><h2>Gemiddelde per SI</h2>`
-        + `<svg viewBox="0 0 ${w3} ${h3}" style="width:100%;height:auto">${stripesSvg3}${gridSvg3}${labelsSvg3}${barsSvg3}</svg>`
-        + `<div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader3}${legendRows3}</div></div>`;
-    }
-  }
+  siDotsCard = bouwSiKaart({ periodRounds });
 
   // Gemiddelde Sd per dag van de week (Ma t/m Zo), zelfde soort streepjes-grafiek als
   // 'Gemiddelde per par' — nu op de Sd-as i.p.v. afwijking-t.o.v.-par. Wisselbaar tussen
   // 7 losse dagen en een tweedeling doordeweeks/weekend (window._weekdayViewMode).
   let weekdayDotsCard = '';
-  {
-    const viewMode = window._weekdayViewMode === 'days' ? 'days' : 'weekend';
-    const dayBuckets = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-    periodRounds.forEach(r => {
-      const e = effectiveSD(r);
-      if (!e || e.value == null) return;
-      const d = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`);
-      if (!isFinite(d.getTime())) return;
-      dayBuckets[d.getDay()].push({ value: e.value, warn: roundHasWarning(r) });
-    });
-    // Groepindeling hangt af van de weergavestand: 7 losse dagen, of doordeweeks (ma-vr)
-    // samengevoegd tegenover weekend (za+zo) samengevoegd. Alle groepen delen nu dezelfde
-    // accentkleur (--weekday-accent) — de positie/het label maakt het onderscheid, niet
-    // meer de kleur, dus geen aparte kleur per dag meer nodig.
-    let groupOrder, groupLabels, groupMembers;
-    if (viewMode === 'weekend') {
-      groupOrder = ['week', 'weekend'];
-      groupLabels = { week: 'Ma - Vr', weekend: 'Za - Zo' };
-      groupMembers = { week: [1, 2, 3, 4, 5], weekend: [6, 0] };
-    } else {
-      groupOrder = [1, 2, 3, 4, 5, 6, 0]; // Ma..Zo
-      const dayLabels = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
-      groupLabels = Object.fromEntries(groupOrder.map(dn => [dn, dayLabels[dn]]));
-      groupMembers = Object.fromEntries(groupOrder.map(dn => [dn, [dn]]));
-    }
-    const groupAvgs = {};
-    groupOrder.forEach(gk => {
-      const arr = groupMembers[gk].flatMap(dn => dayBuckets[dn]);
-      groupAvgs[gk] = arr.length ? { avg: arr.reduce((s, x) => s + x.value, 0) / arr.length, n: arr.length, warn: arr.some(x => x.warn) } : { avg: null, n: 0, warn: false };
-    });
-    const nGroups = groupOrder.length;
-    const groupVals = Object.values(groupAvgs).filter(d => d.avg != null).map(d => d.avg);
-    const toggleBtn = (mode, label) => `<button class="btn-secondary" style="flex:1;padding:8px;font-size:15px${viewMode === mode ? ';background:var(--gold);color:var(--green-deep)' : ''}" onclick="window._weekdayViewMode='${mode}';renderPlayerStats()">${label}</button>`;
-    const toggleRow = `<div style="display:flex;gap:6px;margin:0 0 4px">${toggleBtn('weekend', 'Werkweek/weekend')}${toggleBtn('days', 'Weekdag')}</div>`;
-    if (groupVals.length) {
-      const minV = Math.min(0, ...groupVals);
-      const maxV = Math.max(0, ...groupVals);
-      const range = maxV - minV;
-      const step = range <= 7.5 ? 2.5 : (range <= 15 ? 5 : 10);
-      let axisLo = Math.floor(minV / step) * step;
-      let axisHi = Math.ceil(maxV / step) * step;
-      if (axisHi <= maxV) axisHi += step;
-      if (axisLo < 0 && axisLo >= minV) axisLo -= step;
-      if (axisHi === axisLo) axisHi += step;
-      // padL2 breder dan bij 'Gemiddelde per par': hier moet ook nog het dag-label
-      // (bv. 'Wo' of 'Za - Zo') links van de as passen.
-      const w2 = 320, h2 = 118, padL2 = 46, padR2 = 12, tickTop2 = 10, tickBottom2 = 90, labelY2 = 108;
-      const xOf2 = v => padL2 + ((v - axisLo) / (axisHi - axisLo)) * (w2 - padL2 - padR2);
-      const fmtV = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(Math.abs(v) % 1 === 0 ? 0 : 1);
-      const ticks2 = [];
-      for (let v = axisLo; v <= axisHi + 1e-9; v += step) ticks2.push(Math.round(v * 100) / 100);
-      const gridSvg2 = ticks2.map(v =>
-        `<line x1="${xOf2(v).toFixed(1)}" y1="${tickTop2}" x2="${xOf2(v).toFixed(1)}" y2="${tickBottom2}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>`
-        + `<text x="${xOf2(v).toFixed(1)}" y="${labelY2}" font-size="12" fill="var(--muted)" text-anchor="middle">${fmtV(v)}</text>`
-      ).join('');
-      const laneGap2 = 5;
-      const laneSpan2 = tickBottom2 - tickTop2;
-      const laneH2 = (laneSpan2 - laneGap2 * (nGroups - 1)) / nGroups;
-      // Afwisselende, lichte rijachtergrond per baan (zebra-striping) — helpt een streepje
-      // te koppelen aan zijn label, nu alle banen dezelfde kleur delen.
-      const stripesSvg2 = groupOrder.map((gk, i) => {
-        if (i % 2 === 1) return '';
-        const yTop = tickTop2 + i * (laneH2 + laneGap2) - laneGap2 / 2;
-        const yBottom = yTop + laneH2 + laneGap2;
-        return `<rect x="0" y="${yTop.toFixed(1)}" width="${w2}" height="${(yBottom - yTop).toFixed(1)}" fill="rgba(0,0,0,.04)"/>`;
-      }).join('');
-      const labelsSvg2 = groupOrder.map((gk, i) => {
-        const yMid = (tickTop2 + i * (laneH2 + laneGap2) + laneH2 / 2).toFixed(1);
-        return `<text x="${padL2 - 6}" y="${yMid}" font-size="12" fill="var(--muted)" text-anchor="end" dominant-baseline="middle">${groupLabels[gk]}</text>`;
-      }).join('');
-      const barsSvg2 = groupOrder.map((gk, i) => {
-        if (groupAvgs[gk].avg == null) return '';
-        const x = xOf2(groupAvgs[gk].avg).toFixed(1);
-        const yTop = (tickTop2 + i * (laneH2 + laneGap2)).toFixed(1);
-        const yBottom = (tickTop2 + i * (laneH2 + laneGap2) + laneH2).toFixed(1);
-        return `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" stroke="var(--weekday-accent)" stroke-width="4" stroke-linecap="butt"/>`;
-      }).join('');
-      const legendHeader2 = `<span></span>`
-        + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Gem. Sd</span>`
-        + `<span></span>`;
-      const legendRows2 = groupOrder.map((gk, i) => {
-        const bg = i % 2 === 1 ? '' : 'background:rgba(0,0,0,.04);';
-        return `<span style="${bg}display:flex;align-items:center;gap:6px;padding:4px 0 4px 6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--weekday-accent);display:inline-block;flex-shrink:0"></span>${groupLabels[gk]}</span>`
-          + `<span style="${bg}font-weight:700${groupAvgs[gk].avg == null ? ';color:var(--muted);font-weight:400' : ''};text-align:right;padding:4px 8px 4px 0;display:flex;align-items:center;justify-content:flex-end;gap:5px">${groupAvgs[gk].warn ? warningIconSmall : ''}${groupAvgs[gk].avg != null ? fmt1(groupAvgs[gk].avg) : '—'}</span>`
-          + `<span style="${bg}color:var(--muted);text-align:right;padding:4px 6px 4px 0">${groupAvgs[gk].n}×</span>`;
-      }).join('');
-      weekdayDotsCard = `<div class="card"><h2>Gemiddelde per dag</h2>${toggleRow}`
-        + `<svg viewBox="0 0 ${w2} ${h2}" style="width:100%;height:auto">${stripesSvg2}${gridSvg2}${labelsSvg2}${barsSvg2}</svg>`
-        + `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px;font-size:15px;color:var(--white)">${legendHeader2}${legendRows2}</div></div>`;
-    }
-  }
+    weekdayDotsCard = bouwDagKaart({ periodRounds });
 
   // Verdeling rond je handicap: dagresultaat per ronde t.o.v. de index die vóór die ronde gold
   const distBuckets = { onder: [], gelijk: [], boven1_3: [], boven3_5: [], boven5: [] };
@@ -4751,48 +5164,7 @@ function renderPlayerStats() {
     const cb = Object.values(byClub[b]).reduce((s, x) => s + x.length, 0);
     return cb - ca;
   });
-  const clubBlock = club => {
-    const tracks = byClub[club];
-    const total = Object.values(tracks).reduce((s, x) => s + x.length, 0);
-    const ck = club.replace(/\W/g, '_');
-    const collapsed = window._statClubCollapsed[ck] !== false; // standaard ingeklapt
-    window._statTrackCollapsed = window._statTrackCollapsed || {};
-    // Banen alfabetisch: terugvinden weegt hier zwaarder dan aantal rondes (Marks keuze).
-    // Tees blijven bewust op aantal gesorteerd — die volgorde zit er bij Mark in.
-    const trackRows = Object.keys(tracks).sort((a, b) => a.localeCompare(b, 'nl')).map(track => {
-      const rs = tracks[track];
-      const avg = avgSdOf(rs);
-      const tk = ck + '_' + track.replace(/\W/g, '_');
-      const tCollapsed = window._statTrackCollapsed[tk] === true; // standaard opengeklapt (i.t.t. clubs zelf)
-      // Tee-subgroepen: gemiddeld dagresultaat per tee op deze baan
-      const byTee = {};
-      rs.forEach(r => { const t = r.tee || 'Onbekend'; (byTee[t] = byTee[t] || []).push(r); });
-      const teeRows = Object.keys(byTee).sort((a, b) => byTee[b].length - byTee[a].length).map(tee => {
-        const trs = byTee[tee];
-        const tAvg = avgSdOf(trs);
-        const tDiff = avgDiffOf(trs);
-        return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0 3px 24px">`
-          + `<span style="flex:1;display:flex;align-items:center;gap:6px;font-size:17px;color:var(--muted)"><span class="tee-badge tee-${escapeHtml(tee)}" style="width:10px;height:10px;padding:0;border-radius:2px;flex-shrink:0"></span>${escapeHtml(tee)}${trs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
-          + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${tAvg != null ? tAvg.toFixed(1) : '—'}</span>`
-          + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${tDiff != null ? fmtDiff(tDiff) : '—'}</span>`
-          + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${trs.length}×</span></div>`;
-      }).join('');
-      const trackDiff = avgDiffOf(rs);
-      const trackHeader = `<div onclick="window._statTrackCollapsed['${tk}']=window._statTrackCollapsed['${tk}']!==true;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 4px 12px">`
-        + `<span style="flex:1;font-size:17px;display:flex;align-items:center;gap:6px">${escapeHtml(track)}${rs.some(roundHasWarning) ? warningIconSmall : ''}</span>`
-        + `<span style="min-width:52px;text-align:right;font-size:17px;font-weight:700">${avg != null ? avg.toFixed(1) : '—'}</span>`
-        + `<span style="min-width:44px;text-align:right;font-size:15px;color:var(--muted)">${trackDiff != null ? fmtDiff(trackDiff) : '—'}</span>`
-        + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${rs.length}×</span>`
-        + `${arrowSvg(13, !tCollapsed)}</div>`;
-      return trackHeader + (tCollapsed ? '' : teeRows);
-    }).join('');
-    const clubHasWarning = Object.values(tracks).some(arr => arr.some(roundHasWarning));
-    const header = `<div onclick="window._statClubCollapsed['${ck}']=window._statClubCollapsed['${ck}']===false?true:false;renderPlayerStats()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0">`
-      + `<span style="flex:1;font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px">${escapeHtml(club)}${clubHasWarning ? warningIconSmall : ''}</span>`
-      + `<span style="width:44px;text-align:right;font-size:15px;color:var(--muted)">${total}×</span>`
-      + `${arrowSvg(15, !collapsed)}</div>`;
-    return header + (collapsed ? '' : `<div>${trackRows}</div>`);
-  };
+  const clubBlock = club => bouwClubBlok(club, { byClub, avgSdOf, avgDiffOf, fmtDiff });
   // Categorieën zoals op de Club-tab (thuisclub, favorieten, overig) zodat beide
   // schermen dezelfde volgorde tonen; alleen clubs waarmee daadwerkelijk gespeeld is,
   // en binnen een categorie alfabetisch. "Actief" hoort bij het startscherm en zegt
@@ -4807,7 +5179,7 @@ function renderPlayerStats() {
   };
   const alfabetisch = arr => [...arr].sort((a, b) => a.localeCompare(b, 'nl'));
   const homeClubNaam = storage.getItem('golf_home_club');
-  const favClubNamen = (typeof getFavClubs === 'function' ? getFavClubs() : []);
+  const favClubNamen = getFavClubs();
   const thuisClubs = clubNames.filter(c => c === homeClubNaam);
   const favClubs = alfabetisch(clubNames.filter(c => c !== homeClubNaam && favClubNamen.includes(c)));
   const overigeClubs = alfabetisch(clubNames.filter(c => c !== homeClubNaam && !favClubNamen.includes(c)));
@@ -4897,95 +5269,7 @@ function renderPlayerStats() {
   // Volgt de periodeknop (net als de kaarten eromheen; de analysemodal rekent juist
   // altijd over het hele archief). Alleen rondes waarin ÉLKE gespeelde hole een
   // puttwaarde heeft tellen mee — een half ingevulde ronde zou elke maat vertekenen.
-  const puttCard = (() => {
-    if (typeof puttsStatsEnabled !== 'function' || !puttsStatsEnabled()) return '';
-    const metPutts = periodRounds.filter(r => {
-      const gespeeld = (r.holes || []).filter(h => h && h.score != null);
-      return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
-    });
-    if (metPutts.length < getMinRoundsStat()) return '';
-    let pHoles = 0, pTot = 0, pGir = 0, pDrie = 0, pOpGir = 0, pGeenGir = 0, pScramble = 0, pScramblePar = 0;
-    let vTot = 0, vVoor = 0, vOp = 0;
-    const puttVerdeling = {};
-    metPutts.forEach(r => (r.holes || []).forEach(h => {
-      if (!h || h.score == null || h.putts == null || h.par == null) return;
-      pHoles++;
-      pTot += h.putts;
-      if (h.putts >= 3) pDrie++;
-      const bucket = Math.min(h.putts, 4);
-      puttVerdeling[bucket] = (puttVerdeling[bucket] || 0) + 1;
-      const totGreen = h.score - h.putts;
-      const isGir = totGreen <= h.par - 2;
-      if (isGir) { pGir++; pOpGir += h.putts; }
-      else {
-        pGeenGir++;
-        if (h.phcp != null && h.score <= h.par + h.phcp) pScramble++;
-        if (h.score <= h.par) pScramblePar++;   // officiële maat: de echte par
-      }
-      vTot += h.score - h.par;
-      vVoor += totGreen - (h.par - 2);
-      vOp += h.putts - 2;
-    }));
-    if (!pHoles) return '';
-    const drempel = getMinRoundsStat(); // zelfde drempel als overal (Marks regel)
-    const drempelHoles = drempel * 9;  // tellingen over holes rekenen in holes
-
-    // Blok 1: kerngetallen, in de rijstijl van Vorm & consistentie
-    const rij = (label, waarde, zebra) =>
-      `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px">`
-      + `<span style="flex:1;font-size:17px;color:var(--muted)">${label}</span>`
-      + `<span style="font-size:17px;font-weight:700">${waarde}</span></div>`;
-    // Zebra begint mét accentkleur op de eerste rij, net als dataRow elders in de app.
-    let z = 0;
-    const kern = [
-      ['Putts per 18 holes', fmt1(pTot / pHoles * 18)],
-      ['Putts per hole', fmt1(pTot / pHoles)],
-      ...(pGir >= drempelHoles ? [['Putts per green in regulation', fmt1(pOpGir / pGir)]] : []),
-      ['Drie putts of meer', Math.round(pDrie / pHoles * 100) + '%'],
-      ['Greens in regulation', Math.round(pGir / pHoles * 100) + '%'],
-      ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. ppar)', Math.round(pScramble / pGeenGir * 100) + '%']] : []),
-      ...(pGeenGir >= drempelHoles ? [['Scrambling (t.o.v. par)', Math.round(pScramblePar / pGeenGir * 100) + '%']] : []),
-    ].map(([l, v]) => rij(l, v, z++ % 2 === 0)).join('');
-
-    // Blok 2: verdeling van putts per hole, zelfde balkjes als Scoreverdeling
-    const verdRij = (label, n, kleur) => {
-      const pct = pHoles ? Math.round(n / pHoles * 100) : 0;
-      return `<div style="display:contents">`
-        + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-        + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
-        + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${n}</span>`
-        + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
-        + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
-    };
-    // Eigen raster zonder buitenmarge: zo bepaalt alleen subHead (10px boven, 4px onder)
-    // de ruimte rond de groene subkoppen, gelijk aan Vorm & consistentie.
-    const puttGrid = binnen => `<div style="display:grid;grid-template-columns:max-content 1fr max-content 10px max-content;column-gap:14px;row-gap:4px;align-items:center">${binnen}</div>`;
-    const verdeling = puttGrid(
-      verdRij('1 putt', puttVerdeling[1] || 0, 'var(--dist-birdie)')
-      + verdRij('2 putts', puttVerdeling[2] || 0, 'var(--res-par)')
-      + verdRij('3 putts', puttVerdeling[3] || 0, 'var(--dist-bogey)')
-      + verdRij('4 of meer', puttVerdeling[4] || 0, 'var(--dist-worse)')
-      + ((puttVerdeling[0] || 0) ? verdRij('0 putts', puttVerdeling[0], 'var(--dist-eagle)') : ''));
-
-    // Blok 3: waar verlies je je slagen — twee balken die samen 100% vormen
-    const absVoor = Math.abs(vVoor), absOp = Math.abs(vOp), absSom = absVoor + absOp;
-    const pctVoor = absSom ? Math.round(absVoor / absSom * 100) : 0;
-    const splitRij = (label, pct, perHole, kleur) => `<div style="display:contents">`
-      + `<span style="font-size:17px;color:var(--muted);white-space:nowrap">${label}</span>`
-      + `<div style="min-width:0">${balkSvg(pct, kleur)}</div>`
-      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${fmtDiff(perHole)}</span>`
-      + `<span style="text-align:center;font-size:17px;font-weight:700;color:var(--muted)">\u00b7</span>`
-      + `<span style="text-align:right;font-size:17px;font-weight:700;white-space:nowrap">${pct}%</span></div>`;
-    const split = subHead('Waar verlies je je slagen') + puttGrid(
-      splitRij('V\u00f3\u00f3r de green', pctVoor, vVoor / pHoles, 'var(--green-light)')
-      + splitRij('Op de green', 100 - pctVoor, vOp / pHoles, 'var(--gold)'));
-
-    return `<div class="card"><h2>Putten en greens</h2>`
-      + kern
-      + subHead('Putts per hole') + verdeling
-      + split
-      + `<div style="font-size:15px;color:var(--muted);margin-top:6px">${pHoles} holes over ${metPutts.length} ronde${metPutts.length === 1 ? '' : 's'} met putts</div></div>`;
-  })();
+  const puttCard = bouwPuttKaart({ periodRounds, dataRow, balkSvg, subHead, fmtDiff });
 
   const formCard = formBody ? `<div class="card"><h2>Vorm &amp; consistentie</h2>${formBody}</div>` : '';
 
@@ -5043,157 +5327,7 @@ function renderPlayerStats() {
   // buckets (1 ronde) krijgen een kleiner stipje; onder 10 punten zijn de
   // limieten indicatief (melding onder de kaart). Tik op een punt voor details.
   // Staat bewust helemaal onderaan, buiten de groepen — plek volgt na beoordeling.
-  const controlChartInner = (() => {
-    const pairs = periodRounds.map((r, i) => ({ date: (r && r.date) || null, time: (r && r.time) || '', v: sdView[i], id: (r && r.id) != null ? r.id : null }))
-      .filter(p => p.v != null && p.date);
-    const aggMode = period === 'l20' ? 'ronde' : (period === 'jaar' ? 'maand' : 'kwartaal');
-    const maandNamen = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-    const dmOf = d => `${+d.slice(8, 10)}-${+d.slice(5, 7)}`;
-    // Buckets: { v, n, label, jaarStart } — v null = leeg (lijnbreuk + leeg plekje)
-    let buckets = [];
-    if (aggMode === 'ronde') {
-      buckets = pairs.map(p => ({ v: p.v, n: 1, label: dmOf(p.date) + '-' + p.date.slice(0, 4), tijd: p.time, id: p.id, jaarStart: null }));
-    } else if (pairs.length) {
-      const perY = aggMode === 'maand' ? 12 : 4;
-      const keyOf = d => {
-        const y = +d.slice(0, 4), m = +d.slice(5, 7);
-        return aggMode === 'maand' ? y * 12 + (m - 1) : y * 4 + Math.floor((m - 1) / 3);
-      };
-      const sums = new Map();
-      pairs.forEach(p => {
-        const k = keyOf(p.date);
-        if (!sums.has(k)) sums.set(k, { s: 0, n: 0, firstDate: null, firstTime: '', id: null });
-        const b = sums.get(k); b.s += p.v; b.n++;
-        // Oudste ronde van de bucket onthouden: daar springt de detailregel heen.
-        const nieuwerVroeger = b.firstDate == null || (p.date + p.time) < (b.firstDate + b.firstTime);
-        if (nieuwerVroeger) { b.firstDate = p.date; b.firstTime = p.time; b.id = p.id; }
-      });
-      const keys = [...sums.keys()];
-      const kMin = Math.min(...keys), kMax = Math.max(...keys);
-      for (let k = kMin; k <= kMax; k++) {
-        const b = sums.get(k);
-        const label = aggMode === 'maand'
-          ? `${maandNamen[k % 12]} ${Math.floor(k / 12)}`
-          : `Q${(k % 4) + 1} ${Math.floor(k / 4)}`;
-        // Aslabel compact: mm-yyyy bij maanden, yyyyQn bij kwartalen (alleen eerste/laatste)
-        const axisLabel = aggMode === 'maand'
-          ? `${String((k % 12) + 1).padStart(2, '0')}-${Math.floor(k / 12)}`
-          : `${Math.floor(k / 4)}-Q${(k % 4) + 1}`;
-        buckets.push({ v: b ? b.s / b.n : null, n: b ? b.n : 0, label, axisLabel, id: b ? b.id : null, jaarStart: (k % perY === 0) ? String(Math.floor(k / perY)) : null });
-      }
-    }
-    const filledIdx = buckets.map((b, i) => b.v != null ? i : null).filter(i => i != null);
-    const filled = filledIdx.map(i => buckets[i].v);
-    const inner = (() => {
-      if (filled.length < 2) return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div style="font-size:17px;color:var(--muted);padding:12px 0">Te weinig rondes in deze periode voor een regelkaart.</div></div>`;
-      const n = filled.length;
-      const mean = filled.reduce((s, v) => s + v, 0) / n;
-      const sdInfo = Math.sqrt(filled.reduce((s, v) => s + (v - mean) * (v - mean), 0) / (n - 1));
-      let mrSum = 0;
-      for (let i = 1; i < filled.length; i++) mrSum += Math.abs(filled[i] - filled[i - 1]);
-      const mrBar = mrSum / (filled.length - 1);
-      const lim3 = 2.66 * mrBar, lim2 = 1.77 * mrBar;
-      // Signalering per gevuld punt: 0 = normaal, 1 = oranje (run-regel), 2 = rood (buiten 3σ)
-      const flags = filled.map(v => Math.abs(v - mean) > lim3 ? 2 : 0);
-      // Run-regel 1: 8 opeenvolgende punten aan één kant van x̄ (exact x̄ breekt de run)
-      let side = 0, runLen = 0, runStart = 0;
-      for (let i = 0; i < filled.length; i++) {
-        const s = Math.sign(filled[i] - mean);
-        if (s !== 0 && s === side) runLen++;
-        else { side = s; runLen = s === 0 ? 0 : 1; runStart = i; }
-        if (runLen >= 8) for (let j = runStart; j <= i; j++) if (flags[j] < 1) flags[j] = 1;
-      }
-      // Run-regel 2: 2 van 3 opeenvolgende punten voorbij 2σ aan dezelfde kant
-      for (let i = 2; i < filled.length; i++) {
-        [1, -1].forEach(sgn => {
-          const beyond = [i - 2, i - 1, i].filter(j => sgn * (filled[j] - mean) > lim2);
-          if (beyond.length >= 2) beyond.forEach(j => { if (flags[j] < 1) flags[j] = 1; });
-        });
-      }
-      const w = 320, h = 184, padL = 34, padR = 8, padT = 10, padB = 32; // padB gelijk aan de verloopgrafiek: beide tekenvlakken lopen nu van y=10 tot y=152
-      const chartBottom = h - padB;
-      const lo = Math.min(mean - lim3, ...filled), hi = Math.max(mean + lim3, ...filled);
-      const span = (hi - lo) || 1;
-      const m = buckets.length;
-      const xOf = i => padL + (m === 1 ? 0 : i * (w - padL - padR) / (m - 1));
-      const yOf = v => padT + (hi - v) / span * (chartBottom - padT);
-      const limOpacity = n < 10 ? '.55' : '1';
-      const limLine = (v, color) => `<line x1="${padL}" y1="${yOf(v).toFixed(1)}" x2="${w - padR}" y2="${yOf(v).toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 3" opacity="${limOpacity}"/>`;
-      const labelFor = (v, txt) => `<text x="2" y="${(yOf(v) + 4).toFixed(1)}" font-size="10" fill="var(--muted)">${txt}</text>`;
-      let svg = limLine(mean + lim3, 'var(--red)') + limLine(mean - lim3, 'var(--red)')
-        + limLine(mean + lim2, 'var(--orange)') + limLine(mean - lim2, 'var(--orange)')
-        + `<line x1="${padL}" y1="${yOf(mean).toFixed(1)}" x2="${w - padR}" y2="${yOf(mean).toFixed(1)}" stroke="var(--gold)" stroke-width="1.5"/>`
-        + labelFor(mean + lim3, '+3σ̂') + labelFor(mean + lim2, '+2σ̂') + labelFor(mean, 'x̄')
-        + labelFor(mean - lim2, '-2σ̂') + labelFor(mean - lim3, '-3σ̂');
-      // X-as-labels: bij aggregatie de jaargrenzen (jan / Q1); zonder jaargrens in
-      // beeld, en bij losse rondes, alleen het eerste en laatste punt.
-      const axisY = h - 4;
-      const axisText = (i, txt, anchor) => `<text x="${xOf(i).toFixed(1)}" y="${axisY}" font-size="10" fill="var(--muted)" text-anchor="${anchor}">${txt}</text>`;
-      if (aggMode === 'ronde') {
-        svg += axisText(0, buckets[0].label, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].label, 'end') : '');
-      } else {
-        // Alleen de eerste en laatste periode, compact: mm-yyyy of yyyyQn (Marks keuze;
-        // verving de jaargrens-labels, die niet lieten zien wélke maand/kwartaal het was).
-        svg += axisText(0, buckets[0].axisLabel, 'start') + (m > 1 ? axisText(m - 1, buckets[m - 1].axisLabel, 'end') : '');
-      }
-      // Lijn met breuken: alleen segmenten tussen direct opeenvolgende gevulde buckets
-      let d = '', prevFilled = false;
-      buckets.forEach((b, i) => {
-        if (b.v == null) { prevFilled = false; return; }
-        d += `${prevFilled ? 'L' : 'M'}${xOf(i).toFixed(1)} ${yOf(b.v).toFixed(1)} `;
-        prevFilled = true;
-      });
-      svg += `<path d="${d.trim()}" fill="none" stroke="var(--green-light)" stroke-width="2"/>`; // gelijk aan de verloopgrafiek
-      // Punten + tik-vlakken; dunne buckets (minder rondes dan de ingestelde drempel)
-      // krijgen een OPEN stip van dezelfde grootte — zelfde idioom als de omlijnde
-      // staafjes in de baananalyse, en beter zichtbaar/aantikbaar dan een klein stipje
-      window._ccData = [];
-      window._ccJump = []; // ronde-id per punt (alleen bij losse rondes; bij maand/kwartaal null)
-      const slotHalf = m > 1 ? (w - padL - padR) / (m - 1) / 2 : (w - padL - padR) / 2;
-      filledIdx.forEach((bi, fi) => {
-        const b = buckets[bi];
-        const flag = flags[fi];
-        const dun = aggMode !== 'ronde' && b.n < getMinRoundsStat();
-        const r = 3.5; // één grootte voor alle punten: kleur en positie t.o.v. de grenzen
-        // maken een signaal al duidelijk (Marks keuze), en groter leest/tikt prettiger
-        const kleur = flag === 2 ? 'var(--red)' : (flag === 1 ? 'var(--orange)' : 'var(--green-light)');
-        // Open punt: gevuld met de effen kaartkleur zodat de lijn er niet doorheen loopt
-        // (met fill="none" liep de lijn er dwars doorheen — Marks leesbaarheidsmelding).
-        svg += dun
-          ? `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="var(--card-solid)" stroke="${kleur}" stroke-width="1.5"/>`
-          : `<circle cx="${xOf(bi).toFixed(1)}" cy="${yOf(b.v).toFixed(1)}" r="${r}" fill="${kleur}"/>`;
-        const groen = v => `<b style="color:var(--green-light)">${fmt1(v)}</b>`;
-        window._ccData.push(aggMode === 'ronde'
-          ? `<b>${b.label}</b>${b.tijd ? ` om <b>${b.tijd}</b>` : ''} · ${groen(b.v)}`
-          : `<b>${b.label}</b>: gem. ${groen(b.v)} · ${b.n} ronde${b.n === 1 ? '' : 's'}`);
-        window._ccJump.push(b.id != null ? b.id : null); // bij maand/kwartaal: de oudste ronde uit die periode
-        svg += `<rect x="${(xOf(bi) - slotHalf).toFixed(1)}" y="0" width="${(slotHalf * 2).toFixed(1)}" height="${chartBottom}" fill="transparent" style="cursor:pointer" onclick="ccShowPoint(${fi})"/>`;
-      });
-      const stats = `<div style="font-size:15px;color:var(--muted);margin-top:4px">n=${n}&nbsp;&nbsp;x̄=${fmt1(mean)}&nbsp;&nbsp;σₙ₋₁=${fmt1(sdInfo)}&nbsp;&nbsp;σ̂=${fmt1(mrBar / 1.128)}&nbsp;&nbsp;r̄=${fmt1(mrBar)}</div>`;
-      const detail = `<div id="ccDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>`;
-      // Uitleg achter een "Legenda"-uitklapper, net als bij de verloopgrafiek: zo hebben
-      // beide weergaven exact dezelfde opbouw (grafiek → informatieblok → legendaknop)
-      // en verspringt de kaart niet meer bij het wisselen (Marks meting).
-      const legendaItem = (swatch, tekst) => `<span style="display:flex;align-items:center;gap:6px">${swatch}${tekst}</span>`;
-      const stip = (fill, stroke) => `<span style="width:9px;height:9px;border-radius:50%;background:${fill};border:1.5px solid ${stroke};display:inline-block;box-sizing:border-box"></span>`;
-      const streep = kleur => `<span style="width:14px;height:0;border-top:2px dashed ${kleur};display:inline-block"></span>`;
-      const ccLegenda = `<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>`
-        + `<div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap">`
-        + legendaItem(`<span style="width:14px;height:2px;background:var(--gold);display:inline-block;border-radius:2px"></span>`, 'x̄ (gem.)')
-        + legendaItem(streep('var(--red)'), '±3σ̂')
-        + legendaItem(streep('var(--orange)'), '±2σ̂ (σ̂ = r̄/1.128)')
-        + legendaItem(stip('var(--green-light)', 'var(--green-light)'), `${getMinRoundsStat()} of meer rondes`)
-        + legendaItem(stip('var(--card-solid)', 'var(--green-light)'), `Minder dan ${getMinRoundsStat()} ronde${getMinRoundsStat() === 1 ? '' : 's'}`)
-        + `</div>`
-        + (n < 10 ? `<div style="margin-top:8px;font-size:15px;color:var(--muted)">Bij minder dan 10 punten zijn de grenzen indicatief.</div>` : '')
-        + `</div>`;
-      // Volgorde onder de grafiek: detailregel, statregel, legendaknop. Boven de grafiek
-      // staat in geen van beide weergaven iets, dus die begint overal op dezelfde hoogte;
-      // de ruimte eronder is bewust NIET vastgezet (Marks keuze).
-      return `<div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${svg}</svg></div>` + detail + stats + ccLegenda;
-    })();
-    return inner;
-  })();
+  const controlChartInner = bouwRegelkaartGrafiek({ period, periodRounds, sdView });
   el.innerHTML = kpiRow
     + stickyPeriodBar
     + grpHeader('handicap', 'Handicap')
@@ -5591,10 +5725,10 @@ const statusWarnIcon = '<svg width="15" height="15" viewBox="0 0.43 24 24" fill=
 // is die opgelost, dan schuift de volgende door (Marks keuze). Volgorde: een ontbrekend
 // dagresultaat raakt je handicap, een duplicaat vervuilt alle statistieken, onvolledige
 // putts alleen de puttcijfers.
-function openStaandeMeldingen() {
-  const rondes = loadSavedRounds();
+function openStaandeMeldingen(bron) {
+  const rondes = bron || loadSavedRounds();
   const zonderSd = rondes.filter(roundHasWarning).length;
-  const dupIds = (typeof findDuplicateRounds === 'function') ? findDuplicateRounds() : new Set();
+  const dupIds = findDuplicateRounds(rondes);
   const dups = dupIds.size;
   const puttRondes = rondes.filter(roundHasPuttWarning);
   const putts = puttRondes.length;
@@ -5613,10 +5747,10 @@ function openStaandeMeldingen() {
 // Waarschuwingsregels in het archief, onder de knoppen: één regel per soort, elk met
 // het eigen icoon en het eigen filter (zelfde indeling als voorheen in de Status-kaart
 // in Instellingen — die is opgesplitst, de backupregels staan nu bij Backup).
-function refreshStatusReminder() {
+function refreshStatusReminder(rondes) {
   const el = document.getElementById('archiveStatus');
   if (!el) return;
-  const lijst = openStaandeMeldingen();
+  const lijst = openStaandeMeldingen(rondes);
   if (!lijst.length || window._warnFilterActive) { el.classList.add('hidden'); el.innerHTML = ''; return; }
   el.innerHTML = lijst.map(m => {
     const icoon = m.filter === 'putt' ? puttWarnIcon : statusWarnIcon;
@@ -5640,27 +5774,27 @@ function statusReminderClick(filter) {
 // Instellingen-tab meteen verversen — je blijft in Instellingen, dus de gebruikelijke
 // verversing bij een tabwissel komt niet langs.
 function naBackupBijwerken() {
-  if (typeof updateLastBackupDisplay === 'function') updateLastBackupDisplay();
-  if (typeof refreshTabDot === 'function') refreshTabDot();
+  updateLastBackupDisplay();
+  refreshTabDot();
 }
 
-function refreshTabDot() {
+function refreshTabDot(rondes) {
   // Eerst de Instellingen-stip: die hangt alleen aan de backupstatus. Als de telling
   // voor Rondes onverhoopt struikelt, blijft deze stip toch correct (Marks melding dat
   // de stip na een backup bleef staan).
   const tabSet0 = document.getElementById('tab-settings');
-  if (tabSet0) tabSet0.classList.toggle('has-dot', typeof isBackupOverdue === 'function' && isBackupOverdue());
+  if (tabSet0) tabSet0.classList.toggle('has-dot', isBackupOverdue(rondes));
   const tab = document.getElementById('tab-archive');
-  if (tab) tab.classList.toggle('has-dot', openStaandeMeldingen().length > 0);
+  if (tab) tab.classList.toggle('has-dot', openStaandeMeldingen(rondes).length > 0);
   const tabSet = document.getElementById('tab-settings');
-  if (tabSet) tabSet.classList.toggle('has-dot', typeof isBackupOverdue === 'function' && isBackupOverdue());
+  if (tabSet) tabSet.classList.toggle('has-dot', isBackupOverdue());
 }
 
 // Mogelijke duplicaten: zelfde datum, tijd én speler. Komt normaal niet voor (de
 // import houdt ze al tegen), dus de regel verschijnt alleen als er echt iets is.
-function findDuplicateRounds() {
+function findDuplicateRounds(lijst) {
   const groepen = new Map();
-  loadSavedRounds().forEach(r => {
+  (lijst || loadSavedRounds()).forEach(r => {
     if (!r.date) return;
     const k = (r.date || '') + '|' + (r.time || '') + '|' + (r.player || '');
     if (!groepen.has(k)) groepen.set(k, []);
@@ -5743,12 +5877,12 @@ async function exportDagresultaten() {
 // rondes (niet afgerond, datum/tijd in de toekomst — zelfde definitie als de
 // Gepland-categorie). Werkt alleen als geïnstalleerde PWA en niet op elk toestel;
 // faalt overal stil.
-function updateAppBadge() {
+function updateAppBadge(rondes) {
   if (!('setAppBadge' in navigator)) return;
   try {
     const nu = Date.now();
-    const isDoneB = r => ((r.playedCount ?? (r.holes || []).filter(h => h && h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
-    const n = loadSavedRounds().filter(r => !isDoneB(r) && r.date && new Date(`${r.date}T${r.time || '00:00'}`).getTime() > nu).length;
+    const isDoneB = r => (isRondeAf(r));
+    const n = (rondes || loadSavedRounds()).filter(r => !isDoneB(r) && r.date && new Date(`${r.date}T${r.time || '00:00'}`).getTime() > nu).length;
     const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
     if (p && p.catch) p.catch(() => {});
   } catch (e) { /* stil */ }
@@ -5765,7 +5899,7 @@ setTimeout(updateAppBadge, 1500);
 // wél een echt AI-gesprek wil — zonder API-sleutel in de app.
 function analysisRounds() {
   const player = startPlayerName();
-  const isDoneA = r => ((r.playedCount ?? (r.holes || []).filter(h => h && h.score !== null).length) >= (r.holesCount ?? (r.holes || []).length));
+  const isDoneA = r => (isRondeAf(r));
   return loadSavedRounds()
     .filter(r => r.player === player && r.qualifying && r.date && isDoneA(r))
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
@@ -5958,7 +6092,7 @@ function buildGameAnalysis() {
       (r.holes || []).forEach((h, i) => {
         if (!h || h.score == null || h.par == null || h.phcp == null) return;
         holesTot++;
-        const punten = typeof stbFor === 'function' ? stbFor(h) : null;
+        const punten = stbFor(h);
         if (punten == null) return;
         const key = `${r.track || '?'}|${i + 1}`;
         const p = perHole[key] = perHole[key] || { n: 0, nul: 0, club: r.club || '', track: r.track || '?', nr: i + 1 };
@@ -5999,7 +6133,7 @@ function buildGameAnalysis() {
   // extra invoer: slagen tot de green = score − putts, en dat moet par − 2 of minder
   // zijn. Voorwaarde is wel dat putts uitsluitend slagen vanaf de green zijn — zo staat
   // het ook in de instelling beschreven.
-  if (typeof puttsStatsEnabled === 'function' && puttsStatsEnabled()) {
+  if (puttsStatsEnabled()) {
     const metPutts = rondes.filter(r => {
       const gespeeld = (r.holes || []).filter(h => h && h.score != null);
       return gespeeld.length > 0 && gespeeld.every(h => h.putts != null);
@@ -6105,7 +6239,7 @@ function buildGameAnalysis() {
       .slice(0, 5); // zelfde aantal als in de prompt (Marks vraag: waarom verschilden die?)
     if (duurste.length) {
       secties.push({ kop: 'Duurste holes', regels: duurste.map(p =>
-        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par${(typeof puttsStatsEnabled === 'function' && puttsStatsEnabled() && p.puttN >= Math.max(minN, 3)) ? `, <b>${fmt1(p.putts / p.puttN)}</b> putts` : ''}, ${p.n}\u00d7 gespeeld.`
+        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par${(puttsStatsEnabled() && p.puttN >= Math.max(minN, 3)) ? `, <b>${fmt1(p.putts / p.puttN)}</b> putts` : ''}, ${p.n}\u00d7 gespeeld.`
       ) });
     } else if (Object.keys(perHole).length) {
       secties.push({ kop: 'Duurste holes', regels: ['Nog te weinig herhaalde holes om betrouwbaar te vergelijken.'] });
@@ -6257,7 +6391,7 @@ async function copyAnalysisForAi() {
   tekst += '- "T.o.v. par" is de kale score. "Mijn persoonlijke par" telt de handicapslagen mee die ik op die hole krijg (bij handicap 30 één slag, op de twaalf moeilijkste holes twee), dus op een par 4 met twee slagen is mijn persoonlijke par 6. Dat is de eerlijke maat om holes onderling te vergelijken.\n';
   tekst += '- Stb = stablefordpunten (2 punten = mijn persoonlijke par op die hole, hoger is beter).\n';
   tekst += '- CR/SR = Course Rating en Slope Rating van de gespeelde tee: hoe hoger, hoe zwaarder de baan.\n';
-  const heeftPutts = typeof puttsStatsEnabled === 'function' && puttsStatsEnabled()
+  const heeftPutts = puttsStatsEnabled()
     && analysisRounds().some(r => (r.holes || []).some(h => h.putts != null));
   tekst += heeftPutts
     ? '- Ik houd het aantal putts per hole bij (alleen slagen vanaf de green). GIR = green in regulation, afgeleid als score \u2212 putts \u2264 par \u2212 2. Fairways-geraakt houd ik niet bij.\n\n'
@@ -6304,7 +6438,7 @@ async function copyAnalysisForAi() {
     tekst += 'datum | tijd | club | baan | tee | holes | par | CR | SR | Sd | Stb' + (heeftPutts ? ' | putts' : '') + ' | telt mee\n';
     ruw.forEach(r => {
       const e = effectiveSD(r);
-      const stb = r.totalStb != null ? r.totalStb : (r.holes || []).reduce((s, h) => s + (typeof stbFor === 'function' ? stbFor(h) : 0), 0);
+      const stb = r.totalStb != null ? r.totalStb : (r.holes || []).reduce((s, h) => s + stbFor(h), 0);
       tekst += [
         r.date || '?',
         r.time || '-',
@@ -6430,7 +6564,7 @@ function watIfClearRefresh() {
 function courseAnalysisData(club, track) {
   const player = startPlayerName();
   if (!player) return null;
-  const isDoneCa = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+  const isDoneCa = r => isRondeAf(r);
   const rs = loadSavedRounds()
     .filter(r => r.player === player && isDoneCa(r) && r.club === club && r.track === track && Array.isArray(r.holes) && r.holes.length)
     .sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || ''))); // nieuwste eerst
@@ -6564,21 +6698,30 @@ async function exportRoundIcs(roundId) {
   const start = new Date(+r.date.slice(0, 4), +r.date.slice(5, 7) - 1, +r.date.slice(8, 10), hh, mm);
   const duurMin = (r.holesCount ?? (r.holes || []).length) >= 18 ? 270 : 150;
   const eind = new Date(start.getTime() + duurMin * 60000);
-  const fmtLocal = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
+  // Tijden in UTC (met Z): een absoluut tijdstip dat elke agenda zelf naar de lokale
+  // tijd omrekent, inclusief zomertijd. Zonder aanduiding moet de client raden, en
+  // sommige webversies gokken op UTC — dan schuift de afspraak twee uur op.
+  const fmtUtc = d => d.getUTCFullYear()
+    + String(d.getUTCMonth() + 1).padStart(2, '0')
+    + String(d.getUTCDate()).padStart(2, '0') + 'T'
+    + String(d.getUTCHours()).padStart(2, '0')
+    + String(d.getUTCMinutes()).padStart(2, '0') + '00Z';
   const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   // Eventtitel: korte clubnaam (indien ingesteld); LOCATION houdt de volledige naam
   const clubKort = (typeof CLUBS === 'object' && r.club && CLUBS[r.club] && CLUBS[r.club].shortName) ? CLUBS[r.club].shortName : (r.club || '');
-  const titel = 'Golf — ' + clubKort + (r.track ? ' · ' + r.track : '');
+  const titel = 'Golf - ' + clubKort + (r.track ? ' - ' + r.track : '');
   const dtstamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GolfScore//NL',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:golfscore-${r.id}@local`,
+    `UID:golfscore-${r.id}-${Date.now().toString(36)}@golf-score.local`,
     `DTSTAMP:${dtstamp}`,
-    `DTSTART:${fmtLocal(start)}`,
-    `DTEND:${fmtLocal(eind)}`,
+    `DTSTART:${fmtUtc(start)}`,
+    `DTEND:${fmtUtc(eind)}`,
     `SUMMARY:${esc(titel)}`,
     `LOCATION:${esc(r.club || '')}`,
+    'SEQUENCE:0', 'STATUS:CONFIRMED', 'TRANSP:OPAQUE',
     'END:VEVENT', 'END:VCALENDAR', ''
   ].join('\r\n');
   const bestandsnaam = `golf-${r.date}${r.time ? '-' + r.time.replace(':', '') : ''}.ics`;
@@ -6587,7 +6730,7 @@ async function exportRoundIcs(roundId) {
     // staat daar niet op. Daarom eerst als text/calendar proberen (voor browsers die
     // het wél kunnen) en anders als text/plain met .ics-naam — dan opent het deelmenu
     // alsnog. Pas als beide niet gedeeld kunnen worden, volgt de download.
-    for (const mime of ['text/calendar', 'text/plain']) {
+    for (const mime of ['text/calendar;charset=utf-8', 'text/plain;charset=utf-8']) {
       const file = new File([ics], bestandsnaam, { type: mime });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: titel });
@@ -6597,7 +6740,7 @@ async function exportRoundIcs(roundId) {
   } catch (e) {
     if (e && e.name === 'AbortError') return; // deelmenu weggetikt: geen download-terugval
   }
-  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url; a.download = bestandsnaam;
   document.body.appendChild(a); a.click(); a.remove();
@@ -7286,7 +7429,6 @@ function buildImportEntry(r, existingIds, skipImportFlag) {
     _justImported: skipImportFlag ? undefined : true,
     total:       played.reduce((s, h) => s + h.score, 0),
     totalStb:    r.holes.reduce((s, h) => s + stbFor(h), 0),
-    playedCount: played.length,
     holesCount:  r.holes.length,
     currentHole: r.holes.findIndex(h => h.score === null),
     started:     true,
@@ -7566,7 +7708,7 @@ function saveActiveRound(skipLoadSaved = false) {
     player: game.player, hcp: game.hcp, gender: game.gender,
     track: game.track, tee: game.tee, CR: game.CR, SR: game.SR, PAR: game.PAR, chcp: game.chcp,
     club: game.club, clubShort: game.clubShort,
-    total, totalStb, playedCount: played.length, holesCount: game.holes.length,
+    total, totalStb, holesCount: game.holes.length,
     currentHole,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
     note: game.note || undefined,
@@ -8185,7 +8327,7 @@ function loadSaved() {
   // door dit hier centraal te doen i.p.v. per wijzigingspad, blijft de 'uit historie
   // afgeleide' Low HI-waarde in Instellingen altijd actueel, ongeacht de oorzaak.
   updateLowHiInput();
-  updateStorageSettingsUI();
+  updateStorageSettingsUI(saved);
   const el = document.getElementById('savedList');
   const searchInput = document.getElementById('archiveSearch');
   const rawSearch = searchInput?.value || '';
@@ -8264,7 +8406,7 @@ function loadSaved() {
 
   const hasDateCriteria = !!(parsedSearch.dateFrom || parsedSearch.dateTo || parsedSearch.recurring);
   let bron = window._warnFilterActive
-    ? (() => { const dupNu = window._warnFilterActive === 'dup' && typeof findDuplicateRounds === 'function' ? findDuplicateRounds() : null;
+    ? (() => { const dupNu = window._warnFilterActive === 'dup' && findDuplicateRounds(saved);
         return saved.filter(r => window._warnFilterActive === 'dup' ? (dupNu && dupNu.has(String(r.id)))
         : window._warnFilterActive === 'putt' ? roundHasPuttWarning(r)
         : roundHasWarning(r)); })()   // elke statusregel filtert zijn eigen categorie
@@ -8335,7 +8477,7 @@ function loadSaved() {
   {
     const mainPlayer = startPlayerName();
     if (mainPlayer) {
-      const isDoneForTrend = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+      const isDoneForTrend = r => isRondeAf(r);
       const qualAll = saved
         .filter(r => r.player === mainPlayer && r.qualifying && isDoneForTrend(r))
         .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`)); // oudste eerst
@@ -8409,7 +8551,7 @@ function loadSaved() {
     const clubSafe = escapeHtml(r.club || 'Onbekende club');
     const playerSafe = escapeHtml(r.player || '—');
     const trackSafe = escapeHtml(r.track || '');
-    const playedCount = r.playedCount ?? r.holes.filter(h=>h.score!==null).length;
+    const playedCount = gespeeldeHoles(r);
     const holesCount  = r.holesCount ?? r.holes.length;
     const done     = playedCount >= holesCount;
     const isActive  = (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id);
@@ -8585,7 +8727,7 @@ function loadSaved() {
   };
 
   const actives    = filtered.filter(r => (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id));
-  const isDone = r => (r.playedCount ?? r.holes.filter(h=>h.score!==null).length) >= (r.holesCount ?? r.holes.length);
+  const isDone = r => isRondeAf(r);
   // Gepland: nog niet afgerond en datum/tijd ligt in de toekomst
   const isFuture = r => {
     const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
@@ -8626,7 +8768,7 @@ function loadSaved() {
     // met volledige kaarten (geen verkorte variant).
     const player1 = startPlayerName();
     if (player1) {
-      const isDoneForWhs = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+      const isDoneForWhs = r => isRondeAf(r);
       const last20 = filtered
         .filter(r => r.player === player1 && r.qualifying && isDoneForWhs(r))
         .sort(sortDesc)
@@ -8787,9 +8929,11 @@ function loadSaved() {
     html = `<div class="info-msg" style="display:flex;align-items:center;gap:8px;font-size:17px;color:${bannerKleur};font-weight:700;margin-bottom:8px"><span style="flex:1">${filtered.length} ${window._warnFilterActive === 'dup' ? 'duplicaten' : window._warnFilterActive === 'putt' ? 'met onvolledige putts' : 'zonder vastgesteld dagresultaat'}</span><button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="clearWarnFilter()">×</button></div>` + html;
   }
   el.innerHTML = html;
-  updateAppBadge();
-  if (typeof refreshStatusReminder === 'function') refreshStatusReminder();
-  if (typeof refreshTabDot === 'function') refreshTabDot();
+  updateAppBadge(saved);
+  // De lijst staat hier al klaar: doorgeven scheelt drie keer opnieuw inlezen en
+  // ontleden van de volledige rondehistorie.
+  refreshStatusReminder(saved);
+  refreshTabDot(saved);
 }
 
 
@@ -10594,7 +10738,7 @@ function openRoundInfoModal(idx) {
   if (!round) return;
   const activeId = storage.getItem('golf_active_id');
   const isActive = activeId && String(round.id) === activeId;
-  const isDone = (round.holes || []).length > 0 && (round.holes || []).every(h => h.score !== null);
+  const isDone = isRondeAf(round);
   if (isDone && !isActive) {
     showConfirmModal(
       'Ronde afgerond',
@@ -10649,7 +10793,7 @@ function openRoundResultModal(idx) {
   if (!round) return;
   const activeId = storage.getItem('golf_active_id');
   const isActive = activeId && String(round.id) === activeId;
-  const isDone = (round.holes || []).length > 0 && (round.holes || []).every(h => h.score !== null);
+  const isDone = isRondeAf(round);
   const sdVal = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
   const hasFixedSd = sdVal != null && sdVal !== '' && isFinite(parseFloat(sdVal));
   if (isDone && !isActive && hasFixedSd) {
@@ -10815,7 +10959,7 @@ function computeWhatIf(player, sdValue) {
   const tempRound = {
     id: '__WATIF__', player, qualifying: true,
     date: todayISO(), time: '12:00',
-    sdFinal: sdValue, playedCount: 18, holesCount: 18, holes: [],
+    sdFinal: sdValue, holesCount: 18, holes: [],
   };
   const allWithTemp = [...all, tempRound];
   const hypo = whsHandicap(last20Qualifying(player, allWithTemp, null, null), effectiveLowHi(player, allWithTemp), esrMapFor(player, allWithTemp));
@@ -11149,7 +11293,7 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
-   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
+   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
@@ -11237,7 +11381,7 @@ function buildClubList() {
   {
     const caPlayer = startPlayerName();
     if (caPlayer) {
-      const isDoneCa = r => (r.playedCount ?? r.holes.filter(h => h.score !== null).length) >= (r.holesCount ?? r.holes.length);
+      const isDoneCa = r => isRondeAf(r);
       loadSavedRounds().forEach(r => {
         if (r.player !== caPlayer || !isDoneCa(r) || !r.club || !r.track) return;
         const k = r.club + '||' + r.track;
@@ -11498,7 +11642,7 @@ async function exportAllRounds() {
   const saved = all.filter(r => {
     if (String(r.id) === activeId) return false;
     if (r._justImported) return false;
-    const played = r.playedCount ?? r.holes?.filter(h => h.score !== null).length ?? 0;
+    const played = gespeeldeHoles(r);
     const total  = r.holesCount  ?? r.holes?.length ?? 0;
     return played >= total && total > 0;
   });
@@ -11558,6 +11702,12 @@ async function exportAllRounds() {
 // nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
 // van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
 function setRoundsAndMark(json) {
+  // Rem bij onleesbare gegevens: niet over iets heen schrijven wat mogelijk nog te
+  // redden is. De aanroeper krijgt false terug en meldt dat het niet gelukt is.
+  if (rondesOnleesbaar) {
+    console.warn('Opslaan geweigerd: de opgeslagen rondes zijn niet leesbaar.');
+    return false;
+  }
   const gelukt = storage.setItem('golf_rounds', json) !== false;
   try { storage.setItem('golf_rounds_changed', new Date().toISOString()); } catch (e) { /* opslag vol: niet kritiek */ }
   return gelukt;
@@ -11565,19 +11715,36 @@ function setRoundsAndMark(json) {
 
 // Aantal rondes dat een backup daadwerkelijk meeneemt: alleen afgeronde rondes, dus
 // niet de actieve, de geplande, de gepauzeerde of de zojuist geïmporteerde.
+// Is deze OPGESLAGEN ronde helemaal gespeeld? Gebruikt de tellers, met de holes als
+// terugval voor oude backups zonder tellers. NIET bedoeld voor de ronde die je op dit
+// moment speelt: daar telt de code de holes rechtstreeks uit het live game-object,
+// omdat dat de scores bevat die nog niet zijn weggeschreven.
+// Aantal holes met een score. Wordt live geteld in plaats van opgeslagen: het is een
+// samenvatting van wat al in de ronde staat, en twee bronnen voor één feit kunnen uit
+// elkaar lopen. De backup-export laat dit veld om dezelfde reden weg.
+function gespeeldeHoles(r) {
+  return (r && r.holes || []).filter(h => h && h.score !== null).length;
+}
+
+function isRondeAf(r) {
+  if (!r) return false;
+  const totaal = r.holesCount ?? (r && r.holes || []).length;
+  return totaal > 0 && gespeeldeHoles(r) >= totaal;
+}
+
 function afgerondeRondesCount(lijst) {
   const activeId = storage.getItem('golf_active_id');
   return (lijst || loadSavedRounds()).filter(r => {
     if (String(r.id) === activeId) return false;
     if (r._justImported) return false;
-    const gespeeld = r.playedCount ?? r.holes?.filter(h => h.score !== null).length ?? 0;
+    const gespeeld = gespeeldeHoles(r);
     const totaal = r.holesCount ?? r.holes?.length ?? 0;
     return totaal > 0 && gespeeld >= totaal;
   }).length;
 }
 
-function isBackupOverdue() {
-  const total = afgerondeRondesCount();
+function isBackupOverdue(lijst) {
+  const total = afgerondeRondesCount(lijst);
   if (total === 0) return false;
   const lastDate = storage.getItem('golf_last_backup_date');
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
@@ -11599,7 +11766,7 @@ function isBackupOverdue() {
 // op basis van golf_last_backup_date/-count; de losse herinneringsbalk bovenaan Rondes
 // is vervallen, de signalering loopt nu via het oranje stipje op de Instellingen-tab.
 function updateLastBackupDisplay() {
-  if (typeof refreshTabDot === 'function') refreshTabDot();
+  refreshTabDot();
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;   // regel bestaat alleen in Instellingen; de stip is hierboven al bijgewerkt
   const daysValEl = document.getElementById('backupReminderDaysVal');
@@ -11631,6 +11798,13 @@ function updateLastBackupDisplay() {
 // er iets nieuws is (niet alleen bij een te oude backup), want dit is precies wat je
 // kwijtraakt als er iets misgaat. Oranje zodra de herinneringsdrempel is bereikt.
 function toonNieuweRondesRegel(overdue) {
+  // De backupregel bovenaan meekopiëren: dit is het enige punt dat bij ÉLKE uitgang
+  // van updateLastBackupDisplay wordt bereikt (er zijn er twee — dat ging eerst mis).
+  {
+    const bron = document.getElementById('lastBackupInfo');
+    const doel = document.getElementById('lastBackupInfoTop');
+    if (bron && doel) doel.innerHTML = bron.innerHTML;
+  }
   const el = document.getElementById('newRoundsInfo');
   if (!el) return;
   const total = afgerondeRondesCount();
@@ -11643,13 +11817,19 @@ function toonNieuweRondesRegel(overdue) {
   const changedTs = storage.getItem('golf_rounds_changed');
   const backupTs = storage.getItem('golf_last_backup_ts');
   const gewijzigdNaBackup = !!changedTs && (!backupTs || changedTs > backupTs);
-  if (!nieuw && !gewijzigdNaBackup) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  const elTop = document.getElementById('newRoundsInfoTop');
+  if (!nieuw && !gewijzigdNaBackup) {
+    el.classList.add('hidden'); el.innerHTML = '';
+    if (elTop) { elTop.classList.add('hidden'); elTop.innerHTML = ''; }
+    return;
+  }
   const kleur = overdue ? 'var(--orange)' : 'var(--white)';
   const delen = [];
   if (nieuw) delen.push(`<span style="color:${kleur};font-weight:700">${nieuw}</span> nieuw`);
   if (gewijzigdNaBackup) delen.push(`${delen.length ? 'g' : 'G'}ewijzigd: ${formatWijzigMoment(changedTs)}`);
   el.innerHTML = delen.join(' \u00b7 ');
   el.classList.remove('hidden');
+  if (elTop) { elTop.innerHTML = el.innerHTML; elTop.classList.remove('hidden'); }
 }
 
 // "vandaag 14:12", "gisteren 09:05" of "12 aug 14:12" — kort genoeg voor één regel.
@@ -11947,12 +12127,12 @@ function nav(id) {
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
   if (id !== 'score') document.getElementById('puttOverlay')?.remove();
-  if (id !== 'setup' && typeof annuleerHerplan === 'function') annuleerHerplan();
+  if (id !== 'setup') annuleerHerplan();
   refreshTabDot();
   if (id === 'settings') {
-    // Bij een te oude backup meteen de Gegevens-tab openen: daar staat de Status-kaart
-    // met de backup-ouderdom, dus je ziet direct waar het over gaat (Marks keuze).
-    if (typeof isBackupOverdue === 'function' && isBackupOverdue() && typeof switchSettingsTab === 'function') switchSettingsTab('data');
+    // De backupstand staat in het blokje bovenaan, zichtbaar op elk tabblad — daarom
+    // opent Instellingen gewoon op het laatst gebruikte tabblad, ook bij een te oude
+    // backup (dat stuurde eerder naar Gegevens, wat inconsistent aanvoelde).
     refreshStorageStatus(); updateLastBackupDisplay(); const mrEl = document.getElementById('minRoundsStatVal'); if (mrEl) mrEl.textContent = getMinRoundsStat(); }
   if (id === 'score' && game.started) renderScore();
   if (id === 'setup') {
@@ -12022,6 +12202,7 @@ function nav(id) {
     updateArchiveYearsClosedToggle();
     initSettingsSections();
     updateTrackPuttsToggle();
+  updateAutoNextToggle();
     updatePuttsStatsToggle();
     updateLowHiInput();
     updatePlayer2Summaries();
@@ -12190,13 +12371,13 @@ function switchSettingsTab(tab) {
 }
 
 // ══ OPSLAG (Instellingen → Rondes) ═══════════════════════════════════════
-function updateStorageSettingsUI() {
+function updateStorageSettingsUI(rondes) {
   const slider = document.getElementById('roundLimitSlider');
   const val = document.getElementById('roundLimitVal');
   const limit = getRoundStorageLimit();
   if (slider) slider.value = limit;
   if (val) val.textContent = limit;
-  const saved = loadSavedRounds();
+  const saved = rondes || loadSavedRounds();
   window._savedRoundCount = saved.length; // cache voor onRoundLimitSlide (geen parse per sleepstap)
   const countEl = document.getElementById('roundLimitCurrentCount');
   if (countEl) countEl.textContent = saved.length;
@@ -12377,7 +12558,9 @@ function actionsAlwaysVisible() {
 // (met aantal kaarten en het standaard draaiende driehoekje) en worden de kaarten
 // erachter in een omhulsel gezet dat in- of uitklapt. Zo hoeft de HTML zelf niet
 // per sectie herschreven te worden en blijft alles op één plek geregeld.
-window._setSectionCollapsed = window._setSectionCollapsed || {};
+window._setSectionCollapsed = window._setSectionCollapsed || (() => {
+  try { return JSON.parse(storage.getItem('golf_set_sections') || '{}'); } catch (e) { return {}; }
+})();
 
 function initSettingsSections() {
   ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData'].forEach(tabId => {
@@ -12416,9 +12599,17 @@ function initSettingsSections() {
 }
 
 // Stand toepassen: omhulsel tonen of verbergen en het driehoekje meedraaien.
+// Secties zijn standaard DICHT: één tik opent wat je nodig hebt, lang indrukken op
+// een tabknop klapt alles open of dicht. Alleen "Status" begint open — dat is de
+// informatie die je juist meteen wilt zien.
+function sectieStandaardDicht(key) {
+  return !/\|\s*Status/i.test(key || '');
+}
+
 function applySettingsSections() {
   document.querySelectorAll('[data-section-key]').forEach(kop => {
-    const dicht = window._setSectionCollapsed[kop.dataset.sectionKey] === true;
+    const opgeslagen = window._setSectionCollapsed[kop.dataset.sectionKey];
+    const dicht = opgeslagen === undefined ? sectieStandaardDicht(kop.dataset.sectionKey) : opgeslagen === true;
     const body = kop.nextElementSibling;
     if (body && body.classList.contains('settings-section-body')) body.style.display = dicht ? 'none' : '';
     const pijl = kop.querySelector('.settings-section-arrow');
@@ -12426,22 +12617,64 @@ function applySettingsSections() {
   });
 }
 
-function toggleSettingsSection(key) {
-  window._setSectionCollapsed[key] = window._setSectionCollapsed[key] !== true;
+// Opent één sectie gericht (gebruikt door het statusblokje bovenaan): openklappen,
+// kort goud oplichten zoals bij het springen naar een ronde, en zó scrollen dat de
+// gouden kop nét onder de vaste app-header staat — scrollIntoView zet hem eronder,
+// want die houdt geen rekening met een plakkende header.
+// Opent één sectie in Instellingen en laat de eerste kaart erin kort goud oplichten,
+// zoals bij het springen naar een ronde in het archief. Bewust zonder scrollen: de
+// secties staan bovenaan hun tabblad, dus er valt niets te overbruggen.
+function openSectie(key, markeerId) {
+  window._setSectionCollapsed[key] = false;
+  bewaarSectieStanden();
   applySettingsSections();
+  const kop = document.querySelector('[data-section-key="' + key + '"]');
+  if (!kop) return;
+  // Geen scroll: de sectie staat bovenaan het tabblad en is dus al in beeld. Alleen
+  // kort goud oplichten, zodat je ziet waar je terechtkomt.
+  setTimeout(() => {
+    const doel = (markeerId && document.getElementById(markeerId))
+      || (kop.nextElementSibling && kop.nextElementSibling.querySelector('.card'));
+    if (doel) {
+      doel.classList.add('round-flash');
+      setTimeout(() => doel.classList.remove('round-flash'), 1700);
+    }
+  }, 60);
+}
+
+function toggleSettingsSection(key) {
+  const nu = window._setSectionCollapsed[key];
+  const dichtNu = nu === undefined ? sectieStandaardDicht(key) : nu === true;
+  window._setSectionCollapsed[key] = !dichtNu;
+  bewaarSectieStanden();
+  applySettingsSections();
+}
+
+// De open/dicht-stand van de secties overleeft een herstart.
+function bewaarSectieStanden() {
+  try { storage.setItem('golf_set_sections', JSON.stringify(window._setSectionCollapsed || {})); }
+  catch (e) { /* niet kritiek */ }
 }
 
 // Lang indrukken op een tabknop bovenin klapt alle secties in of uit — zelfde
 // idioom als lang indrukken op een groepeerknop bij Clubs en in het Archief.
 function toggleAllSettingsSections() {
-  // De Status-sectie doet niet mee met "alles inklappen": daar staan de meldingen over
-  // ontbrekende dagresultaten, duplicaten en de backup-ouderdom, en die wil je bij het
-  // openen van Gegevens meteen zien (Marks keuze). Zelf inklappen kan wel gewoon.
-  const koppen = [...document.querySelectorAll('[data-section-key]')]
-    .filter(k => !/\|Status$/i.test(k.dataset.sectionKey));
+  // Alleen de secties van de tab die NU zichtbaar is: anders bepaalt de stand van de
+  // andere tabs mee of er open- of dichtgeklapt wordt, en lijkt de knop niets te doen
+  // (dat gebeurde op de Gegevens-tab).
+  const zichtbareTab = ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData']
+    .map(id => document.getElementById(id))
+    .find(t => t && !t.classList.contains('hidden'));
+  const bron = zichtbareTab || document;
+  const koppen = [...bron.querySelectorAll('[data-section-key]')];
   if (!koppen.length) return;
-  const allesDicht = koppen.every(k => window._setSectionCollapsed[k.dataset.sectionKey] === true);
+  const isDicht = k => {
+    const v = window._setSectionCollapsed[k.dataset.sectionKey];
+    return v === undefined ? sectieStandaardDicht(k.dataset.sectionKey) : v === true;
+  };
+  const allesDicht = koppen.every(isDicht);
   koppen.forEach(k => { window._setSectionCollapsed[k.dataset.sectionKey] = !allesDicht; });
+  bewaarSectieStanden();
   if (navigator.vibrate) navigator.vibrate(20);
   applySettingsSections();
 }
@@ -12478,7 +12711,32 @@ function togglePuttsStats() {
   const cb = document.getElementById('puttsStatsToggle');
   const on = cb ? cb.checked : storage.getItem('golf_putts_stats') === 'off';
   storage.setItem('golf_putts_stats', on ? 'on' : 'off');
-  if (typeof renderPlayerStats === 'function') renderPlayerStats();
+  renderPlayerStats();
+}
+
+// Automatisch naar de volgende hole na het bevestigen van een score.
+// Standaard UIT. Doet niets zolang putts bijgehouden worden: de puttregel hoort dan
+// bij de hole die je net invulde, en wegspringen zou die onbereikbaar maken.
+function autoNextEnabled() {
+  return storage.getItem('golf_auto_next') === 'on' && !trackPuttsEnabled();
+}
+function toggleAutoNext() {
+  const cb = document.getElementById('autoNextToggle');
+  const on = cb ? cb.checked : storage.getItem('golf_auto_next') !== 'on';
+  storage.setItem('golf_auto_next', on ? 'on' : 'off');
+}
+function updateAutoNextToggle() {
+  const cb = document.getElementById('autoNextToggle');
+  if (cb) cb.checked = storage.getItem('golf_auto_next') === 'on';
+}
+
+// Eerstvolgende hole ZONDER score, vanaf i+1. Geen wikkeling: op de laatste hole
+// (of als alles is ingevuld) blijf je staan.
+function volgendeLegeHole(i) {
+  for (let k = i + 1; k < game.holes.length; k++) {
+    if (game.holes[k] && game.holes[k].score === null) return k;
+  }
+  return -1;
 }
 
 function toggleTrackPutts() {
@@ -13040,7 +13298,7 @@ document.addEventListener('focusin', (e) => {
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px;transition:transform .2s ease">
     <div id="valueEditLabel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center;overflow-wrap:break-word"></div>
     <div class="fg" style="margin-bottom:8px">
-      <input id="valueEditInput" type="text" oninput="onValueEditInput(this)" onkeydown="if(event.key==='Enter'){confirmValueEdit();}" onblur="if(this.type==='text') this.value=this.value.trim()">
+      <input id="valueEditInput" type="text" aria-label="Nieuwe waarde" oninput="onValueEditInput(this)" onkeydown="if(event.key==='Enter'){confirmValueEdit();}" onblur="if(this.type==='text') this.value=this.value.trim()">
     </div>
     <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;text-align:center;margin-bottom:8px">Vul tee in</div>
     <div id="valueEditTeeHint" style="display:none;font-size:20px;color:var(--white);line-height:1.5;margin-bottom:8px">Herkende kleuren: Blauw · Bruin · Geel · Grijs · Groen · Oranje · Paars · Roze · Rood · Wit · Zilver · Zwart</div>
@@ -13172,7 +13430,7 @@ document.addEventListener('focusin', (e) => {
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
     <h2 style="margin:0 0 14px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Kies een club</h2>
     <div class="fg" style="margin-bottom:14px">
-      <input id="clubSearchModalInput" type="text" placeholder="Zoek een club..." oninput="renderClubSearchModalList()">
+      <input id="clubSearchModalInput" aria-label="Zoeken in clubs" type="text" placeholder="Zoek een club..." oninput="renderClubSearchModalList()">
     </div>
     <div id="clubSearchModalList" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
@@ -13189,11 +13447,11 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeClubEditor()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:10px">
-      <label>Naam</label>
+      <label for="editorClubName">Naam</label>
       <input id="editorClubName" placeholder="Naam van de club" maxlength="60" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
     <div class="fg" style="margin-bottom:12px">
-      <label>Korte naam</label>
+      <label for="editorShortName">Korte naam</label>
       <input id="editorShortName" placeholder="Korte naam" maxlength="20" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -13220,11 +13478,11 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeCourseEditor()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:14px">
-      <label>Club</label>
+      <label for="courseEditorClubName">Club</label>
       <input id="courseEditorClubName" readonly>
     </div>
     <div class="fg" style="margin-bottom:14px">
-      <label>Baan</label>
+      <label for="editorCourseName">Baan</label>
       <input id="editorCourseName" placeholder="Naam van de baan" maxlength="60" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
     <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:14px" onclick="toggleEditorSection('tees')">
@@ -13267,22 +13525,22 @@ document.addEventListener('focusin', (e) => {
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
     <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Ronde bewerken</h2>
     <div class="fg" style="margin-bottom:14px">
-      <label>Speler</label>
+      <label for="editPlayerInput">Speler</label>
       <input id="editPlayerInput" type="text" maxlength="50" placeholder="Naam speler" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()" onchange="if(!this.value && _roundInfoOrig) this.value=_roundInfoOrig.player||''">
     </div>
     <div class="fg" style="margin-bottom:20px">
-      <label>Datum &amp; tijd</label>
+      <label for="editDateInput">Datum &amp; tijd</label>
       <div style="display:flex;gap:8px">
         <div class="fg" style="flex:1;margin-bottom:0">
           <input id="editDateInput" type="date" onchange="if(!this.value && _roundInfoOrig) this.value=_roundInfoOrig.date||''">
         </div>
         <div class="fg" style="flex:1;margin-bottom:0">
-          <input id="editTimeInput" type="time" onchange="if(!this.value && _roundInfoOrig) this.value=_roundInfoOrig.time||''">
+          <input id="editTimeInput" type="time" aria-label="Starttijd van de ronde" onchange="if(!this.value && _roundInfoOrig) this.value=_roundInfoOrig.time||''">
         </div>
       </div>
     </div>
     <div class="fg" style="margin-bottom:14px">
-      <label>Hcp</label>
+      <label for="editHcpInput">Hcp</label>
       <div id="editHcpRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="editHcpInput" class="field-input" type="text" inputmode="decimal" placeholder="—" style="text-align:left" oninput="onEditHcpInput(this)" onblur="onEditHcpBlur(this)">
     </div>
@@ -13291,7 +13549,7 @@ document.addEventListener('focusin', (e) => {
       <label class="switch"><input type="checkbox" id="editQualifyToggle"><span class="slider"></span></label>
     </div>
     <div class="fg" style="margin-bottom:14px">
-      <label>Notitie</label>
+      <label for="editNoteInput">Notitie</label>
       <textarea id="editNoteInput" maxlength="200" rows="2" placeholder="bijv. Clubcompetitie" style="resize:vertical;font-family:inherit"></textarea>
     </div>
     <div id="roundInfoDeleteMsg" class="error-msg hidden" style="color:var(--red);font-size:17px;font-weight:700;text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
@@ -13327,12 +13585,12 @@ document.addEventListener('focusin', (e) => {
       <tr>
         <td style="padding:0;vertical-align:middle"><label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700"><span style="display:block;color:var(--green-light)">Vastgesteld</span> dagresultaat (Sd<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:2px"><polyline points="20 6 9 17 4 12"/></svg>)</label></td>
         <td style="padding:0;width:76px">
-          <input id="editSdInput" class="field-input" type="text" inputmode="decimal" placeholder="—" oninput="onEditSdInput(this)" onblur="onEditSdBlur()">
+          <input id="editSdInput" aria-label="Vastgesteld dagresultaat" class="field-input" type="text" inputmode="decimal" placeholder="—" oninput="onEditSdInput(this)" onblur="onEditSdBlur()">
         </td>
       </tr>
     </table>
     <div class="fg" style="margin:4px 0 14px">
-      <label>Notitie</label>
+      <label for="resultNoteInput">Notitie</label>
       <textarea id="resultNoteInput" maxlength="200" rows="2" placeholder="bijv. Clubcompetitie" style="resize:vertical;font-family:inherit"></textarea>
     </div>
     <div style="display:flex;gap:8px">
@@ -13373,11 +13631,11 @@ document.addEventListener('focusin', (e) => {
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
     <h2 id="player2ModalTitle" style="margin:0 0 16px;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px"></h2>
     <div class="fg" style="margin-bottom:14px">
-      <label>Naam</label>
+      <label for="player2ModalName">Naam</label>
       <input id="player2ModalName" type="text" maxlength="50" placeholder="Naam speler 2" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,'')" onblur="this.value=this.value.trim()">
     </div>
     <div class="fg" style="margin-bottom:20px">
-      <label>Handicap</label>
+      <label for="player2ModalHcp">Handicap</label>
       <input id="player2ModalHcp" type="text" inputmode="decimal" placeholder="hcp" oninput="onHcpInput(this)" onblur="onHcpBlur(this)">
     </div>
     <div style="display:flex;gap:8px">
