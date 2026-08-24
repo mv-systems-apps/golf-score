@@ -1216,7 +1216,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F0</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F1</div>
 </div>
 
 <script>
@@ -7499,6 +7499,7 @@ function doAdditiveImport(parsed) {
   } else {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
+  try { storage.setItem('golf_backup_fingerprint', backupVingerafdruk()); } catch (e) {}
     storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
     naBackupBijwerken();
   }
@@ -11299,7 +11300,7 @@ async function doResetAll() {
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
    'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
-   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
+   'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_backup_fingerprint', 'golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
@@ -11707,6 +11708,32 @@ async function exportAllRounds() {
 // Rondes opslaan én vastleggen dát er iets gewijzigd is. Zo telt niet alleen een
 // nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
 // van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
+// Korte vingerafdruk van wat er in het BACKUPBESTAND zou komen: alleen afgeronde
+// rondes (niet de actieve, niet de zojuist geïmporteerde) en alleen de velden die
+// exportAllRounds meeneemt. Zo telt het plannen of verwijderen van een ronde niet als
+// "gewijzigd" — dat verandert het bestand immers niet.
+function backupVingerafdruk(lijst) {
+  const activeId = storage.getItem('golf_active_id');
+  const relevant = (lijst || loadSavedRounds())
+    .filter(r => {
+      if (String(r.id) === activeId) return false;
+      if (r._justImported) return false;
+      const totaal = r.holesCount ?? (r.holes || []).length;
+      return totaal > 0 && gespeeldeHoles(r) >= totaal;
+    })
+    .map(r => {
+      // Dezelfde velden als de export: id, tellers en hulpvelden blijven buiten beeld.
+      const { id, total, totalStb, playedCount, holesCount, currentHole, started,
+              _justImported, sd: _oudeSd, ...rest } = r;
+      return { ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => h) };
+    });
+  const tekst = JSON.stringify(relevant);
+  // Eenvoudige hash (djb2): we hoeven alleen te wéten of er iets veranderd is.
+  let h = 5381;
+  for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
+  return String(h) + ':' + relevant.length;
+}
+
 function setRoundsAndMark(json) {
   // Rem bij onleesbare gegevens: niet over iets heen schrijven wat mogelijk nog te
   // redden is. De aanroeper krijgt false terug en meldt dat het niet gelukt is.
@@ -11715,7 +11742,15 @@ function setRoundsAndMark(json) {
     return false;
   }
   const gelukt = storage.setItem('golf_rounds', json) !== false;
-  try { storage.setItem('golf_rounds_changed', new Date().toISOString()); } catch (e) { /* opslag vol: niet kritiek */ }
+  // Alleen stempelen als het BACKUPBESTAND hierdoor verandert (zie backupVingerafdruk):
+  // een geplande ronde toevoegen of verwijderen raakt de backup niet.
+  try {
+    const nu = backupVingerafdruk();
+    if (nu !== storage.getItem('golf_backup_fingerprint')) {
+      storage.setItem('golf_backup_fingerprint', nu);
+      storage.setItem('golf_rounds_changed', new Date().toISOString());
+    }
+  } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
   return gelukt;
 }
 
