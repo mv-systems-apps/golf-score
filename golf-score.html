@@ -1228,7 +1228,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F5</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F7</div>
 </div>
 
 <script>
@@ -12846,6 +12846,8 @@ function toggleStartNote(nr) {
   }
   if (!veld.value.trim()) {                          // leeg → weer dicht
     wrap.classList.add('hidden');
+    veld.readOnly = false;
+    werkNoteKnopBij(nr);
     return;
   }
   zetNoteLezen(nr, !veld.readOnly);                  // gevuld → wisselen lezen/bewerken
@@ -12857,12 +12859,23 @@ function toggleStartNote(nr) {
 // gouden tint zolang je kunt bewerken, zodat de stand zichtbaar is.
 function zetNoteLezen(nr, lezen) {
   const veld = document.getElementById('startNote' + nr);
-  const knop = document.getElementById('noteBtn' + nr);
   if (!veld) return;
   veld.readOnly = !!lezen;
   veld.style.opacity = lezen ? '.75' : '';
   veld.style.cursor = lezen ? 'default' : '';
-  if (knop) knop.style.color = lezen ? '' : 'var(--gold)';
+  werkNoteKnopBij(nr);
+}
+
+// Het potlood is alleen goud terwijl je daadwerkelijk kunt typen. Staat het veld dicht,
+// of is het een leesveld, dan heeft de knop de gewone kleur — anders lijkt er iets
+// actief te zijn terwijl er niets staat (dat gebeurde na het leegmaken van een notitie).
+function werkNoteKnopBij(nr) {
+  const knop = document.getElementById('noteBtn' + nr);
+  const wrap = document.getElementById('noteWrap' + nr);
+  const veld = document.getElementById('startNote' + nr);
+  if (!knop || !wrap || !veld) return;
+  const bewerkbaar = !wrap.classList.contains('hidden') && !veld.readOnly;
+  knop.style.color = bewerkbaar ? 'var(--gold)' : '';
 }
 
 // Zet een notitie in het veld en klap het open als er iets staat.
@@ -12891,8 +12904,9 @@ function wisStartNotes() {
     const veld = document.getElementById('startNote' + nr);
     const wrap = document.getElementById('noteWrap' + nr);
     if (veld) { veld.value = ''; veld.style.height = ''; }
-    zetNoteLezen(nr, false);
+    if (veld) veld.readOnly = false;
     if (wrap) wrap.classList.add('hidden');
+    werkNoteKnopBij(nr);
   });
 }
 
