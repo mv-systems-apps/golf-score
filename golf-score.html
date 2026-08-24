@@ -660,7 +660,13 @@
 
 
   <div class="card" id="roundCard">
-    <h2 id="roundCardTitle">Ronde</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 id="roundCardTitle" style="margin:0">Ronde</h2>
+      <button class="btn-secondary" id="noteBtn1" style="padding:6px 10px" onclick="toggleStartNote(1)" aria-label="Notitie"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    </div>
+    <div id="noteWrap1" class="fg hidden" style="margin-bottom:12px">
+      <textarea id="startNote1" aria-label="Notitie bij deze ronde" maxlength="200" rows="1" placeholder="bijv. Clubcompetitie" style="resize:none;overflow:hidden;font-family:inherit;width:100%" oninput="groeiStartNote(this)"></textarea>
+    </div>
     <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Geslacht</label>
     <div class="gender-btns" style="margin-bottom:12px">
       <button class="gender-btn" id="gb-Heren" onclick="selectGender('Heren')">Heren</button>
@@ -692,7 +698,13 @@
   </div>
 
   <div class="card hidden" id="round2Card">
-    <h2>Ronde speler 2</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0">Ronde speler 2</h2>
+      <button class="btn-secondary" id="noteBtn2" style="padding:6px 10px" onclick="toggleStartNote(2)" aria-label="Notitie"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    </div>
+    <div id="noteWrap2" class="fg hidden" style="margin-bottom:12px">
+      <textarea id="startNote2" aria-label="Notitie bij de ronde van speler 2" maxlength="200" rows="1" placeholder="bijv. Clubcompetitie" style="resize:none;overflow:hidden;font-family:inherit;width:100%" oninput="groeiStartNote(this)"></textarea>
+    </div>
     <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Geslacht</label>
     <div class="gender-btns" style="margin-bottom:12px">
       <button class="gender-btn" id="gb2-Heren" onclick="selectGender2('Heren')">Heren</button>
@@ -1216,7 +1228,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F1</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F5</div>
 </div>
 
 <script>
@@ -3217,6 +3229,11 @@ function herplanRonde(id) {
     if (hcp2 && maat.hcp != null) hcp2.value = maat.hcp;
   }
 
+  // Notities meenemen: elk blok hoort bij één speler, dus de notitie landt vanzelf bij
+  // de juiste ronde. Zonder dit verdween een notitie bij het verzetten van een ronde.
+  zetStartNote(1, r.note || '');
+  zetStartNote(2, maat ? (maat.note || '') : '');
+
   toonHerplanBanner(r, maat, kwijt);
   updatePlayer2CardVisibility();
   updatePlayer2Titles();
@@ -3240,6 +3257,9 @@ function annuleerHerplan() {
   _herplanIds = null;
   const el = document.getElementById('herplanBanner');
   if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+  // Ook de notitievelden leegmaken: anders lekt de notitie van de geannuleerde
+  // herplanning door naar de volgende ronde die je aanmaakt.
+  wisStartNotes();
 }
 
 // Wordt aangeroepen zodra de nieuwe ronde is vastgelegd: pas dán verdwijnt de oude.
@@ -3300,6 +3320,7 @@ function startRoundConfirmed() {
     CR: teeData.CR, SR: teeData.SR, PAR: teeData.PAR, chcp,
     qualifying: !!sel.qualifying,
     started: true,
+    note: leesStartNote(1) || undefined,
     holes: course.holes.map((h, i) => ({
       id: h.id, par: h.par, si: h.si,
       phcp: phcps[i],
@@ -3332,6 +3353,7 @@ function startRoundConfirmed() {
         id: newId2,
         date: startDate || todayISO(), time: startTime || null,
         player: name2, hcp: isNaN(hcp2) ? null : hcp2,
+        note: leesStartNote(2) || undefined,
         gender: sel2.gender, track: sel.track, tee: sel2.tee,
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
         CR: teeData2.CR, SR: teeData2.SR, PAR: teeData2.PAR, chcp: chcp2,
@@ -3356,6 +3378,7 @@ function startRoundConfirmed() {
   }
 
   ruimHerplanOp();
+  wisStartNotes();          // de notitie zit nu in de ronde; het veld weer leeg
   updatePlayerSwitchBar();
   loadSaved();
   nav('score');
@@ -12180,6 +12203,9 @@ function nav(id) {
     window.scrollTo(0, 0);
     rebuildStartScreen();
     restorePlayer2Visibility();
+    // Notitievelden op maat brengen: bij herplannen wordt de tekst gezet terwijl dit
+    // scherm nog verborgen is, en dan is de gemeten hoogte nog nul.
+    herstelStartNoteHoogtes();
     const today = todayISO();
     if (_setupDateInitDay !== today) {
       // Eerste keer naar Start vandaag: zet datum en tijd op nu
@@ -12778,6 +12804,96 @@ function volgendeLegeHole(i) {
     if (game.holes[k] && game.holes[k].score === null) return k;
   }
   return -1;
+}
+
+// ── Notitie op het startscherm ───────────────────────────────────────────────
+// Eén regel die meegroeit met de tekst (in de bewerk- en resultaatvensters heeft het
+// veld juist een VASTE hoogte: daar is ruimte, op het startscherm niet).
+function groeiStartNote(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  // Is het veld (of het scherm eromheen) verborgen, dan is scrollHeight 0 en zou het
+  // veld op nul pixels blijven staan — dat gebeurde bij herplannen, waar de notitie
+  // wordt gezet vóór het startscherm in beeld komt. Dan niets zetten en later opnieuw.
+  if (!el.scrollHeight) { el.style.height = ''; return; }
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// Beide velden opnieuw op maat brengen zodra het startscherm getoond wordt.
+function herstelStartNoteHoogtes() {
+  [1, 2].forEach(nr => {
+    const veld = document.getElementById('startNote' + nr);
+    const wrap = document.getElementById('noteWrap' + nr);
+    if (veld && wrap && !wrap.classList.contains('hidden')) groeiStartNote(veld);
+  });
+}
+
+// Drie standen, in deze volgorde: dicht → bewerken → lezen → bewerken → ...
+// Een INGEVULDE notitie klapt bewust NIET dicht: hij blijft zichtbaar als leesveld,
+// zodat je onderweg kunt zien wat je genoteerd hebt zonder hem te kunnen vertypen.
+// Alleen een leeg veld verdwijnt weer, want daar valt niets te lezen.
+function toggleStartNote(nr) {
+  const wrap = document.getElementById('noteWrap' + nr);
+  const veld = document.getElementById('startNote' + nr);
+  if (!wrap || !veld) return;
+
+  if (wrap.classList.contains('hidden')) {          // dicht → bewerken
+    wrap.classList.remove('hidden');
+    zetNoteLezen(nr, false);
+    groeiStartNote(veld);
+    veld.focus();
+    return;
+  }
+  if (!veld.value.trim()) {                          // leeg → weer dicht
+    wrap.classList.add('hidden');
+    return;
+  }
+  zetNoteLezen(nr, !veld.readOnly);                  // gevuld → wisselen lezen/bewerken
+  if (!veld.readOnly) veld.focus();
+  groeiStartNote(veld);
+}
+
+// Leesstand: niet te bewerken, gedempt weergegeven. Het potlood op de knop krijgt een
+// gouden tint zolang je kunt bewerken, zodat de stand zichtbaar is.
+function zetNoteLezen(nr, lezen) {
+  const veld = document.getElementById('startNote' + nr);
+  const knop = document.getElementById('noteBtn' + nr);
+  if (!veld) return;
+  veld.readOnly = !!lezen;
+  veld.style.opacity = lezen ? '.75' : '';
+  veld.style.cursor = lezen ? 'default' : '';
+  if (knop) knop.style.color = lezen ? '' : 'var(--gold)';
+}
+
+// Zet een notitie in het veld en klap het open als er iets staat.
+function zetStartNote(nr, tekst) {
+  const veld = document.getElementById('startNote' + nr);
+  const wrap = document.getElementById('noteWrap' + nr);
+  if (!veld || !wrap) return;
+  veld.value = tekst || '';
+  wrap.classList.toggle('hidden', !veld.value);
+  // Een meegekomen notitie (herplannen) begint in LEESSTAND: je ziet meteen wat er
+  // staat, maar wijzigt hem niet per ongeluk. Eén tik op de knop maakt hem bewerkbaar.
+  zetNoteLezen(nr, !!veld.value);
+  if (veld.value) groeiStartNote(veld);
+}
+
+function leesStartNote(nr) {
+  const veld = document.getElementById('startNote' + nr);
+  const t = veld ? veld.value.trim() : '';
+  return t ? t.slice(0, 200) : '';
+}
+
+// Beide velden leegmaken en dichtklappen — na het starten van een ronde en bij het
+// annuleren van een herplanning, zodat een notitie niet doorlekt naar een volgende ronde.
+function wisStartNotes() {
+  [1, 2].forEach(nr => {
+    const veld = document.getElementById('startNote' + nr);
+    const wrap = document.getElementById('noteWrap' + nr);
+    if (veld) { veld.value = ''; veld.style.height = ''; }
+    zetNoteLezen(nr, false);
+    if (wrap) wrap.classList.add('hidden');
+  });
 }
 
 function toggleTrackPutts() {
