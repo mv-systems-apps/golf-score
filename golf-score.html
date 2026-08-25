@@ -1228,7 +1228,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F7</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F9</div>
 </div>
 
 <script>
@@ -11690,12 +11690,15 @@ async function exportAllRounds() {
   const data = saved.map(r => {
     const { id, total, totalStb, playedCount, holesCount, currentHole, started, _justImported, sd: _oldSd,
             date, time, player, hcp, club, clubShort, gender, track, tee, CR, SR, PAR, chcp,
-            ...rest } = r;
+            note, holes: _holes, ...rest } = r;
     return {
       date, time, player, hcp,
       club, clubShort,
       gender, track, tee, CR, SR, PAR, chcp,
       ...rest,
+      // De notitie hoort bij de kop van de ronde, niet achteraan tussen de restvelden:
+      // in het backupbestand lees je hem zo direct na qualifying en vóór de holes.
+      ...(note ? { note } : {}),
       holes: r.holes.map(({ _initScore, ...h }) => h),
     };
   });
