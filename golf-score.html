@@ -1228,7 +1228,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0F9</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FB</div>
 </div>
 
 <script>
@@ -9656,11 +9656,25 @@ function setFieldValue(el, val) {
 // tijdens het typen, i.p.v. pas bij bevestigen te corrigeren. Alleen van toepassing op
 // CR/SR — Par wordt niet meer los ingevoerd (zie updateAllTeeParDisplays hierboven) en
 // andere velden in deze gedeelde modal (bv. teenaam) blijven ongemoeid.
+// CR hoort bij een AANTAL HOLES: een 9-holesbaan heeft ongeveer de helft van de CR van
+// een 18-holesbaan. De grenzen bewegen daarom mee. Ze zijn ruim gekozen — ze moeten
+// typefouten vangen (3.5, 350), niet ongebruikelijke banen weigeren.
+function crGrenzen() {
+  const rijen = document.getElementById('editorHoles');
+  const n = rijen ? rijen.querySelectorAll('.hole-si').length : 0;
+  // Nog geen holes bekend (nieuwe baan, editor nog niet gevuld): dan het RUIME bereik
+  // aanhouden. Anders zou je bij een 18-holesbaan geen 69.1 kunnen invoeren omdat de
+  // app op dat moment ten onrechte 9 holes veronderstelt.
+  if (!n) return { min: 25, max: 90, holes: null };
+  return n <= 9 ? { min: 25, max: 45, holes: 9 } : { min: 50, max: 90, holes: 18 };
+}
+
 function onValueEditInput(input) {
   if (!valueEditTarget) return;
   const msgEl = document.getElementById('valueEditRangeMsg');
+  const cr = crGrenzen();
   const ranges = {
-    'cr-name-field':  { min: 55, max: 80,  decimal: true,  label: '55 t/m 80' },
+    'cr-name-field':  { min: cr.min, max: cr.max, decimal: true, label: cr.min + ' t/m ' + cr.max },
     'sr-name-field':  { min: 55, max: 155, decimal: false, label: '55 t/m 155' },
     // Bereik is bewust 1 t/m 18 en NIET gekoppeld aan het aantal holes van deze baan:
     // bij een 9-holes-baan die de helft van een 18-holes-baan is, wordt de SI vaak
@@ -9777,7 +9791,13 @@ function confirmValueEdit() {
 
   if (isCrField) {
     const v = parseFloat(newVal.replace(',', '.'));
-    if (isNaN(v) || v < 55 || v > 80) { showErr('CR moet tussen 55 en 80 liggen'); return; }
+    const g = crGrenzen();
+    if (isNaN(v) || v < g.min || v > g.max) {
+      showErr(g.holes
+        ? `CR moet tussen ${g.min} en ${g.max} liggen (${g.holes} holes)`
+        : `CR moet tussen ${g.min} en ${g.max} liggen`);
+      return;
+    }
     newVal = v.toFixed(1);
   }
   if (isSrField) {
