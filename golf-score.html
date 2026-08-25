@@ -102,11 +102,13 @@
     html.light-mode .hole-id,
     html.light-mode .hole-si { background: rgba(0,0,0,.05) !important; color: var(--text) !important; border-color: rgba(0,0,0,.2) !important; }
     html.light-mode .par-cycle-btn,
-    html.light-mode .par-name-field,
     html.light-mode .tee-name-field,
     html.light-mode .cr-name-field,
     html.light-mode .sr-name-field,
     html.light-mode .gender-cycle-btn { background: rgba(0,0,0,.05) !important; color: var(--text) !important; border-color: rgba(0,0,0,.2) !important; }
+    /* PAR bij de tees is een BEREKENDE waarde (som van de hole-pars): geen vulling en
+       geen kader, zodat hij niet als aanklikbaar invoerveld leest. Alleen tekst dempen. */
+    html.light-mode .par-name-field { background: transparent !important; color: rgba(0,0,0,.55) !important; border-color: transparent !important; }
     html.light-mode .share-modal-box { background: var(--bg); border-color: rgba(0,0,0,.15); }
     html.light-mode #shareText { background: rgba(0,0,0,.05); color: var(--text); border-color: rgba(0,0,0,.15); }
     html.light-mode .ppar-dot-red { border-color: transparent; }
@@ -770,7 +772,7 @@
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
     <div id="archiveDateErrMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">Ongeldige datum</div>
     <div style="position:relative">
-      <input id="archiveSearch" aria-label="Zoeken in rondes" type="text" placeholder="Club, baan, speler, notitie, datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
+      <input id="archiveSearch" aria-label="Zoeken in rondes" type="text" placeholder="Club, baan, speler, notitie, @datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
       <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', loadSaved)" title="Wissen">&times;</button>
     </div>
   </div>
@@ -1228,7 +1230,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FC</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FF</div>
 </div>
 
 <script>
@@ -9882,7 +9884,7 @@ function makeTeeRow(gender, tee, par, cr, sr) {
       </div>
     </td>
     <td style="padding:3px 2px"><div class="tee-name-field" data-value="${tee}" onclick="openTeeFieldModal(this, 'Tee', false)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;overflow-wrap:break-word;cursor:pointer;text-align:center">${tee}</div></td>
-    <td style="padding:3px 2px"><div class="par-name-field" data-value="${parDisp}" data-numeric="1" title="Wordt automatisch berekend uit de hole-pars" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.04);color:var(--muted);border:1px solid rgba(255,255,255,.15);font-size:17px;text-align:center">${parDisp}</div></td>
+    <td style="padding:3px 2px"><div class="par-name-field" data-value="${parDisp}" data-numeric="1" title="Wordt automatisch berekend uit de hole-pars" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:transparent;color:var(--muted);border:1px solid transparent;font-size:17px;text-align:center;cursor:default">${parDisp}</div></td>
     <td style="padding:3px 2px"><div class="cr-name-field" data-value="${crDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'CR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${crDisp}</div></td>
     <td style="padding:3px 2px"><div class="sr-name-field" data-value="${srDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'SR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${srDisp}</div></td>`;
   bindGenderLongPress(tr.querySelector('.gender-cycle-btn'));
@@ -13488,12 +13490,12 @@ document.addEventListener('focusin', (e) => {
 <div id="valueEditModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px;transition:transform .2s ease">
     <div id="valueEditLabel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center;overflow-wrap:break-word"></div>
+    <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;text-align:center;margin-bottom:8px">Vul tee in</div>
+    <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:center;margin-bottom:8px"></div>
     <div class="fg" style="margin-bottom:8px">
       <input id="valueEditInput" type="text" aria-label="Nieuwe waarde" oninput="onValueEditInput(this)" onkeydown="if(event.key==='Enter'){confirmValueEdit();}" onblur="if(this.type==='text') this.value=this.value.trim()">
     </div>
-    <div id="valueEditError" class="error-msg" style="display:none;color:var(--red);font-size:20px;font-weight:700;text-align:center;margin-bottom:8px">Vul tee in</div>
     <div id="valueEditTeeHint" style="display:none;font-size:20px;color:var(--white);line-height:1.5;margin-bottom:8px">Herkende kleuren: Blauw · Bruin · Geel · Grijs · Groen · Oranje · Paars · Roze · Rood · Wit · Zilver · Zwart</div>
-    <div id="valueEditRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);text-align:center;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeValueEditModal()">Annuleren</button>
       <button class="btn-primary" style="flex:1;margin-top:0;padding:12px;font-size:20px" onclick="confirmValueEdit()">OK</button>
