@@ -1228,7 +1228,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FB</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FC</div>
 </div>
 
 <script>
@@ -9656,17 +9656,14 @@ function setFieldValue(el, val) {
 // tijdens het typen, i.p.v. pas bij bevestigen te corrigeren. Alleen van toepassing op
 // CR/SR — Par wordt niet meer los ingevoerd (zie updateAllTeeParDisplays hierboven) en
 // andere velden in deze gedeelde modal (bv. teenaam) blijven ongemoeid.
-// CR hoort bij een AANTAL HOLES: een 9-holesbaan heeft ongeveer de helft van de CR van
-// een 18-holesbaan. De grenzen bewegen daarom mee. Ze zijn ruim gekozen — ze moeten
-// typefouten vangen (3.5, 350), niet ongebruikelijke banen weigeren.
+// CR-bereik: bewust ZEER ruim (10 t/m 90). Dit is een typefoutfilter, geen keurmeester.
+// De officiele regels kennen geen boven- of ondergrens voor de Course Rating; ze stellen
+// alleen een minimumlengte aan de baan. In de praktijk loopt de CR van ongeveer 24 (een
+// korte 9-holes par-3-baan) tot 80 (de zwaarste banen ter wereld). Een grens die het
+// aantal holes volgde was preciezer, maar leverde vooral valse afwijzingen op — en een
+// vergissing als 3.5 of 350 wordt hiermee net zo goed gevangen.
 function crGrenzen() {
-  const rijen = document.getElementById('editorHoles');
-  const n = rijen ? rijen.querySelectorAll('.hole-si').length : 0;
-  // Nog geen holes bekend (nieuwe baan, editor nog niet gevuld): dan het RUIME bereik
-  // aanhouden. Anders zou je bij een 18-holesbaan geen 69.1 kunnen invoeren omdat de
-  // app op dat moment ten onrechte 9 holes veronderstelt.
-  if (!n) return { min: 25, max: 90, holes: null };
-  return n <= 9 ? { min: 25, max: 45, holes: 9 } : { min: 50, max: 90, holes: 18 };
+  return { min: 10, max: 90, holes: null };
 }
 
 function onValueEditInput(input) {
