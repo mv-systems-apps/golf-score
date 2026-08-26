@@ -1235,7 +1235,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-001</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-004</div>
 </div>
 
 <script>
@@ -3247,6 +3247,18 @@ function herplanRonde(id) {
   // (verwijderd, of hernoemd zonder de historie mee te nemen), dan blijft de huidige
   // keuze staan — en dat melden we, anders zie je zonder uitleg iets anders staan.
   const kwijt = [];
+  // Eerst de CLUB: het startscherm toont alleen de banen van de geselecteerde club.
+  // Herplan je een ronde van een andere club, dan staat zijn baan niet in de lijst en
+  // valt de keuze terug op de eerste baan die er wél staat — je krijgt dan ongemerkt
+  // een andere baan dan je herplant.
+  if (r.club && CLUBS[r.club]) {
+    if (storage.getItem('golf_default_club') !== r.club) {
+      storage.setItem('golf_default_club', r.club);
+      rebuildCourseLookup();
+    }
+  } else if (r.club) {
+    kwijt.push(`club ${r.club}`);
+  }
   if (r.track && COURSES[r.track]) {
     sel.track = r.track;
     // Het 9/18-filter meenemen: staat het op 9 en herplan je een 18-holesronde, dan is
