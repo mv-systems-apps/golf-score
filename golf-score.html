@@ -89,6 +89,10 @@
     input.field-input { width: 100%; padding: 8px 10px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: var(--white); font-size: 20px; -webkit-appearance: none; text-align: right; box-sizing: border-box; }
     html.light-mode input.field-input { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.14); color: var(--text); }
     html.light-mode .btn-secondary { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.16); }
+    /* Een knop die op scherp staat krijgt een rode achtergrond; zwarte tekst daarop is
+       in de lichte modus slecht leesbaar, dus altijd wit. Geldt voor ALLE knoppen met
+       deze bevestigingsstand, niet alleen die bij de tees. */
+    .confirm-armed { color: #fff !important; }
     html.light-mode .active-bg { background: rgba(0,0,0,.14) !important; border-color: rgba(0,0,0,.3) !important; }
     html.light-mode .tab { color: rgba(0,0,0,.5); }
     html.light-mode .tabs { border-top-color: rgba(0,0,0,.04); }
@@ -1091,6 +1095,7 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b7fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="justify-self:start">Ronde met putts op sommige holes, maar niet op alle</span>
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6" y="3" width="8" height="14" rx="1" fill="var(--green-light)"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, laatste 2 jaar</span>
       <svg width="20" height="20" viewBox="0 0 20 20"><rect x="6.75" y="3.75" width="6.5" height="12.5" rx="1" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg><span style="justify-self:start">Gemiddelde score per hole t.o.v. par, ouder dan 2 jaar</span>
+      <span style="font-size:24px;font-weight:900;line-height:1">*</span><span style="justify-self:start">Baananalyse: op deze hole speelde je niet altijd dezelfde par (bijvoorbeeld vanaf een andere tee). Getoond wordt de par van je laatste ronde.</span>
     
     </div>
   </div>
@@ -1230,7 +1235,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527CE-0FF</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-001</div>
 </div>
 
 <script>
@@ -1271,13 +1276,15 @@ function rebuildCourseLookup() {
   saveClubsToStorage();
 }
 
+// Geeft true/false terug: de baaneditor moet weten of het echt gelukt is, anders zou
+// hij "Opgeslagen" melden terwijl de wijziging bij de volgende start weg is.
 function saveClubsToStorage() {
   if (clubsOnleesbaar) {
     console.warn('Opslaan geweigerd: de opgeslagen clubgegevens zijn niet leesbaar.');
-    return;
+    return false;
   }
   try {
-    storage.setItem('golf_clubs', JSON.stringify(CLUBS));
+    return storage.setItem('golf_clubs', JSON.stringify(CLUBS)) !== false;
   } catch(e) {
     console.error('Opslaan van clubs is mislukt:', e);
     const warn = document.getElementById('storageWarning');
@@ -1285,10 +1292,14 @@ function saveClubsToStorage() {
       warn.classList.remove('hidden');
       warn.textContent = '⚠️ Opslaan is mislukt: ' + e.message;
     }
+    return false;
   }
 }
 
 let clubsOnleesbaar = false;
+// Wordt gezet zodra een ander tabblad de clubgegevens wijzigt; de baaneditor vraagt
+// dan eerst om bevestiging voordat hij eroverheen schrijft.
+let clubsGewijzigdElders = false;
 
 function loadClubsFromStorage() {
   try {
@@ -1304,7 +1315,7 @@ function loadClubsFromStorage() {
     Object.keys(CLUBS).forEach(clubName => {
       const courses = CLUBS[clubName].courses || {};
       Object.keys(courses).forEach(courseName => {
-        if (!(courses[courseName].holes || []).length) {
+        if (!(courses[courseName].holeIds || []).length) {
           delete courses[courseName];
         }
       });
@@ -1380,6 +1391,42 @@ function distributeChcp(chcp, n, holes) {
   for (let i = 0; i < remainder; i++) phcps[sorted[i].idx] += delta;
 
   return phcps;
+}
+
+// ══ PAR EN SI PER TEE ═══════════════════════════════════════════════════
+// Par en slagindex horen bij de TEE, niet bij de baan — zo staat het ook in de
+// officiële baangegevens. De baan bewaart alleen `holeIds` (het is fysiek dezelfde
+// hole vanaf elke tee); elke tee heeft een even lange eigen lijst `holes: [{par,si}]`.
+// Er is dus één vorm en geen terugvaloptie: waar par of SI nodig is, komt die altijd
+// van een tee. Deze drie hulpjes zijn de enige plek waar dat wordt uitgelezen.
+
+// Par-totaal van een tee: altijd de som van zijn eigen holes, nooit apart opgeslagen.
+function teePar(teeData) {
+  return (teeData?.holes || []).reduce((s, h) => s + (h.par || 0), 0);
+}
+
+// Voor baanbrede weetjes (bv. "is dit een par-3 baan") is er geen tee gekozen.
+// Dan telt de eerste tee: het aantal holes is baanbreed gelijk en de par verschilt
+// hooguit op een enkele hole, dus voor een categorie is dit representatief.
+function firstTeeOf(course) {
+  for (const teemap of Object.values(course?.tees || {})) {
+    const eerste = Object.values(teemap || {})[0];
+    if (eerste) return eerste;
+  }
+  return null;
+}
+
+// Bouwt de holes van een ronde: de namen komen van de baan, par en SI van de tee.
+// Dit is de enige plek waar een ronde-hole uit baan- en teegegevens wordt gemaakt;
+// alles daarna (scorekaart, Stableford, persoonlijke par, statistieken) leest uit de
+// ronde zelf, die zijn eigen kopie bewaart.
+function buildRoundHoles(course, teeData, phcps) {
+  const teeHoles = teeData?.holes || [];
+  return (course.holeIds || []).map((id, i) => {
+    const par = teeHoles[i]?.par;
+    const si  = teeHoles[i]?.si;
+    return { id, par, si, phcp: phcps[i], ppar: par + phcps[i], score: null };
+  });
 }
 
 function calcChcp(n, CR, SR, PAR, hcp) {
@@ -1908,9 +1955,8 @@ function trackCategories(name) {
   // Geeft een Set met alle categorieën die op deze baan van toepassing zijn.
   // Een baan kan zowel '9'/'18' als 'par3' tegelijk zijn (bijv. een PAR-3 baan met 9 holes).
   const course = COURSES[name];
-  const holes = course?.holes || [];
-  const n = holes.length;
-  const parSum = holes.reduce((s, h) => s + (h.par || 0), 0);
+  const n = (course?.holeIds || []).length;
+  const parSum = teePar(firstTeeOf(course));
   const cats = new Set();
   if (n === 9) cats.add('9');
   else if (n === 18) cats.add('18');
@@ -2241,7 +2287,7 @@ function calcChcpAuto2(hcp2) {
   const genderKey = Object.keys(course.tees).find(g => g === sel2.gender) || Object.keys(course.tees)[0];
   const teeData = course.tees[genderKey]?.[sel2.tee] || Object.values(course.tees[genderKey] || {})[0];
   if (!teeData) return null;
-  return calcChcp(course.holes.length, teeData.CR, teeData.SR, teeData.PAR, hcp2);
+  return calcChcp(course.holeIds.length, teeData.CR, teeData.SR, teePar(teeData), hcp2);
 }
 
 function updateChcp2() {
@@ -2469,7 +2515,7 @@ function buildTrackList() {
     const course = COURSES[name];
 
     visibleNames.push(name);
-    const n = course.holes.length;
+    const n = course.holeIds.length;
     const btn = document.createElement('button');
     btn.className = 'track-btn' + (name === sel.track ? ' active' : '');
     btn.innerHTML = `<span class="track-name">${escapeHtml(name)}</span><span class="track-sub">${n}h</span>`;
@@ -2527,7 +2573,7 @@ function buildTeeButtons() {
   const course = COURSES[sel.track];
   // Verberg tee-sectie als er geen holes zijn
   const teeSection = el.previousElementSibling; // h3 Tee
-  const hasHoles = course?.holes?.length > 0;
+  const hasHoles = course?.holeIds?.length > 0;
   if (teeSection) teeSection.style.display = hasHoles ? '' : 'none';
   el.style.display = hasHoles ? '' : 'none';
   if (!course || !hasHoles) return;
@@ -2682,7 +2728,7 @@ function calcChcpAuto() {
                     Object.keys(course.tees)[0];
   const teeData = course.tees[genderKey]?.[sel.tee];
   if (!teeData) return null;
-  return calcChcp(course.holes.length, teeData.CR, teeData.SR, teeData.PAR, hcp);
+  return calcChcp(course.holeIds.length, teeData.CR, teeData.SR, teePar(teeData), hcp);
 }
 
 function recalcPpar() {
@@ -3299,12 +3345,21 @@ function startRoundConfirmed() {
                     Object.keys(course.tees)[0];
   const teeData   = course.tees[genderKey]?.[sel.tee] || Object.values(course.tees[genderKey] || {})[0];
   if (!teeData) { showStartError('Geen geldige tee gevonden'); return; }
-  const n         = course.holes.length;
-  const chcpAuto  = isNaN(hcp) ? 0 : calcChcp(n, teeData.CR, teeData.SR, teeData.PAR, hcp);
+  const n         = course.holeIds.length;
+  // Par en SI komen van de tee, dus die lijst moet net zo lang zijn als de baan holes
+  // heeft. Bij import en in de editor wordt dat al afgedwongen; dit is het vangnet voor
+  // gegevens die op een andere manier beschadigd zijn geraakt — anders zou de ronde
+  // halverwege stukbreken in plaats van hier een duidelijke melding te geven.
+  if ((teeData.holes || []).length !== n) {
+    showStartError(`Tee ${sel.tee} heeft geen volledige par/SI-gegevens — controleer de baan bij Clubs`);
+    return;
+  }
+  const parTee    = teePar(teeData);
+  const chcpAuto  = isNaN(hcp) ? 0 : calcChcp(n, teeData.CR, teeData.SR, parTee, hcp);
   const chcp      = sel.chcpOverride !== null ? sel.chcpOverride : chcpAuto;
 
-  // verdeel chcp slagen over holes op basis van SI
-  const phcps = distributeChcp(chcp, n, course.holes);
+  // verdeel chcp slagen over holes op basis van SI — de SI's van DEZE tee
+  const phcps = distributeChcp(chcp, n, teeData.holes || []);
 
   let [startDate, startTime] = sel.dateTimeEdited
     ? [sel.date, sel.time]
@@ -3319,16 +3374,11 @@ function startRoundConfirmed() {
     player: name, hcp: isNaN(hcp) ? null : hcp,
     gender: sel.gender, track: sel.track, tee: sel.tee,
     club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
-    CR: teeData.CR, SR: teeData.SR, PAR: teeData.PAR, chcp,
+    CR: teeData.CR, SR: teeData.SR, PAR: parTee, chcp,
     qualifying: !!sel.qualifying,
     started: true,
     note: leesStartNote(1) || undefined,
-    holes: course.holes.map((h, i) => ({
-      id: h.id, par: h.par, si: h.si,
-      phcp: phcps[i],
-      ppar: h.par + phcps[i],
-      score: null,
-    })),
+    holes: buildRoundHoles(course, teeData, phcps),
   };
   currentHole = 0;
   game.holes[0]._initScore = game.holes[0].score;
@@ -3343,10 +3393,13 @@ function startRoundConfirmed() {
     if (name2) {
       const hcp2 = parseFloat(document.getElementById('iHcp2').value.replace(',', '.'));
       const genderKey2 = Object.keys(course.tees).find(g => g === sel2.gender) || Object.keys(course.tees)[0];
-      const teeData2 = course.tees[genderKey2]?.[sel2.tee] || Object.values(course.tees[genderKey2] || {})[0] || teeData;
-      const chcpAuto2 = isNaN(hcp2) ? 0 : calcChcp(n, teeData2.CR, teeData2.SR, teeData2.PAR, hcp2);
+      let teeData2 = course.tees[genderKey2]?.[sel2.tee] || Object.values(course.tees[genderKey2] || {})[0] || teeData;
+      // Zelfde vangnet voor speler 2: liever de tee van speler 1 dan een halve ronde.
+      if ((teeData2.holes || []).length !== n) teeData2 = teeData;
+      const parTee2 = teePar(teeData2);
+      const chcpAuto2 = isNaN(hcp2) ? 0 : calcChcp(n, teeData2.CR, teeData2.SR, parTee2, hcp2);
       const chcp2 = sel2.chcpOverride !== null ? sel2.chcpOverride : chcpAuto2;
-      const phcps2 = distributeChcp(chcp2, n, course.holes);
+      const phcps2 = distributeChcp(chcp2, n, teeData2.holes || []);
       let newId2 = newId1 + 1;
       const usedIds = new Set(loadSavedRounds().map(r => r.id));
       usedIds.add(newId1);
@@ -3358,14 +3411,11 @@ function startRoundConfirmed() {
         note: leesStartNote(2) || undefined,
         gender: sel2.gender, track: sel.track, tee: sel2.tee,
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
-        CR: teeData2.CR, SR: teeData2.SR, PAR: teeData2.PAR, chcp: chcp2,
+        CR: teeData2.CR, SR: teeData2.SR, PAR: parTee2, chcp: chcp2,
         qualifying: !!sel2.qualifying,
         total: 0, totalStb: 0, holesCount: n,
         currentHole: 0, started: true,
-        holes: course.holes.map((h, i) => ({
-          id: h.id, par: h.par, si: h.si,
-          phcp: phcps2[i], ppar: h.par + phcps2[i], score: null,
-        })),
+        holes: buildRoundHoles(course, teeData2, phcps2),
       };
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
@@ -6609,7 +6659,11 @@ function courseAnalysisData(club, track) {
     const recent = (r.date || '') >= cutIso;
     r.holes.forEach((h, i) => {
       if (!h || h.score == null || h.par == null) return;
-      if (!agg.has(h.id)) agg.set(h.id, { id: h.id, par: h.par, order: i, nu: leeg(), toen: leeg() });
+      // De rondes staan nieuwste eerst, dus de par van je MEEST RECENTE ronde op deze
+      // hole wordt het getoonde getal. Wijkt een oudere ronde daarvan af (andere tee),
+      // dan onthouden we dat, zodat het label niet stelliger is dan het mag zijn.
+      if (!agg.has(h.id)) agg.set(h.id, { id: h.id, par: h.par, order: i, parWisselt: false, nu: leeg(), toen: leeg() });
+      if (h.par !== agg.get(h.id).par) agg.get(h.id).parWisselt = true;
       const kant = recent ? agg.get(h.id).nu : agg.get(h.id).toen;
       kant.sumDiff += h.score - h.par;
       kant.sum += h.score; kant.n++;
@@ -6707,7 +6761,11 @@ function caShowHole(blockId, idx) {
   // óók bij twee buckets te tonen — één formaat voor beide gevallen.
   const bereik = k => k.best === k.worst ? String(k.best) : `${k.best}–${k.worst}`;
   const deel = k => `<b>${gem(k)}</b> (${bereik(k)}, ${k.n}×)`;
-  const kop = `<b>${escapeHtml(String(d.id))}</b> (par ${d.par}): `;
+  // Sterretje: op deze hole speelde je niet altijd dezelfde par (zie de symbolenlijst
+  // bij Instellingen). De staafjes kloppen wel — die meten score t.o.v. de par van
+  // elke ronde zelf.
+  const parLabel = `par ${d.par}${d.parWisselt ? '*' : ''}`;
+  const kop = `<b>${escapeHtml(String(d.id))}</b> (${parLabel}): `;
   if (d.nu.n && d.toen.n) {
     el.innerHTML = kop + `toen gem. ${deel(d.toen)} → nu gem. ${deel(d.nu)}`;
     return;
@@ -9372,11 +9430,11 @@ function renderClubCourseList() {
   }
   const groups = { 9: [], 18: [], overig: [] };
   names.forEach(name => {
-    const n = (data.courses[name].holes || []).length;
+    const n = (data.courses[name].holeIds || []).length;
     (n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
   });
   const rowHtml = name => {
-    const n = (data.courses[name].holes || []).length;
+    const n = (data.courses[name].holeIds || []).length;
     return `<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;margin-top:6px">
       <span style="flex:1;min-width:0;overflow-wrap:break-word;font-size:17px;font-weight:700">${escapeHtml(name)}</span>
       <span style="font-size:15px;color:var(--muted);flex:0 0 auto;white-space:nowrap">${n}h</span>
@@ -9479,17 +9537,20 @@ function hasUnsavedClubChanges() {
 }
 
 function snapshotCourseEditor() {
+  // De hole-lijst van de getoonde tee staat nog in de tabel; eerst terugschrijven,
+  // anders zou een wijziging die je net typte niet als 'niet opgeslagen' tellen.
+  syncHoleTableNaarTee();
   return JSON.stringify({
     courseName: document.getElementById('editorCourseName').value,
-    tees: Array.from(document.querySelectorAll('.tee-editor-row')).map(row => {
+    tees: teeRows().map(row => {
       const genderBtn = row.querySelector('.gender-cycle-btn');
       const teeName = row.querySelector('.tee-name-field')?.dataset.value || '';
-      const par = row.querySelector('.par-name-field')?.dataset.value || '';
       const cr = row.querySelector('.cr-name-field')?.dataset.value || '';
       const sr = row.querySelector('.sr-name-field')?.dataset.value || '';
-      return [genderBtn?.dataset.gender || '', teeName, par, cr, sr];
+      // Par staat er bewust NIET bij: dat is de som van de holes hieronder.
+      return [genderBtn?.dataset.gender || '', teeName, cr, sr, row._holes || []];
     }),
-    holes: readHolesFromEditor()
+    holeIds: document.getElementById('editorHolesBody') ? readHolesFromEditor().map(h => h.id) : editorHoleIds
   });
 }
 
@@ -9548,14 +9609,22 @@ function openCourseEditor(courseName) {
   if (courseName === '__new__') {
     editorOrigCourseName = null;
     document.getElementById('editorCourseName').value = '';
+    editorHoleTeeRow = null;
+    editorHoleIds = [];
     renderTeeEditor({});
+    editorHoleTeeRow = teeRows()[0] || null;
     renderHoleEditor([]);
   } else {
     editorOrigCourseName = courseName;
     document.getElementById('editorCourseName').value = courseName;
     const course = data.courses[courseName];
+    editorHoleTeeRow = null;
+    editorHoleIds = course.holeIds || [];
     renderTeeEditor(course.tees || {});
-    renderHoleEditor(course.holes || []);
+    // Elke tee-rij draagt nu zijn eigen hole-lijst; de tabel toont die van de eerste
+    // tee, en met de kiezer erboven wissel je naar een andere.
+    editorHoleTeeRow = teeRows()[0] || null;
+    renderHoleEditor(holesVoorTabel(false));
   }
   document.getElementById('editorStatus').style.display = 'none';
   editorCourseSnapshot = snapshotCourseEditor();
@@ -9606,7 +9675,7 @@ function renderTeeEditor(tees) {
   ];
   sortedGenders.forEach(gender => {
     Object.entries(tees[gender]).forEach(([tee, vals]) => {
-      tbody.appendChild(makeTeeRow(gender, tee, vals.PAR, vals.CR, vals.SR));
+      tbody.appendChild(makeTeeRow(gender, tee, teePar(vals), vals.CR, vals.SR, vals.holes));
     });
   });
   updateTeeMoveButtons();
@@ -9812,6 +9881,8 @@ function confirmValueEdit() {
 
   if (errEl) errEl.style.display = 'none';
   setFieldValue(valueEditTarget, newVal);
+  if (isTeeNameField) renderHoleTeeChooser();
+  if (isSiField) { syncHoleTableNaarTee(); renderHoleTeeChooser(); }
   valueEditTarget.dispatchEvent(new Event('input', { bubbles: true }));
   valueEditTarget.dispatchEvent(new Event('change', { bubbles: true }));
   closeValueEditModal();
@@ -9867,7 +9938,11 @@ function closeChoiceEditModal() {
   choiceEditCallback = null;
 }
 
-function makeTeeRow(gender, tee, par, cr, sr) {
+// De hole-lijst van een tee hangt aan de RIJ zelf (tr._holes), niet aan een sleutel
+// met geslacht en teenaam. Zo blijft de lijst automatisch bij zijn tee horen als je
+// die hernoemt, van geslacht wisselt of verplaatst — daar kan niets meer uit de pas
+// gaan lopen.
+function makeTeeRow(gender, tee, par, cr, sr, holes) {
   // Weergave normaliseren, ook voor oudere data die nog niet via confirmValueEdit is
   // opgeslagen: Par en SR zijn altijd hele getallen, CR altijd met exact 1 decimaal
   // (de officiële WHS-conventie, bv. 71,2 — nooit een kaal 71).
@@ -9889,6 +9964,7 @@ function makeTeeRow(gender, tee, par, cr, sr) {
     <td style="padding:3px 2px"><div class="sr-name-field" data-value="${srDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'SR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${srDisp}</div></td>`;
   bindGenderLongPress(tr.querySelector('.gender-cycle-btn'));
   bindArrowLongPress(tr.querySelector('.tee-move-down-btn'));
+  tr._holes = (holes || []).map(h => ({ par: h.par, si: h.si }));
   return tr;
 }
 
@@ -9925,6 +10001,7 @@ function moveTeeRowDown(btn) {
   const row = btn.closest('.tee-editor-row');
   const next = row.nextElementSibling;
   if (next) row.parentElement.insertBefore(next, row);
+  renderHoleTeeChooser();
   row.classList.remove('tee-row-selected');
   clearTimeout(row._autoDeselect);
   btn.classList.add('hidden');
@@ -10033,6 +10110,7 @@ function editGenderBtn(btn) {
   openChoiceEditModal('Geslacht', ['Heren', 'Dames'], btn.dataset.gender, (choice) => {
     btn.dataset.gender = choice;
     btn.textContent = choice.charAt(0);
+    renderHoleTeeChooser();
   });
 }
 
@@ -10044,7 +10122,11 @@ function addTeeRow() {
   const defaultPar = holes.reduce((s, h) => s + h.par, 0);
   const defaultCR  = is18 ? 70.0 : 34.5;
   const defaultSR  = is18 ? 124 : 117;
-  document.getElementById('editorTeesBody').appendChild(makeTeeRow('Heren', 'Geel', defaultPar, defaultCR, defaultSR));
+  // Een nieuwe tee begint met dezelfde par en SI als de tee die nu in de holetabel
+  // staat — dat scheelt alles overtikken, en afwijken doe je daarna per hole.
+  const startHoles = holes.map(h => ({ par: h.par, si: h.si }));
+  document.getElementById('editorTeesBody').appendChild(makeTeeRow('Heren', 'Geel', defaultPar, defaultCR, defaultSR, startHoles));
+  renderHoleTeeChooser();
   updateTeeMoveButtons();
   updateTeeRowMoveHint();
   updateEditorSectionCounts();
@@ -10085,7 +10167,12 @@ function removeLastTeeRow(btn) {
   document.getElementById('teeRowDeleteMsg')?.classList.add('hidden');
   updateTeeRowMoveHint();
   const rows = document.getElementById('editorTees').querySelectorAll('.tee-editor-row');
+  const verwijderdeWasZichtbaar = rows.length && rows[rows.length - 1] === editorHoleTeeRow;
   if (rows.length) rows[rows.length - 1].remove();
+  renderHoleTeeChooser();
+  // Stond de verwijderde tee in de holetabel, dan hoort daar nu de tee te staan waar
+  // de kiezer op is teruggevallen — anders zie je de waarden van een tee die weg is.
+  if (verwijderdeWasZichtbaar) renderHoleEditor(holesVoorTabel(false));
   updateTeeMoveButtons();
   updateTeeRowMoveHint();
   updateEditorSectionCounts();
@@ -10099,10 +10186,276 @@ function removeLastTeeRow(btn) {
   }, 50);
 }
 
+// ══ HOLETABEL PER TEE ═══════════════════════════════════════════════════
+// De holetabel hoort bij ÉÉN tee: de ID-kolom is van de baan (dezelfde holes vanaf
+// elke tee), de PAR- en SI-kolom zijn van de getoonde tee. Welke tee dat is, kiest
+// je met de knoppenrij erboven.
+let editorHoleTeeRow = null;
+
+function teeRowLabel(row) {
+  const g = row.querySelector('.gender-cycle-btn')?.dataset.gender || '';
+  const t = row.querySelector('.tee-name-field')?.dataset.value || '';
+  return [g.charAt(0), t].filter(Boolean).join(' · ');
+}
+
+function teeRows() {
+  return Array.from(document.querySelectorAll('.tee-editor-row'));
+}
+
+// Schrijft de par en SI uit de zichtbare tabel terug naar de tee die nu getoond wordt.
+// Moet gebeuren vóór elke wissel, opslag of controle — anders gaat de laatste
+// wijziging verloren zodra je naar een andere tee kijkt.
+function syncHoleTableNaarTee() {
+  if (!editorHoleTeeRow || !document.getElementById('editorHolesBody')) return;
+  editorHoleTeeRow._holes = readHolesFromEditor().map(h => ({ par: h.par, si: h.si }));
+}
+
+// ── Vergelijken en gelijktrekken ─────────────────────────────────────────
+// In Nederland zijn par en SI vanaf alle tees meestal identiek. Een verschil is dus
+// vaker een tikfout dan een echte afwijking — daarom een statusregel die het meteen
+// laat zien, en knoppen om het in één keer recht te trekken.
+
+function teeGender(row) {
+  return row.querySelector('.gender-cycle-btn')?.dataset.gender || '';
+}
+
+// Vergelijkt twee hole-lijsten en zegt WAT er verschilt: alleen de SI, alleen de par,
+// of allebei. Dat onderscheid maakt een tikfout in de SI direct herkenbaar.
+function vergelijkHoles(a, b) {
+  const A = a || [], B = b || [];
+  let par = false, si = false;
+  if (A.length !== B.length) return { gelijk: false, par: true, si: true };
+  A.forEach((h, i) => {
+    if (h.par !== B[i].par) par = true;
+    if (h.si  !== B[i].si)  si  = true;
+  });
+  return { gelijk: !par && !si, par, si };
+}
+
+// Het onderwerp van de melding: 'De <b>par</b>' of '<b>Par en SI</b>', met het
+// enkelvoud/meervoud dat daarbij hoort.
+function verschilOnderwerp(v) {
+  if (v.par && v.si) return { woord: '<b>Par en SI</b>', meervoud: true };
+  if (v.par)         return { woord: 'De <b>par</b>',    meervoud: false };
+  return { woord: 'De <b>SI</b>', meervoud: false };
+}
+
+// De stand van zaken: welke tees wijken af van de getoonde tee, en verschillen heren
+// en dames onderling? Wordt gebruikt door zowel de statusregel als de knoppen.
+function teeVergelijking() {
+  const rows = teeRows();
+  const ijk = editorHoleTeeRow || rows[0];
+  const afwijkend = rows.filter(r => r !== ijk && !vergelijkHoles(r._holes, ijk?._holes).gelijk);
+  const soort = rows.filter(r => r !== ijk).reduce((acc, r) => {
+    const v = vergelijkHoles(r._holes, ijk?._holes);
+    return { par: acc.par || v.par, si: acc.si || v.si };
+  }, { par: false, si: false });
+
+  const heren = rows.filter(r => teeGender(r) === 'Heren');
+  const dames = rows.filter(r => teeGender(r) === 'Dames');
+  const onderlingGelijk = groep => groep.every(r => vergelijkHoles(r._holes, groep[0]._holes).gelijk);
+  const herenOnderling = heren.length ? onderlingGelijk(heren) : true;
+  const damesOnderling = dames.length ? onderlingGelijk(dames) : true;
+  const tussenGeslacht = (heren.length && dames.length)
+    ? vergelijkHoles(heren[0]._holes, dames[0]._holes)
+    : { gelijk: true, par: false, si: false };
+
+  // Staat de getoonde tee er als enige anders bij, dan is HIJ de uitzondering — en
+  // niet de acht andere. Dat scheelt een misleidende melding, en belangrijker: het
+  // voorkomt dat 'alles gelijk' een tikfout over de goede tees heen kopieert.
+  const rest = rows.filter(r => r !== ijk);
+  // De tee die je bekijkt is altijd het ijkpunt: de statusregel en de stipjes gaan
+  // over afwijkingen ten OPZICHTE van die tee. Zijn de andere tees het onderling eens,
+  // dan is de getoonde tee dus de uitzondering — ook als er maar één andere tee is.
+  const restOnderlingGelijk = rest.length >= 1 && rest.every(r => vergelijkHoles(r._holes, rest[0]._holes).gelijk);
+  const ijkIsUitzondering = !!afwijkend.length && restOnderlingGelijk;
+
+  return { rows, ijk, afwijkend, soort, heren, dames, rest,
+           herenOnderling, damesOnderling, tussenGeslacht, ijkIsUitzondering };
+}
+
+function renderHoleTeeStatus() {
+  const el = document.getElementById('holeTeeStatus');
+  if (!el) return;
+  const v = teeVergelijking();
+  if (v.rows.length <= 1) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const knop = (tekst, fn, id) =>
+    `<button type="button" id="${id}" class="btn-secondary" onclick="${fn}"
+      style="padding:5px 10px;font-size:14px">${tekst}</button>`;
+
+  // Richting van 'heren = dames' volgt de tee die je in beeld hebt: wat je ziet is de
+  // bron, zodat de knop nooit iets anders doet dan hij zegt.
+  const bronIsDames = teeGender(v.ijk) === 'Dames';
+  const doelLabel = bronIsDames ? 'Maak heren gelijk aan dames' : 'Maak dames gelijk aan heren';
+
+  let tekst, kleur, knoppen = '';
+  if (!v.afwijkend.length) {
+    tekst = `Alle ${v.rows.length} tees zijn gelijk`;
+    kleur = 'var(--green-light)';
+  } else {
+    kleur = 'var(--orange)';
+    const o = verschilOnderwerp(v.soort);
+    const wijkt = o.meervoud ? 'wijken af' : 'wijkt af';
+    // Staat de getoonde tee er als enige anders bij, dan gaat dat vóór: dat is meestal
+    // een tikfout op déze tee, en herstellen moet dan de eerste knop zijn. Zou de
+    // geslachtsmelding voorgaan, dan was 'Dames = heren' de enige knop — en die zou de
+    // tikfout juist over de goede tees heen kopiëren.
+    if (v.ijkIsUitzondering) {
+      tekst = `${o.woord} van deze tee ${wijkt}`;
+      knoppen = knop('Deze tee herstellen', 'herstelGetoondeTee(this)', 'teeHerstelBtn')
+              + knop('De overige aanpassen', 'trekAlleTeesGelijk(this)', 'teeGelijkAllesBtn');
+    } else if (v.herenOnderling && v.damesOnderling && !v.tussenGeslacht.gelijk
+        && v.heren.length && v.dames.length) {
+      const g = verschilOnderwerp(v.tussenGeslacht);
+      tekst = `${g.woord} ${g.meervoud ? 'verschillen' : 'verschilt'} tussen heren en dames`;
+      knoppen = knop(doelLabel, 'trekGeslachtGelijk(this)', 'teeGelijkGeslachtBtn');
+    } else {
+      const aantal = v.afwijkend.length === 1
+        ? '1 tee'
+        : `${v.afwijkend.length} van ${v.rows.length} tees`;
+      tekst = `${o.woord} van ${aantal} ${wijkt}`;
+      knoppen = knop('Alles gelijk', 'trekAlleTeesGelijk(this)', 'teeGelijkAllesBtn');
+      if (v.heren.length && v.dames.length) {
+        knoppen += knop(doelLabel, 'trekGeslachtGelijk(this)', 'teeGelijkGeslachtBtn');
+      }
+    }
+  }
+
+  // Elke melding op een eigen regel, de knoppen daaronder — anders lopen tekst en
+  // knoppen op een smal scherm door elkaar heen.
+  el.innerHTML = `<div id="holeTeeStatusText" style="font-size:15px;color:${kleur}">${tekst}</div>
+    <div id="teeGelijkMsg" class="error-msg hidden" style="color:var(--red);font-size:15px;font-weight:700;margin-top:2px">Tik nogmaals om te bevestigen</div>
+    ${knoppen ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${knoppen}</div>` : ''}`;
+}
+
+// Beide knoppen overschrijven meerdere tees in één keer, dus dezelfde bevestiging in
+// twee tikken als bij het verwijderen van een hole. Opslaan gebeurt pas met Opslaan,
+// dus een misklik kun je nog altijd ongedaan maken door zonder opslaan te sluiten.
+function bevestigTweeTikken(btn, doe) {
+  if (!btn) return;
+  if (btn.dataset.confirm !== '1') {
+    btn.dataset.confirm = '1';
+    btn.style.background = 'var(--red)';
+    btn.style.borderColor = 'var(--red)';
+    btn.classList.add('confirm-armed');
+    document.getElementById('teeGelijkMsg')?.classList.remove('hidden');
+    clearTimeout(btn._confirmTimeout);
+    btn._confirmTimeout = setTimeout(() => {
+      btn.dataset.confirm = '0';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.classList.remove('confirm-armed');
+      document.getElementById('teeGelijkMsg')?.classList.add('hidden');
+    }, 2000);
+    return;
+  }
+  clearTimeout(btn._confirmTimeout);
+  document.getElementById('teeGelijkMsg')?.classList.add('hidden');
+  doe();
+}
+
+function kopieerHolesNaar(bron, doelen) {
+  const lijst = (bron?._holes || []).map(h => ({ par: h.par, si: h.si }));
+  doelen.forEach(r => { if (r !== bron) r._holes = lijst.map(h => ({ ...h })); });
+  renderHoleEditor(holesVoorTabel());
+  updateAllTeeParDisplays();
+}
+
+// Herstelt de tee die je bekijkt vanuit de rest (die het onderling wél eens is).
+function herstelGetoondeTee(btn) {
+  syncHoleTableNaarTee();
+  bevestigTweeTikken(btn, () => {
+    const v = teeVergelijking();
+    if (!v.rest.length) return;
+    kopieerHolesNaar(v.rest[0], [v.rest[0], v.ijk]);
+  });
+}
+
+function trekAlleTeesGelijk(btn) {
+  syncHoleTableNaarTee();
+  bevestigTweeTikken(btn, () => {
+    const v = teeVergelijking();
+    kopieerHolesNaar(v.ijk, v.rows);
+  });
+}
+
+function trekGeslachtGelijk(btn) {
+  syncHoleTableNaarTee();
+  bevestigTweeTikken(btn, () => {
+    const v = teeVergelijking();
+    // De getoonde tee is de bron; het andere geslacht is het doel.
+    const doelen = teeGender(v.ijk) === 'Dames' ? v.heren : v.dames;
+    kopieerHolesNaar(v.ijk, [v.ijk, ...doelen]);
+  });
+}
+
+function renderHoleTeeChooser() {
+  const el = document.getElementById('holeTeeChooser');
+  if (!el) return;
+  const rows = teeRows();
+  // De getoonde tee kan zijn verdwenen (verwijderd); val dan terug op de eerste.
+  if (!rows.includes(editorHoleTeeRow)) editorHoleTeeRow = rows[0] || null;
+  if (rows.length <= 1) {
+    el.innerHTML = '';
+    el.style.display = 'none';
+    renderHoleTeeStatus();
+    return;
+  }
+  el.style.display = '';
+  const ijk = editorHoleTeeRow;
+  el.innerHTML = rows.map((row, i) => {
+    const actief = row === ijk;
+    // Een stipje bij elke tee die afwijkt van de tee die je nu bekijkt, zodat je
+    // meteen ziet wélke het is in plaats van ze een voor een langs te moeten.
+    const anders = !actief && !vergelijkHoles(row._holes, ijk?._holes).gelijk;
+    const stip = anders
+      ? `<span class="tee-afwijkend-stip" title="Wijkt af van de getoonde tee" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--orange);margin-left:6px;vertical-align:middle"></span>`
+      : '';
+    return `<button type="button" class="btn-secondary hole-tee-btn" data-idx="${i}" onclick="kiesHoleTee(${i})"
+      style="padding:6px 12px;font-size:15px;${actief ? 'background:var(--green-light);border-color:var(--green-light);color:var(--green-deep);font-weight:700' : ''}">${escapeHtml(teeRowLabel(row))}${stip}</button>`;
+  }).join('');
+  renderHoleTeeStatus();
+}
+
+function kiesHoleTee(idx) {
+  const rows = teeRows();
+  const row = rows[idx];
+  if (!row || row === editorHoleTeeRow) return;
+  syncHoleTableNaarTee();
+  editorHoleTeeRow = row;
+  renderHoleEditor(holesVoorTabel());
+}
+
+// De rijen voor de tabel: namen van de baan, par en SI van de getoonde tee.
+// Tijdens het bewerken staan de namen in de tabel zelf (daar pas je ze aan), maar bij
+// het OPENEN van een baan moet je ze uit editorHoleIds halen — anders erf je de namen
+// van de baan die je hiervoor open had staan.
+function holesVoorTabel(uitTabel = true) {
+  const ids = (uitTabel && document.getElementById('editorHolesBody'))
+    ? readHolesFromEditor().map(h => h.id)
+    : (editorHoleIds || []);
+  const eigen = editorHoleTeeRow?._holes || [];
+  return ids.map((id, i) => {
+    const eig = eigen[i];
+    // Heeft deze tee nog helemaal geen regel voor deze hole (nieuwe hole), dan een
+    // zinnige startwaarde. Is de regel er wél maar de SI leeg, dan blijft hij leeg —
+    // zie leesSi: een ontbrekende SI hoort zichtbaar te zijn, niet ingevuld te worden.
+    if (!eig) return { id, par: 4, si: i + 1 };
+    return { id, par: eig.par ?? 4, si: eig.si ?? null };
+  });
+}
+
+// Alleen gebruikt bij het openen, vóór de tabel bestaat.
+let editorHoleIds = [];
+
 function renderHoleEditor(holes) {
   const el = document.getElementById('editorHoles');
   const n = holes.length;
-  el.innerHTML = `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+  el.innerHTML = `<div id="holeTeeStatus" style="margin-bottom:8px"></div>
+  <div id="holeTeeChooser" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <table style="width:100%;border-collapse:collapse;table-layout:fixed">
     <colgroup>
       <col style="width:10%"><col style="width:36%"><col style="width:27%"><col style="width:27%">
     </colgroup>
@@ -10126,6 +10479,8 @@ function renderHoleEditor(holes) {
     const h = holes[i] || {id:`H${i+1}`, par:4, si:i+1};
     tbody.appendChild(makeHoleRow(h, i));
   });
+  editorHoleIds = holes.map(h => h.id);
+  renderHoleTeeChooser();
   updateEditorSectionCounts();
   updateAllTeeParDisplays();
 }
@@ -10137,14 +10492,18 @@ function makeHoleRow(h, i) {
     <td style="padding:3px 2px;text-align:center;font-size:20px;color:var(--muted)">${i+1}</td>
     <td style="padding:3px 2px"><input value="${h.id}" placeholder="H${i+1}" class="hole-id" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'ID')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>
     <td style="padding:3px 2px"><button type="button" class="par-cycle-btn" data-par="${h.par}" data-hole="${i+1}" onclick="editParBtn(this)" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;cursor:pointer">${h.par}</button></td>
-    <td style="padding:3px 2px"><input type="number" value="${h.si}" placeholder="${i+1}" min="1" max="18" class="hole-si" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'SI')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>`;
+    <td style="padding:3px 2px"><input type="number" value="${h.si ?? ''}" placeholder="${i+1}" min="1" max="18" class="hole-si" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'SI')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>`;
   return tr;
 }
 
 function addOneHoleRow() {
+  syncHoleTableNaarTee();
   const current = readHolesFromEditor();
   const n = current.length;
-  renderHoleEditor([...current, {id:`H${n+1}`, par:4, si:n+1}]);
+  // Een hole hoort bij de BAAN: hij komt er bij elke tee bij, anders lopen de lijsten
+  // uit de pas. De nieuwe hole start overal met par 4 en de eerstvolgende SI.
+  teeRows().forEach(row => { row._holes = [...(row._holes || []), { par: 4, si: n + 1 }]; });
+  renderHoleEditor([...holesVoorTabel(), {id:`H${n+1}`, par:4, si:n+1}]);
   updateEditorRemoveButtons();
   setTimeout(() => {
     const el = document.getElementById('addHoleRowBtn');
@@ -10188,17 +10547,30 @@ function removeHoleRow(btn) {
   btn.style.background = '';
   btn.style.borderColor = '';
   btn.classList.remove('confirm-armed');
-  const current = readHolesFromEditor();
+  syncHoleTableNaarTee();
+  teeRows().forEach(row => { row._holes = (row._holes || []).slice(0, -1); });
+  const current = holesVoorTabel();
   current.pop();
   renderHoleEditor(current);
   updateEditorRemoveButtons();
   setTimeout(() => {
+    const el = document.getElementById('addHoleRowBtn');
     if (!el) return;
     const overlay = document.getElementById('courseEditorOverlay') || document.documentElement;
     const rect = el.getBoundingClientRect();
     const target = window.innerHeight * 0.8;
     overlay.scrollBy({ top: rect.bottom - target, behavior: 'smooth' });
   }, 50);
+}
+
+// Geeft het ingevulde getal terug, of null als het veld leeg is. Bewust GEEN terugval
+// op het holenummer: dan zou een fout onzichtbaar worden ingevuld en pas verderop als
+// 'dubbele SI' opduiken. Of het getal binnen het bereik ligt, beoordeelt
+// validateCourseInput — zo blijft het onderscheid tussen 'niets ingevuld' en 'buiten
+// bereik' zichtbaar in de melding.
+function leesSi(waarde) {
+  const v = parseInt(waarde, 10);
+  return Number.isInteger(v) ? v : null;
 }
 
 function readHolesFromEditor() {
@@ -10208,25 +10580,27 @@ function readHolesFromEditor() {
     return {
       id:  idInput.value.trim() || `H${i+1}`,
       par: parseInt(parent.querySelector('.par-cycle-btn')?.dataset.par) || 4,
-      si:  parseInt(parent.querySelector('.hole-si').value) || i+1
+      si:  leesSi(parent.querySelector('.hole-si').value)
     };
   });
 }
 
 // De Par-kolom in de tees-tabel is geen los invoerveld — het is altijd de som van de
-// hole-pars (de app verwachtte dat toch al bij het opslaan, dus nu kan die waarde
-// simpelweg niet meer los raken van de werkelijke holes). Wordt na elke wijziging aan
-// de hole-pars (toevoegen/verwijderen van een hole, of een losse hole-par aanpassen)
-// opnieuw aangeroepen om alle tee-rijen synchroon te houden.
+// hole-pars van DIE tee. Nu par per tee kan verschillen, kan die som dus per rij
+// anders zijn. Wordt na elke wijziging aan de hole-pars opnieuw aangeroepen.
 function updateAllTeeParDisplays() {
   const holesEl = document.getElementById('editorHoles');
   const teesBody = document.getElementById('editorTeesBody');
   if (!holesEl || !teesBody) return;
-  const sum = readHolesFromEditor().reduce((s, h) => s + h.par, 0);
-  teesBody.querySelectorAll('.par-name-field').forEach(el => {
+  syncHoleTableNaarTee();
+  teeRows().forEach(row => {
+    const el = row.querySelector('.par-name-field');
+    if (!el) return;
+    const sum = (row._holes || []).reduce((s, h) => s + (h.par || 0), 0);
     el.textContent = String(sum);
     el.dataset.value = String(sum);
   });
+  renderHoleTeeChooser();
 }
 
 function editParBtn(btn) {
@@ -10522,31 +10896,19 @@ function validateCourseInput() {
   const teeRows = document.querySelectorAll('.tee-editor-row');
   if (!teeRows.length) throw new Error('Voeg minimaal één tee toe');
 
-  // Valideer holes — minimaal 1, alle velden ingevuld
+  // De getoonde tee eerst terugschrijven, anders wordt de laatste wijziging niet
+  // meegenomen in de controle hieronder.
+  syncHoleTableNaarTee();
+
+  // Valideer de holenamen — die zijn van de baan en gelden voor alle tees
   const holes = readHolesFromEditor();
   if (!holes.length) throw new Error('Voeg minimaal één hole toe');
-  holes.forEach((h, i) => {
-    const label = h.id || `Hole ${i + 1}`;
-    if (!h.id)                          throw new Error(`Vul naam in voor ${label}`);
-    if (h.par === null || isNaN(h.par)) throw new Error(`Vul par in voor ${label}`);
-    if (h.si === null || isNaN(h.si))   throw new Error(`Vul SI in voor ${label}`);
-  });
-
-  // Check op dubbele hole labels
   const holeIds = holes.map(h => h.id);
+  holeIds.forEach((id, i) => {
+    if (!id) throw new Error(`Vul naam in voor hole ${i + 1}`);
+  });
   const dupeIds = holeIds.filter((id, i) => holeIds.indexOf(id) !== i);
   if (dupeIds.length) throw new Error(`Dubbele holenaam: "${[...new Set(dupeIds)].join('", "')}"`);
-
-  // Check SI: uniek en binnen bereik (geen check op 1 t/m aantal holes — bij een
-  // 9-holes-baan die de helft van een 18-holes-baan is, is bijvoorbeeld alleen de
-  // oneven of alleen de even nummering uit die 18-holes-indexering ook een legitieme,
-  // veelgebruikte vorm; zie ook de 'hole-si'-toelichting in onValueEditInput hierboven).
-  const siValues = holes.map(h => h.si);
-  const dupeSi = siValues.filter((v, i) => siValues.indexOf(v) !== i);
-  if (dupeSi.length) throw new Error(`Dubbele SI: ${[...new Set(dupeSi)].join(', ')}`);
-  holes.forEach(h => {
-    if (h.si < 0 || h.si > 99) throw new Error(`SI ${h.si} buiten bereik (0–99) voor hole "${h.id}"`);
-  });
 
   // Valideer tee velden
   const tees = {};
@@ -10567,30 +10929,43 @@ function validateCourseInput() {
     if (!crRaw)  throw new Error(`Vul CR in voor ${label}`);
     if (!srRaw)  throw new Error(`Vul SR in voor ${label}`);
     if (tees[g]?.[t]) throw new Error(`Dubbele tee: "${t}" bestaat al bij ${g}`);
-    const par = parseInt(parRaw);
     const cr  = parseFloat(crRaw.replace(',', '.'));
     const sr  = parseInt(srRaw);
     if (!tees[g]) tees[g] = {};
-    tees[g][t] = { PAR: par, CR: cr, SR: sr };
-  });
 
-  // Check tee par vs som van hole pars
-  const holeParsSum = holes.reduce((s, h) => s + h.par, 0);
-  Object.entries(tees).forEach(([, teeMap]) => {
-    Object.entries(teeMap).forEach(([, vals]) => {
-      if (vals.PAR !== holeParsSum) throw new Error(`Par ${vals.PAR} ≠ hole-pars ${holeParsSum}`);
+    // Par en SI horen bij deze tee — dus ook per tee controleren.
+    const teeHoles = (row._holes || []).map(h => ({ par: h.par, si: h.si }));
+    if (teeHoles.length !== holes.length) {
+      throw new Error(`${label}: ${teeHoles.length} holes, baan heeft er ${holes.length}`);
+    }
+    teeHoles.forEach((h, k) => {
+      const holeLabel = `${label}, hole "${holeIds[k]}"`;
+      if (h.par === null || isNaN(h.par)) throw new Error(`Vul par in voor ${holeLabel}`);
+      if (h.si === null || isNaN(h.si))   throw new Error(`Vul SI in voor ${holeLabel}`);
+      // Bereik 1 t/m 18, gelijk aan het invoervenster en de importcontrole. Bewust NIET
+      // vastgepind op het aantal holes: de SI van een 9-holesbaan volgt vaak de
+      // nummering van de 18-holesbaan waar hij deel van is (alleen de oneven of alleen
+      // de even nummers), en dat is een legitieme, veelgebruikte vorm.
+      if (h.si < 1 || h.si > 18) throw new Error(`SI ${h.si} buiten bereik (1–18) voor ${holeLabel}`);
     });
+    const siValues = teeHoles.map(h => h.si);
+    const dupeSi = siValues.filter((v, k) => siValues.indexOf(v) !== k);
+    if (dupeSi.length) throw new Error(`${label}: dubbele SI ${[...new Set(dupeSi)].join(', ')}`);
+
+    tees[g][t] = { CR: cr, SR: sr, holes: teeHoles };
   });
 
-  return { newCourseName, holes, tees };
+  return { newCourseName, holeIds, tees };
 }
 
-function applyCourseChanges({ newCourseName, holes, tees }) {
+function applyCourseChanges({ newCourseName, holeIds, tees }) {
   const club = CLUBS[editorClub];
   if (editorOrigCourseName && editorOrigCourseName !== newCourseName) {
     delete club.courses[editorOrigCourseName];
   }
-  club.courses[newCourseName] = { tees, holes };
+  // De baan bewaart alleen de holenamen; par en SI staan per tee (die kwamen al zo
+  // uit validateCourseInput).
+  club.courses[newCourseName] = { holeIds, tees };
 
   rebuildCourseLookup();
   if (!COURSES[sel.track]) {
@@ -10598,13 +10973,24 @@ function applyCourseChanges({ newCourseName, holes, tees }) {
     if (fallback) sel.track = fallback;
   }
   rebuildAll();
-  saveClubsToStorage();
+  const opgeslagen = saveClubsToStorage();
 
   editorOrigCourseName = newCourseName;
+  return opgeslagen;
 }
 
-function saveCourseFromEditor() {
+function saveCourseFromEditor(negeerElders) {
   const status = document.getElementById('editorStatus');
+  // Heeft een ander tabblad de clubgegevens ondertussen gewijzigd, dan schrijft opslaan
+  // die wijziging weg. Eerst vragen dus — met de mogelijkheid te verversen en opnieuw
+  // te beginnen, of bewust door te gaan.
+  if (clubsGewijzigdElders && !negeerElders) {
+    showConfirmModal('Bijgewerkt in ander tabblad',
+      'De clubgegevens zijn in een ander tabblad gewijzigd. Opslaan overschrijft die wijziging. Wat wil je doen?',
+      () => { clubsGewijzigdElders = false; saveCourseFromEditor(true); },
+      'Verversen', () => location.reload(), 'Toch opslaan');
+    return;
+  }
   try {
     const validated = validateCourseInput();
     // Oude namen onthouden vóór de wijziging (baan én tees): rondes bewaren die namen
@@ -10614,7 +11000,10 @@ function saveCourseFromEditor() {
     const oudeBaan = editorOrigCourseName;
     const oudeTees = (oudeBaan && CLUBS[editorClub] && CLUBS[editorClub].courses[oudeBaan])
       ? Object.keys(CLUBS[editorClub].courses[oudeBaan].tees || {}) : [];
-    applyCourseChanges(validated);
+    const opgeslagen = applyCourseChanges(validated);
+    // Mislukt het wegschrijven (volle opslag), dan mag er geen "Opgeslagen" verschijnen:
+    // de wijziging staat dan alleen nog in het geheugen en is bij de volgende start weg.
+    if (!opgeslagen) throw new Error('Opslaan mislukt — geheugen vol of geblokkeerd');
     const nieuweBaan = validated.newCourseName;
     const nieuweTees = Object.keys(validated.tees || {});
     const klaar = () => { editorCourseSnapshot = snapshotCourseEditor(); renderClubCourseList(); };
@@ -11475,8 +11864,8 @@ function buildClubList() {
     const isActive = club === activeClub;
     const courses = CLUBS[club]?.courses || {};
     const sortedCourseEntries = Object.entries(courses).sort(([nameA, dataA], [nameB, dataB]) => {
-      const holesA = (dataA.holes || []).length;
-      const holesB = (dataB.holes || []).length;
+      const holesA = (dataA.holeIds || []).length;
+      const holesB = (dataB.holeIds || []).length;
       if (holesA !== holesB) return holesA - holesB;
       return nameA.localeCompare(nameB, 'nl');
     });
@@ -11484,14 +11873,14 @@ function buildClubList() {
     const clubKey = club.replace(/\W/g, '_');
     const courseGroups = { 9: [], 18: [], overig: [] };
     sortedCourseEntries.forEach(([name, data]) => {
-      const n = (data.holes || []).length;
+      const n = (data.holeIds || []).length;
       (n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
     });
     const courseRowHtml = ([name, data]) => {
       const caBtn = caCounts.get(club + '||' + name)
         ? `<button class="btn-secondary" style="padding:4px 9px;flex:0 0 auto" onclick="toggleCourseAnalysis(event, '${escapeJsString(club)}', '${escapeJsString(name)}', this)" title="Baananalyse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>`
         : '';
-      return `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:8px">${caBtn}${(data.holes||[]).length}h</span></div>`;
+      return `<div style="font-size:20px;display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;border-left:2px solid rgba(255,255,255,.15);gap:8px"><span style="color:var(--green-light);overflow-wrap:break-word;min-width:0">${escapeHtml(name)}</span><span style="color:var(--muted);flex:0 0 auto;white-space:nowrap;display:flex;align-items:center;gap:8px">${caBtn}${(data.holeIds||[]).length}h</span></div>`;
     };
     const courseSubGroupHtml = (key, label) => {
       if (!courseGroups[key].length) return '';
@@ -12077,17 +12466,16 @@ function validateImportedClubData(data) {
   }
   for (const [courseName, course] of Object.entries(data.courses)) {
     if (!course || typeof course !== 'object') return `Baan "${courseName}": ongeldige structuur`;
-    if (!Array.isArray(course.holes) || !course.holes.length) {
-      return `Baan "${courseName}": ontbrekende of lege "holes"-lijst`;
+    // De baan bewaart alleen de holenamen; par en SI staan per tee (zie teePar hierboven).
+    if (!Array.isArray(course.holeIds) || !course.holeIds.length) {
+      return `Baan "${courseName}": ontbrekende of lege "holeIds"-lijst`;
     }
-    for (const [i, h] of course.holes.entries()) {
-      if (!h.id) return `Baan "${courseName}", hole ${i + 1}: ontbrekend "id"`;
-      if (!Number.isInteger(h.par) || h.par < 3 || h.par > 6) {
-        return `Baan "${courseName}", hole "${h.id}": ongeldige par-waarde (${h.par})`;
-      }
-      if (!Number.isInteger(h.si) || h.si < 1 || h.si > 18) {
-        return `Baan "${courseName}", hole "${h.id}": ongeldige SI-waarde (${h.si})`;
-      }
+    for (const [i, id] of course.holeIds.entries()) {
+      if (!id || typeof id !== 'string') return `Baan "${courseName}", hole ${i + 1}: ontbrekende naam`;
+    }
+    const dubbeleIds = course.holeIds.filter((id, i) => course.holeIds.indexOf(id) !== i);
+    if (dubbeleIds.length) {
+      return `Baan "${courseName}": dubbele holenaam "${[...new Set(dubbeleIds)].join('", "')}"`;
     }
     if (!course.tees || typeof course.tees !== 'object' || !Object.keys(course.tees).length) {
       return `Baan "${courseName}": ontbrekende of lege "tees"`;
@@ -12097,9 +12485,24 @@ function validateImportedClubData(data) {
         return `Baan "${courseName}", "${gender}": geen tees gevonden`;
       }
       for (const [teeName, vals] of Object.entries(teemap)) {
-        if (typeof vals?.PAR !== 'number') return `Baan "${courseName}", tee "${teeName}": ongeldige PAR`;
-        if (typeof vals?.CR !== 'number') return `Baan "${courseName}", tee "${teeName}": ongeldige CR`;
-        if (typeof vals?.SR !== 'number') return `Baan "${courseName}", tee "${teeName}": ongeldige SR`;
+        const label = `Baan "${courseName}", tee "${teeName}"`;
+        if (typeof vals?.CR !== 'number') return `${label}: ongeldige CR`;
+        if (typeof vals?.SR !== 'number') return `${label}: ongeldige SR`;
+        if (!Array.isArray(vals.holes) || vals.holes.length !== course.holeIds.length) {
+          return `${label}: "holes" ontbreekt of telt niet ${course.holeIds.length} holes`;
+        }
+        for (const [i, h] of vals.holes.entries()) {
+          const holeLabel = `${label}, hole "${course.holeIds[i]}"`;
+          if (!Number.isInteger(h?.par) || h.par < 3 || h.par > 6) {
+            return `${holeLabel}: ongeldige par-waarde (${h?.par})`;
+          }
+          if (!Number.isInteger(h?.si) || h.si < 1 || h.si > 18) {
+            return `${holeLabel}: ongeldige SI-waarde (${h?.si})`;
+          }
+        }
+        const sis = vals.holes.map(h => h.si);
+        const dubbeleSi = sis.filter((v, i) => sis.indexOf(v) !== i);
+        if (dubbeleSi.length) return `${label}: dubbele SI ${[...new Set(dubbeleSi)].join(', ')}`;
       }
     }
   }
@@ -13308,11 +13711,25 @@ document.addEventListener('focusin', (e) => {
 });
 
 (function init() {
-  // Waarschuw als een ander tabblad de rondes wijzigt (voorkomt onbedoeld overschrijven)
+  // Waarschuw als een ander tabblad de rondes of de clubgegevens wijzigt (voorkomt
+  // onbedoeld overschrijven). Bij de clubs is dat extra van belang sinds elke tee zijn
+  // eigen par en SI heeft: het tabblad dat als laatste opslaat, schrijft de hele baan
+  // weg — inclusief de tees die het andere tabblad net had aangepast.
   window.addEventListener('storage', e => {
     if (e.key === 'golf_rounds' && e.newValue !== e.oldValue) {
       showInfoModal('Bijgewerkt in ander tabblad',
         'De rondes zijn in een ander tabblad gewijzigd. Ververs deze pagina om de laatste versie te zien; anders kun je wijzigingen overschrijven.');
+    }
+    if (e.key === 'golf_clubs' && e.newValue !== e.oldValue) {
+      clubsGewijzigdElders = true;
+      // Staat de baaneditor open, dan zou opslaan de wijziging van het andere tabblad
+      // overschrijven — dat meldt saveCourseFromEditor dan zelf. Anders volstaat een
+      // melding hier.
+      const editorOpen = !document.getElementById('courseEditorOverlay')?.classList.contains('hidden');
+      if (!editorOpen) {
+        showInfoModal('Bijgewerkt in ander tabblad',
+          'De clubgegevens zijn in een ander tabblad gewijzigd. Ververs deze pagina om de laatste versie te zien; anders kun je wijzigingen overschrijven.');
+      }
     }
   });
 
