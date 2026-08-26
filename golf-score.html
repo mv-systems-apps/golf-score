@@ -421,10 +421,34 @@
        Randkleur via --sym-color (altijd de categoriekleur), met currentColor als terugval
        voor par (geen symbool, dus geen kleur nodig). Puur decoratief, beïnvloedt de vaste
        boxbreedte niet. */
-    .score-val.sym-birdie { border: 2px solid var(--sym-color, currentColor); border-radius: 50%; }
-    .score-val.sym-eagle  { border: 2px solid var(--sym-color, currentColor); border-radius: 50%; box-shadow: 0 0 0 2px var(--green-deep), 0 0 0 4px var(--sym-color, currentColor); }
-    .score-val.sym-bogey  { border: 2px solid var(--sym-color, currentColor); border-radius: 3px; }
-    .score-val.sym-double { border: 2px solid var(--sym-color, currentColor); border-radius: 3px; box-shadow: 0 0 0 2px var(--green-deep), 0 0 0 4px var(--sym-color, currentColor); }
+    /* Het symbool is een LOSSE ring over het cijfer heen, geen rand OM het cijfer.
+       Als rand kreeg het element zijn maat van de tekst: een gebroken breedte
+       (calc(1ch + 24px) ≈ 40,7px) en een andere hoogte, dus in feite een ellips op
+       halve pixels. Sommige telefoons tekenen zo'n vorm tijdens het scrollen maar
+       half — de cirkel kwam er dan als een boogje uit (Marks melding). Met een ring
+       van vaste, hele afmetingen kan dat niet gebeuren, en het is bovendien een echte
+       cirkel in plaats van een ellips. */
+    .score-val.sym-birdie, .score-val.sym-eagle,
+    .score-val.sym-bogey,  .score-val.sym-double { position: relative; }
+    .score-val.sym-birdie::after, .score-val.sym-eagle::after,
+    .score-val.sym-bogey::after,  .score-val.sym-double::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      /* Het cijfer staat NIET in het midden van het vakje: de opvulling is bewust
+         ongelijk (links 11 en rechts 13, boven 4 en onder 2) omdat het cijfer daarmee
+         optisch goed staat. Dat scheelt een halve pixel per kant, dus de ring schuift
+         1px naar links en 1px omlaag mee — anders staat hij om het vakje in plaats van
+         om het cijfer. Verander je die opvulling, pas dan ook deze marge aan. */
+      width: 38px; height: 38px; margin: -18px 0 0 -20px;
+      border: 2px solid var(--sym-color, currentColor);
+      box-sizing: border-box; pointer-events: none;
+    }
+    .score-val.sym-birdie::after, .score-val.sym-eagle::after { border-radius: 50%; }
+    .score-val.sym-bogey::after,  .score-val.sym-double::after { border-radius: 3px; }
+    /* Dubbele ring voor eagle en dubbel bogey (of slechter): tweede ring eromheen, met
+       een tussenruimte in de achtergrondkleur. */
+    .score-val.sym-eagle::after, .score-val.sym-double::after {
+      box-shadow: 0 0 0 2px var(--green-deep), 0 0 0 4px var(--sym-color, currentColor);
+    }
     /* Legenda/telling onder grafiek. Terugdraaien: zet var(--res-*) terug. Par blijft grijs. */
     .c-eagle  { color: var(--dist-eagle); }
     .c-birdie { color: var(--dist-birdie); }
@@ -899,7 +923,7 @@
     </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Tijdens de ronde <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>)</span></div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Tijdens de ronde <span style="text-transform:none;font-weight:400">(<svg width="17" height="17" viewBox="0 -0.56 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>)</span></div>
   
 
   <div class="card">
@@ -926,7 +950,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div style="font-size:20px;font-weight:700;color:var(--white)">Naar volgende hole</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: na het bevestigen van een score springt de app naar de eerstvolgende hole zonder score.</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: zodra je de score van een hole hebt ingevuld en het invoerpaneel sluit, springt de app naar de eerstvolgende hole zonder score.</div>
             <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
             <div class="more-full">Corrigeer je een hole die al een score had, dan blijf je staan. Bij een gat in de rij wordt vooruit gekeken: je springt niet terug naar een overgeslagen hole. Werkt niet samen met putts bijhouden — dan blijft de puttregel bij de hole in beeld staan.</div>
       </div>
@@ -959,7 +983,7 @@
     </div>
   </div>
 
-<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Spelers <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>)</span></div>
+<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Spelers <span style="text-transform:none;font-weight:400">(<svg width="17" height="17" viewBox="0.5 -0.5 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>)</span></div>
   <div class="card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
@@ -981,7 +1005,7 @@
 
   </div>
   <div id="settingsTabWhs" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Handicap <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>)</span></div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Handicap <span style="text-transform:none;font-weight:400">(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>)</span></div>
   <div class="card">
     <div style="margin-bottom:8px">
       <div style="font-size:20px;font-weight:700;color:var(--white)">Low HI</div>
@@ -1109,7 +1133,7 @@
   </div>
   </div>
   <div id="settingsTabMain2">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Clubs &amp; Rondes <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg> &amp; <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">Clubs &amp; Rondes <span style="text-transform:none;font-weight:400">(<svg width="16" height="16" viewBox="-1.5 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span style="margin:0 8px 0 6px">&amp;</span><svg width="18" height="18" viewBox="0 1 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
@@ -1132,7 +1156,7 @@
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <div>
-      <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in rondes <span style="font-weight:400">(<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
+      <div style="font-size:20px;font-weight:700;color:var(--white)">Zoeken in rondes <span style="font-weight:400">(<svg width="18" height="18" viewBox="0 1 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>)</span></div>
       <div style="font-size:17px;color:var(--muted)">Typ een deel van een club-, baan- of spelernaam, of van een notitie. Met <b>@</b> zoek je op datum, met <b>:</b> op een periode.</div>
       <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
       <div class="more-full">Volgorde: dag-maand(-jaar). <b>@8-8-2026</b> exact, <b>@8-2026</b> maand, <b>@2026</b> jaar, <b>@8-8</b> elk jaar. Periode: <b>@1-1-2026:30-6-2026</b>; open kant mag (<b>@2025:</b> of <b>@:2026</b>); <b>@8-8:15-8</b> geldt voor elk jaar. Combineren: <b>heelsum@2026</b>.</div>
@@ -1214,7 +1238,7 @@
       </div>
       <div id="otherPlayerCleanupCard" class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes van andere spelers dan <span id="otherPlayerMainNameLabel" style="color:var(--gold)">hoofdspeler</span> verwijderen</div>
-        <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
+        <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="14" height="14" viewBox="0.5 -0.5 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
         <div id="otherPlayerCleanupBody" class="hidden">
           <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="otherPlayerCount" style="color:var(--white);font-weight:700">0</span> rondes van andere spelers: <span id="otherPlayerNames" style="color:var(--white);font-weight:700">—</span>.</div>
           <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
@@ -1243,7 +1267,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-005</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-00F</div>
 </div>
 
 <script>
@@ -3557,9 +3581,44 @@ function selectNine(n) {
   renderScore();
 }
 let scoreButtonsJustToggled = false;
-function toggleScoreButtons(i) {
-  scoreButtonsRow = (scoreButtonsRow === i) ? null : i;
+function markeerNetGetoggled() {
   scoreButtonsJustToggled = true;
+  setTimeout(() => { scoreButtonsJustToggled = false; }, 0);
+}
+
+// ── Doorspringen naar de volgende lege hole ─────────────────────────────────
+// "Klaar met een hole" = het invoerpaneel sluiten. Dat werkt hetzelfde of je nu putts
+// bijhoudt of niet, en het is het enige moment waarop je zeker weet dat er niets meer
+// bij die hole hoort — met putts aan hoort de puttregel er namelijk óók bij, en meteen
+// na de score wegspringen zou die onbereikbaar maken.
+// Springen gebeurt alleen als de hole LEEG was: bij een correctie op een al ingevulde
+// hole blijf je staan, anders wordt corrigeren onwerkbaar.
+// (Bevestig je een lange druk — score wissen of ongedaan maken — dan springt de app met
+// putts uit al bij die bevestiging door; zie clearScoreTap.)
+let invoerHole = null, invoerHoleWasLeeg = false;
+
+function beginInvoer(i) {
+  invoerHole = i;
+  invoerHoleWasLeeg = !game.holes[i] || game.holes[i].score === null;
+}
+
+// Sluit het invoerpaneel en spring zo nodig door. Alle plekken waar het paneel
+// dichtgaat lopen hierlangs, zodat de sprong niet aan één van die plekken kan ontbreken.
+function sluitInvoer() {
+  const i = invoerHole;
+  scoreButtonsRow = null;
+  invoerHole = null;
+  if (i === null || !autoNextEnabled() || !invoerHoleWasLeeg) return;
+  const h = game.holes[i];
+  if (!h || h.score === null) return;
+  const volgende = volgendeLegeHole(i);
+  if (volgende >= 0) setCurrentHole(volgende);
+}
+
+function toggleScoreButtons(i) {
+  if (scoreButtonsRow === i) sluitInvoer();
+  else { scoreButtonsRow = i; beginInvoer(i); }
+  markeerNetGetoggled();
   renderScore();
 }
 
@@ -3567,7 +3626,8 @@ function toggleScoreButtons(i) {
 function selectScoreRow(i) {
   selectHole(i);
   scoreButtonsRow = i;
-  scoreButtonsJustToggled = true;
+  beginInvoer(i);
+  markeerNetGetoggled();
   renderScore();
 }
 
@@ -3579,7 +3639,7 @@ document.addEventListener('click', (e) => {
     e.target.closest('.score-val') ||
     e.target.closest('.sum-tr')
   )) return;
-  scoreButtonsRow = null;
+  sluitInvoer();
   renderScore();
 });
 
@@ -3654,7 +3714,8 @@ function clearScoreTap(revert) {
   pulseScore(i);
   updateHeader();
   updateHeaderScore();
-  if (!revert && wasLeeg && autoNextEnabled() && game.holes[i].score !== null) {
+  // Met putts aan wacht de sprong tot het invoerpaneel sluit (zie sluitInvoer).
+  if (!revert && wasLeeg && autoNextEnabled() && !trackPuttsEnabled() && game.holes[i].score !== null) {
     const volgende = volgendeLegeHole(i);
     if (volgende >= 0) setCurrentHole(volgende);
   }
@@ -3737,22 +3798,47 @@ function selectHole(i) {
   updateHeaderScore();
 }
 
+// ══ SYMBOLEN IN LOPENDE TEKST ════════════════════════════════════════════
+// Een symbool tussen woorden vraagt om twee dingen die op een knop vanzelf goed gaan:
+//
+//  1. HOOGTE. Elk symbool vult zijn tekenvak anders — de vlag beslaat 18 van de 24
+//     eenheden in de hoogte, de map maar 16. Bij dezelfde breedte lijkt de map dus
+//     kleiner. Daarom krijgt elk symbool een eigen maat, zo gekozen dat de GETEKENDE
+//     lijnen even hoog zijn (ongeveer 12px bij tekst van 20px).
+//  2. UITLIJNING. Zonder opgave zakt een svg naar de onderkant van de regel.
+//     'middle' zet het midden van het symbool op de optische middenlijn van de tekst,
+//     precies waar ook de pijl → van het lettertype hangt.
+function inlineIcoon(svg, maat) {
+  return svg
+    .replace(/width="\d+" height="\d+"/, `width="${maat}" height="${maat}"`)
+    .replace(/ style="vertical-align:[^"]*"/, '')
+    .replace('viewBox=', 'style="vertical-align:middle" viewBox=');
+}
+
+// De pijl tussen twee symbolen, met evenveel lucht aan beide kanten.
+//
+// 'middle' zet het midden van het VAK op de middenlijn, maar de pijl hangt niet midden
+// in zijn vak: getekend loopt hij van 11 tot 3 eenheden boven de basislijn, dus zijn
+// zwaartepunt ligt hoger. Gemeten verschil met de symbolen ernaast: 1,5px. Die duw
+// hieronder haalt dat weg, zodat pijl en driehoekje op precies dezelfde lijn staan.
+function inlinePijl() {
+  // Bewust een GETEKENDE pijl en niet het letterteken →: waar dat teken op de regel
+  // hangt verschilt per lettertype, dus op het ene toestel stond hij hoger dan de
+  // symbolen ernaast en op het andere lager. Als tekening volgt hij dezelfde regel als
+  // de rest en staat hij overal op dezelfde lijn.
+  const pijl = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="M14 8l4 4-4 4"/></svg>';
+  return `<span style="margin:0 2px">${inlineIcoon(pijl, 24)}</span>`;
+}
+
 // ══ SUMMARY ══════════════════════════════════════════════════════════════
 function emptyStateHTML() {
   const setupIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>';
-  const archiveIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>';
+  const archiveIcon = '<svg width="16" height="16" viewBox="0 1 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>';
   const startTriangle = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
-  // In de lopende tekst hebben de symbolen hun eigen uitlijning nodig: op de knoppen
-  // hieronder zorgt de flex-opmaak daarvoor, maar tussen woorden zakt een svg zonder
-  // vertical-align naar de onderkant van de regel. Ze staan hier ook even groot als de
-  // tekst eromheen, zodat map en driehoekje op dezelfde hoogte staan.
-  // (De vervanging haakt aan op viewBox in plaats van op de openingstag, zodat er in de
-  // broncode geen losse svg-tekst staat die de tagteller in de controles verwart.)
-  const inTekst = (svg, breedte) => svg
-    .replace(/width="\d+" height="\d+"/, `width="${breedte}" height="${breedte}"`)
-    .replace(/ style="vertical-align:middle"/, '')
-    .replace('viewBox=', 'style="vertical-align:-2px" viewBox=');
-  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Maak een nieuwe ronde aan, of start een opgeslagen ronde (${inTekst(archiveIcon, 18)} → ${inTekst(startTriangle, 15)}).</div>`
+  // Symbolen in lopende tekst: zie inlineIcoon hieronder. De maten zijn zo gekozen dat
+  // de getekende lijnen even hoog zijn — niet de onzichtbare tekenvakken, want die
+  // vullen de symbolen elk anders.
+  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Maak een nieuwe ronde aan, of start een opgeslagen ronde (${inlineIcoon(archiveIcon, 18)}${inlinePijl()}${inlineIcoon(startTriangle, 16)}).</div>`
     + `<div style="display:flex;gap:8px">`
     + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('setup')">${setupIcon}Nieuwe ronde</button>`
     + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('archive')">${archiveIcon}Rondes</button>`
@@ -4028,8 +4114,8 @@ function renderScoreTable() {
     row.className = 'sum-tr' + (i === currentHole ? ' current-row' : '');
     row.onclick = () => {
       if (i === currentHole && scoreButtonsRow === i) {
-        scoreButtonsRow = null;
-        scoreButtonsJustToggled = true;
+        sluitInvoer();
+        markeerNetGetoggled();
         renderScore();
         return;
       }
@@ -4763,7 +4849,7 @@ function renderPlayerStats() {
   if (!player) {
     const hasAnyRounds = loadSavedRounds().length > 0;
     el.innerHTML = hasAnyRounds
-      ? `<div class="card"><div style="font-size:20px;color:var(--muted)">Geen <b>statistieken</b>.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Er staan al rondes opgeslagen, maar er is geen spelernaam ingevuld bij Start (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Vul die daar in om de statistieken te zien.</div></div>`
+      ? `<div class="card"><div style="font-size:20px;color:var(--muted)">Geen <b>statistieken</b>.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Er staan al rondes opgeslagen, maar er is geen spelernaam ingevuld bij Start (<svg width="13" height="13" viewBox="0.5 -0.5 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Vul die daar in om de statistieken te zien.</div></div>`
       : '<span class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen statistieken</span>';
     return;
   }
@@ -4775,7 +4861,7 @@ function renderPlayerStats() {
     .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`));
 
   if (!rounds.length) {
-    el.innerHTML = `<div class="card"><h2>${escapeHtml(player)}</h2><div style="font-size:20px;color:var(--muted)">Geen <b>afgeronde</b> qualifying rondes.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Statistieken tonen alleen <b>afgeronde</b> rondes (qualifying) van de speler die is ingevuld bij Start (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Klopt de naam niet, pas die dan aan.</div></div>`;
+    el.innerHTML = `<div class="card"><h2>${escapeHtml(player)}</h2><div style="font-size:20px;color:var(--muted)">Geen <b>afgeronde</b> qualifying rondes.</div><div style="font-size:15px;color:var(--muted);margin-top:8px">Statistieken tonen alleen <b>afgeronde</b> rondes (qualifying) van de speler die is ingevuld bij Start (<svg width="13" height="13" viewBox="0.5 -0.5 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>). Klopt de naam niet, pas die dan aan.</div></div>`;
     return;
   }
 
@@ -6975,8 +7061,8 @@ function maakPuttRij(bronRij, i) {
   rij.removeAttribute('id');
   rij.onclick = e => {
     e.stopPropagation();
-    scoreButtonsRow = null;
-    scoreButtonsJustToggled = true;
+    sluitInvoer();
+    markeerNetGetoggled();
     renderScore();
   };
   const c = rij.children;
@@ -13264,11 +13350,11 @@ function togglePuttsStats() {
   renderPlayerStats();
 }
 
-// Automatisch naar de volgende hole na het bevestigen van een score.
-// Standaard UIT. Doet niets zolang putts bijgehouden worden: de puttregel hoort dan
-// bij de hole die je net invulde, en wegspringen zou die onbereikbaar maken.
+// Automatisch naar de volgende lege hole zodra het invoeren van een hole klaar is.
+// Standaard UIT. Wanneer "klaar" is, staat bij sluitInvoer hierboven: met putts uit bij
+// het bevestigen van de score, met putts aan zodra je het invoerpaneel sluit.
 function autoNextEnabled() {
-  return storage.getItem('golf_auto_next') === 'on' && !trackPuttsEnabled();
+  return storage.getItem('golf_auto_next') === 'on';
 }
 function toggleAutoNext() {
   const cb = document.getElementById('autoNextToggle');
