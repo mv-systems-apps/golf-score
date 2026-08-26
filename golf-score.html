@@ -91,8 +91,13 @@
     html.light-mode .btn-secondary { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.16); }
     /* Een knop die op scherp staat krijgt een rode achtergrond; zwarte tekst daarop is
        in de lichte modus slecht leesbaar, dus altijd wit. Geldt voor ALLE knoppen met
-       deze bevestigingsstand, niet alleen die bij de tees. */
-    .confirm-armed { color: #fff !important; }
+       deze bevestigingsstand, niet alleen die bij de tees.
+       Ook alles ERIN moet mee: een pictogram in zo'n knop heeft vaak een eigen kleur
+       (zoals .delete-icon), en die zou anders van de knop winnen — in de lichte modus
+       is var(--white) namelijk juist donker. */
+    .confirm-armed, .confirm-armed * { color: #fff !important; }
+    .confirm-armed svg { stroke: #fff !important; }
+    .confirm-armed svg [fill]:not([fill="none"]) { fill: #fff !important; }
     html.light-mode .active-bg { background: rgba(0,0,0,.14) !important; border-color: rgba(0,0,0,.3) !important; }
     html.light-mode .tab { color: rgba(0,0,0,.5); }
     html.light-mode .tabs { border-top-color: rgba(0,0,0,.04); }
@@ -343,6 +348,9 @@
     .btn-secondary:disabled, .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
     .active-bg { background: rgba(255,255,255,.28) !important; border-color: rgba(255,255,255,.45) !important; }
     .delete-icon { color: var(--white); }
+    /* Rode knoppen: pictogram en tekst altijd wit, ook in de lichte modus. */
+    .btn-op-rood, .btn-op-rood * { color: #fff !important; }
+    .btn-op-rood svg { stroke: #fff !important; }
     .btn-secondary:active { transform: scale(.95); }
     /* Hoofdactie op een kaart (laden, pauzeren, gereed). Bewust een KLASSE en geen
        eigen stijl op het element: de bevestigingslogica zet tijdelijk een oranje
@@ -1210,14 +1218,14 @@
         <div id="otherPlayerCleanupBody" class="hidden">
           <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="otherPlayerCount" style="color:var(--white);font-weight:700">0</span> rondes van andere spelers: <span id="otherPlayerNames" style="color:var(--white);font-weight:700">—</span>.</div>
           <div id="deleteOtherPlayersMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-          <button id="deleteOtherPlayersBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
+          <button id="deleteOtherPlayersBtn" class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmDeleteOtherPlayers(this)">Verwijder rondes van andere spelers</button>
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Niet-qualifying rondes verwijderen</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Je hebt <span id="nonQCount" style="color:var(--white);font-weight:700">0</span> niet-qualifying rondes.</div>
         <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button id="purgeNonQBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
+        <button id="purgeNonQBtn" class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
     </div>
   </div>
@@ -1229,13 +1237,13 @@
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
-        <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
+        <button class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
     </div>
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-004</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-005</div>
 </div>
 
 <script>
@@ -14027,7 +14035,7 @@ document.addEventListener('focusin', (e) => {
     <div id="dangerModalMessage" style="font-size:20px;font-weight:400;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Alle clubs, rondes en instellingen worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</div>
     <div style="display:flex;gap:8px">
       <button class="btn-secondary" id="dangerModalCancelBtn" style="flex:1;padding:12px;font-size:20px" onclick="document.getElementById('resetAllModal').classList.add('hidden')">Annuleren</button>
-      <button class="btn-secondary confirm-armed" id="dangerModalConfirmBtn" style="flex:1;padding:12px;font-size:20px;background:var(--red);border-color:var(--red);color:#fff">Wissen</button>
+      <button class="btn-secondary btn-op-rood confirm-armed" id="dangerModalConfirmBtn" style="flex:1;padding:12px;font-size:20px;background:var(--red);border-color:var(--red);color:#fff">Wissen</button>
     </div>
   </div>
 </div>
@@ -14081,7 +14089,7 @@ document.addEventListener('focusin', (e) => {
     <div style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5">Je hebt wijzigingen die nog niet zijn opgeslagen. Weet je zeker dat je wilt sluiten?</div>
     <div style="display:flex;gap:8px">
       <button class="btn-secondary" style="flex:1;padding:12px;font-size:20px" onclick="closeEditorWarningModal()">Annuleren</button>
-      <button class="btn-secondary confirm-armed" style="flex:1;padding:12px;font-size:20px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmCloseEditorWithoutSaving()">Sluiten</button>
+      <button class="btn-secondary btn-op-rood confirm-armed" style="flex:1;padding:12px;font-size:20px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmCloseEditorWithoutSaving()">Sluiten</button>
     </div>
   </div>
 </div>
