@@ -3247,11 +3247,27 @@ function herplanRonde(id) {
   // (verwijderd, of hernoemd zonder de historie mee te nemen), dan blijft de huidige
   // keuze staan — en dat melden we, anders zie je zonder uitleg iets anders staan.
   const kwijt = [];
-  if (r.track && COURSES[r.track]) sel.track = r.track;
+  if (r.track && COURSES[r.track]) {
+    sel.track = r.track;
+    // Het 9/18-filter meenemen: staat het op 9 en herplan je een 18-holesronde, dan is
+    // die baan niet zichtbaar en valt de keuze terug op de eerste baan die wél zichtbaar
+    // is — je krijgt dan ongemerkt een andere baan dan je herplant.
+    const aantalHoles = (COURSES[r.track].holeIds || []).length;
+    if (aantalHoles === 9 || aantalHoles === 18) {
+      sel.holeCount = String(aantalHoles);
+      sel._holeCountUserCleared = false;
+    }
+    sel.showPar3 = trackCategories(r.track).has('par3');
+  }
   else if (r.track) kwijt.push(`baan ${r.track}`);
   if (r.gender) sel.gender = r.gender;
   const teesVanBaan = (COURSES[sel.track] && COURSES[sel.track].tees) ? (COURSES[sel.track].tees[sel.gender] || {}) : {};
-  if (r.tee && teesVanBaan[r.tee]) sel.tee = r.tee;
+  if (r.tee && teesVanBaan[r.tee]) {
+    sel.tee = r.tee;
+    // Zonder deze markering ziet buildTeeButtons de tee als 'nog niet gekozen' en zet hij
+    // de NGF-aanbevolen tee terug — dan speel je de herplande ronde vanaf een andere tee.
+    sel._teeUserSelected = true;
+  }
   else if (r.tee && COURSES[r.track]) kwijt.push(`tee ${r.tee}`);
   if (r.date) sel.date = r.date;
   if (r.time) sel.time = r.time;
@@ -3268,7 +3284,12 @@ function herplanRonde(id) {
   storage.setItem('golf_player2_visible', maat ? '1' : '0');
   if (maat) {
     if (maat.gender) sel2.gender = maat.gender;
-    if (maat.tee) sel2.tee = maat.tee;
+    if (maat.tee) {
+      sel2.tee = maat.tee;
+      // Net als bij speler 1: zonder deze markering vervangt buildTeeButtons2 de tee
+      // door de NGF-aanbeveling en speelt de medespeler ineens vanaf een andere tee.
+      sel2._teeUserSelected = true;
+    }
     sel2.qualifying = !!maat.qualifying;
     sel2.chcpOverride = null;
     const naam2 = document.getElementById('iName2');
@@ -3286,6 +3307,13 @@ function herplanRonde(id) {
   updatePlayer2CardVisibility();
   updatePlayer2Titles();
   rebuildAll();
+  // De knoppen voor geslacht, aantal holes en par3 volgen sel niet vanzelf; zonder dit
+  // staat er Heren gemarkeerd terwijl je een damesronde herplant.
+  ['Heren', 'Dames'].forEach(g =>
+    document.getElementById('gb-' + g)?.classList.toggle('active', g === sel.gender));
+  document.getElementById('cat-9')?.classList.toggle('active', sel.holeCount === '9');
+  document.getElementById('cat-18')?.classList.toggle('active', sel.holeCount === '18');
+  document.getElementById('cat-par3')?.classList.toggle('active', !!sel.showPar3);
   nav('setup');
 }
 
@@ -3694,7 +3722,17 @@ function emptyStateHTML() {
   const setupIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>';
   const archiveIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>';
   const startTriangle = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:middle"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
-  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Geen scores. Maak een nieuwe ronde aan, of start (${startTriangle}) een ronde.</div>`
+  // In de lopende tekst hebben de symbolen hun eigen uitlijning nodig: op de knoppen
+  // hieronder zorgt de flex-opmaak daarvoor, maar tussen woorden zakt een svg zonder
+  // vertical-align naar de onderkant van de regel. Ze staan hier ook even groot als de
+  // tekst eromheen, zodat map en driehoekje op dezelfde hoogte staan.
+  // (De vervanging haakt aan op viewBox in plaats van op de openingstag, zodat er in de
+  // broncode geen losse svg-tekst staat die de tagteller in de controles verwart.)
+  const inTekst = (svg, breedte) => svg
+    .replace(/width="\d+" height="\d+"/, `width="${breedte}" height="${breedte}"`)
+    .replace(/ style="vertical-align:middle"/, '')
+    .replace('viewBox=', 'style="vertical-align:-2px" viewBox=');
+  return `<div style="font-size:20px;color:var(--info-grey);font-weight:700;margin-bottom:12px">Maak een nieuwe ronde aan, of start een opgeslagen ronde (${inTekst(archiveIcon, 18)} → ${inTekst(startTriangle, 15)}).</div>`
     + `<div style="display:flex;gap:8px">`
     + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('setup')">${setupIcon}Nieuwe ronde</button>`
     + `<button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="nav('archive')">${archiveIcon}Rondes</button>`
