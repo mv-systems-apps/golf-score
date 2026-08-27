@@ -867,7 +867,7 @@
   <!-- Backupstand: koploos blokje onder de tabknoppen, BUITEN de drie tabbladen zodat
        het overal zichtbaar is. Stond eerst achter de kop "Backup" op de Gegevens-tab
        en zat daar verstopt — zeker nu de secties standaard ingeklapt zijn. -->
-  <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Backup', 'exportCard');">
+  <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Backup (export &amp; import)', 'exportCard');">
     <div id="lastBackupInfoTop" style="font-size:17px;color:var(--muted)"></div>
     <div id="newRoundsInfoTop" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px"></div>
   </div>
@@ -952,7 +952,7 @@
         <div style="font-size:20px;font-weight:700;color:var(--white)">Naar volgende hole</div>
         <div style="font-size:17px;color:var(--muted)">Aan: zodra je de score van een hole hebt ingevuld en het invoerpaneel sluit, springt de app naar de eerstvolgende hole zonder score.</div>
             <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-            <div class="more-full">Corrigeer je een hole die al een score had, dan blijf je staan. Bij een gat in de rij wordt vooruit gekeken: je springt niet terug naar een overgeslagen hole. Werkt niet samen met putts bijhouden — dan blijft de puttregel bij de hole in beeld staan.</div>
+            <div class="more-full">Corrigeer je een hole die al een score had, dan blijf je staan. Bij een gat in de rij wordt vooruit gekeken: je springt niet terug naar een overgeslagen hole.</div>
       </div>
       <label class="switch"><input type="checkbox" id="autoNextToggle" onchange="toggleAutoNext()"><span class="slider"></span></label>
     </div>
@@ -1166,7 +1166,7 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup <span style="text-transform:none;font-weight:400">(export &amp; import)</span></div>
   <div class="card" id="exportCard">
     <!-- De backupstand staat nu in het blokje bovenaan (backupStatusTop), zichtbaar op
          alle drie de tabbladen. Deze twee elementen blijven bestaan maar zijn verborgen:
@@ -1267,7 +1267,7 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-00F</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-011</div>
 </div>
 
 <script>
