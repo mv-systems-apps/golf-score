@@ -1260,6 +1260,7 @@
     <div class="more-full">
       <div class="subpanel" style="margin-top:8px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
+        <!-- (de opslagnaam staat in zijn eigen kaart hierboven) -->
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
@@ -1267,7 +1268,9 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-011</div>
+  <div id="opslagNaamRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px;cursor:pointer" onclick="openOpslagNaamModal()" title="Tik om deze opslag een naam te geven"></div>
+  <input type="text" id="opslagNaamInput" class="hidden" oninput="bewaarOpslagNaam()" aria-label="Naam van deze opslag">
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-017</div>
 </div>
 
 <script>
@@ -2377,11 +2380,20 @@ function switchToPlayer(n) {
     gameFromRound(r2);
     setHeaderInfo(game.track, game.tee, game.chcp);
   } else {
-    // Sla r2 op en herstel speler 1
-    const p2Entry = buildRoundEntry();
-    const idx = saved.findIndex(r => r.id === game2Id);
-    if (idx >= 0) saved[idx] = p2Entry;
-    setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+    // Sla r2 op en herstel speler 1.
+    // Alleen terugschrijven als het spel dat nu in het geheugen staat ECHT de ronde van
+    // speler 2 is. Zou activePlayer om wat voor reden dan ook op 2 staan terwijl er een
+    // andere ronde geladen is, dan zou die hier over de ronde van speler 2 heen worden
+    // geschreven — en is die scorekaart weg. Liever de wissel dan half uitvoeren dan
+    // gegevens overschrijven.
+    if (String(game.id) === String(game2Id)) {
+      const p2Entry = buildRoundEntry();
+      const idx = saved.findIndex(r => r.id === game2Id);
+      if (idx >= 0) saved[idx] = p2Entry;
+      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
+    } else {
+      console.warn('Wissel naar speler 1: het geladen spel is niet de ronde van speler 2 — niet weggeschreven.');
+    }
     activePlayer = 1;
     // Herstel speler 1 uit storage
     const active = saved.find(r => String(r.id) === storage.getItem('golf_active_id'));
@@ -2986,6 +2998,30 @@ function savePlayerProfile() {
 
 // Instelbaar maximum aantal opgeslagen rondes (20-500, standaard 300) — zie het
 // schuifje bij Instellingen → Rondes → Opslag.
+// Snoeien tot het ingestelde maximum. Bewust op DATUM en niet op plaats in de lijst:
+// de opslag staat niet op datum gesorteerd (importeren zet rondes achter de actieve
+// ronde, een datum wijzigen verplaatst niets), dus wegknippen van de staart kon een
+// recente — zelfs volledig ingevulde — ronde weggooien terwijl er veel oudere bleven
+// staan. Dat is precies wat de instelling belooft NIET te doen.
+function trimRondes(lijst) {
+  const max = getRoundStorageLimit();
+  if (lijst.length <= max) return lijst;
+  // Oudste eerst bepalen; rondes zonder datum tellen als het oudst.
+  const opDatum = [...lijst].sort((a, b) => {
+    const ta = `${a.date || '0000-00-00'}T${a.time || '00:00'}`;
+    const tb = `${b.date || '0000-00-00'}T${b.time || '00:00'}`;
+    return ta < tb ? -1 : ta > tb ? 1 : 0;
+  });
+  const weg = new Set(opDatum.slice(0, lijst.length - max).map(r => r.id));
+  const metScores = opDatum.slice(0, lijst.length - max)
+    .filter(r => (r.holes || []).some(h => h.score !== null)).length;
+  if (metScores) {
+    console.warn(`Maximum bereikt: ${metScores} ingevulde ronde(s) verwijderd.`);
+  }
+  // De oorspronkelijke volgorde blijft staan; alleen de oudste vallen eruit.
+  return lijst.filter(r => !weg.has(r.id));
+}
+
 function getRoundStorageLimit() {
   const raw = parseInt(storage.getItem('golf_round_limit'), 10);
   return (isFinite(raw) && raw >= 20 && raw <= 500) ? raw : 300;
@@ -3391,7 +3427,7 @@ function ruimHerplanOp() {
   // opslaan mislukt (volle opslag), dan zou verwijderen je zonder ronde achterlaten.
   const nieuweAanwezig = saved.some(r => !weg.has(String(r.id)) && String(r.id) === String(game.id));
   if (!nieuweAanwezig) { annuleerHerplan(); return; }
-  setRoundsAndMark(JSON.stringify(saved.filter(r => !weg.has(String(r.id)))));
+  metVerwijderen(() => setRoundsAndMark(JSON.stringify(saved.filter(r => !weg.has(String(r.id))))));
   annuleerHerplan();
 }
 
@@ -3492,7 +3528,7 @@ function startRoundConfirmed() {
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
       saved2.unshift(round2);
-      setRoundsAndMark( JSON.stringify(saved2.slice(0, getRoundStorageLimit())));
+      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved2))));
       activePlayer = 1;
       storage.setItem('golf_game2_id', String(game2Id));
     }
@@ -6728,6 +6764,90 @@ async function checkAppUpdate() {
 setTimeout(checkAppUpdate, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkAppUpdate, 2500); });
 
+// Kijkt of een backupbestand uit dezelfde opslag komt. De code staat achteraan in de
+// naam (bijvoorbeeld rondes_backup_20260827_K7QM.json). Staat er geen code in, dan is
+// het een bestand van vóór deze versie of van elders — daar zeggen we niets over.
+function meldAndereOpslag(bestandsnaam) {
+  const m = /_([A-Z0-9]{4})\.json$/i.exec(bestandsnaam || '');
+  if (!m) return;
+  const code = m[1].toUpperCase();
+  if (code === opslagCode()) return;
+  // NA het importeren melden, niet ervoor: het importresultaat gebruikt hetzelfde
+  // venster en zou deze melding meteen overschrijven — dan zie je hem nooit.
+  meldZodraVensterVrij('Uit een andere opslag',
+    `Dit bestand komt uit opslag ${code}; je gebruikt nu ${opslagLabel()}. `
+    + `Dat gebeurt bijvoorbeeld bij een ander browserprofiel of een ander adres. `
+    + `Importeren kan gewoon — kies "Toevoegen" als je niets wilt kwijtraken.`);
+}
+
+// Wacht tot het meldingsvenster vrij is en toont dan pas. Er is één gedeeld venster in
+// de app, dus twee meldingen vlak na elkaar zouden elkaar verdringen.
+function meldZodraVensterVrij(titel, tekst) {
+  const start = Date.now();
+  const probeer = () => {
+    const venster = document.getElementById('confirmModal');
+    const open = venster && !venster.classList.contains('hidden');
+    // Even wachten tot een eventuele eerste melding er staat, daarna tot hij weg is.
+    if (Date.now() - start < 400 || open) {
+      if (Date.now() - start > 120000) return;   // niet eindeloos blijven proberen
+      setTimeout(probeer, 300);
+      return;
+    }
+    showInfoModal(titel, tekst);
+  };
+  setTimeout(probeer, 300);
+}
+
+// ══ WELKE OPSLAG IS DIT? ═════════════════════════════════════════════════
+// De browser houdt gegevens apart per adres ÉN per profiel. Dezelfde app in een ander
+// browserprofiel is dus een lege app, zonder dat er iets kapot is — en dat is van
+// buitenaf niet te zien. Daarom krijgt elke opslag bij de eerste start een eigen code,
+// en kun je die een naam geven die je herkent.
+//
+// De CODE is waar de app op vergelijkt (die verandert nooit); de NAAM is alleen wat jij
+// leest. Zo kun je later hernoemen zonder dat oude backups ineens "van elders" lijken.
+function opslagCode() {
+  let code = storage.getItem('golf_storage_id');
+  if (!code) {
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // zonder I, O, 0 en 1
+    code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+    storage.setItem('golf_storage_id', code);
+  }
+  return code;
+}
+
+function opslagNaam() {
+  return (storage.getItem('golf_storage_name') || '').trim();
+}
+
+// Wat je leest: de naam als die er is, anders de code.
+function opslagLabel() {
+  const naam = opslagNaam();
+  return naam ? `${naam} (${opslagCode()})` : `${opslagCode()} (nog geen naam)`;
+}
+
+function toonOpslagNaam() {
+  const el = document.getElementById('opslagNaamRegel');
+  if (el) el.textContent = 'Opslag: ' + opslagLabel();
+}
+
+// Hergebruikt het bestaande invoervenster. Dat werkt op een invoerveld, dus er staat
+// een verborgen veldje klaar waar het venster zijn waarde in kwijt kan.
+function openOpslagNaamModal() {
+  const veld = document.getElementById('opslagNaamInput');
+  if (!veld) return;
+  veld.value = opslagNaam();
+  openValueEditModal(veld, 'Naam van deze opslag');
+}
+
+function bewaarOpslagNaam() {
+  const veld = document.getElementById('opslagNaamInput');
+  const schoon = (veld?.value || '').trim().slice(0, 24);
+  if (schoon) storage.setItem('golf_storage_name', schoon);
+  else storage.removeItem('golf_storage_name');
+  toonOpslagNaam();
+}
+
 // ── Opslagbescherming: vraag de browser de site-opslag als blijvend te markeren,
 // zodat Android hem niet stilletjes mag opruimen bij ruimtegebrek. Geen backup-
 // vervanger: handmatig wissen of de-installeren verwijdert nog steeds alles.
@@ -6748,6 +6868,7 @@ async function refreshStorageStatus() {
     el.textContent = tekst;
   } catch (e) { /* status is informatief; stil falen is prima */ }
 }
+toonOpslagNaam();
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {}).finally(() => refreshStorageStatus());
 }
@@ -7520,6 +7641,7 @@ function importRound(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
+  meldAndereOpslag(file.name);
 
   const showStatus = (msg, isError) => showInfoModal(isError ? 'Import mislukt' : 'Import voltooid', msg, isError ? 'red' : null);
 
@@ -7611,7 +7733,7 @@ function importRound(input) {
             const isActive = String(exactMatch.id) === storage.getItem('golf_active_id');
             const isP2 = exactMatch.id === game2Id;
             saved.splice(idx, 1);
-            doImportRound(r, saved);
+            metVerwijderen(() => doImportRound(r, saved));
             if (isActive) { storage.removeItem('golf_active_id'); restoreActiveRound(); }
             if (isP2) { game2Id = null; storage.removeItem('golf_game2_id'); updatePlayerSwitchBar(); }
             showStatus('Ronde overschreven', false);
@@ -7682,7 +7804,7 @@ function doImportRound(r, saved, skipImportFlag = false, deferSave = false) {
   // deferSave (batch-import): de aanroeper slaat na de hele batch één keer op en
   // rendert één keer — per ronde opslaan + volledig renderen maakte grote imports traag.
   if (deferSave) return;
-  setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+  metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
   loadSaved();
 }
 
@@ -7706,7 +7828,7 @@ function doAdditiveImport(parsed) {
     imported++;
   });
   if (imported > 0) {
-    if (setRoundsAndMark(JSON.stringify(current.slice(0, getRoundStorageLimit()))) === false) {
+    if (metVerwijderen(() => setRoundsAndMark(JSON.stringify(trimRondes(current)))) === false) {
       showStatus('Importeren mislukt — er is niet genoeg opslagruimte.', true);
       return;
     }
@@ -7751,7 +7873,7 @@ function doFullRestoreImport(parsed) {
   // Bij een volle opslag mislukt juist de grote schrijfactie, terwijl het wissen van de
   // actieve ronde en het bijwerken van de backupstand daarna wél zouden slagen — dan
   // sta je met je oude archief én een verkeerde backupstand.
-  if (setRoundsAndMark(JSON.stringify(entries.slice(0, getRoundStorageLimit()))) === false) {
+  if (metVerwijderen(() => setRoundsAndMark(JSON.stringify(trimRondes(entries)))) === false) {
     showStatus('Herstellen mislukt — er is niet genoeg opslagruimte. Je bestaande rondes zijn ongewijzigd.', true);
     return;
   }
@@ -7951,8 +8073,21 @@ function saveActiveRound(skipLoadSaved = false) {
 
   const saved = loadSavedRounds();
   const idx = saved.findIndex(r => r.id === game.id);
-  if (idx >= 0) saved[idx] = entry; else saved.unshift(entry);
-  setRoundsAndMark( JSON.stringify(saved.slice(0, getRoundStorageLimit())));
+  if (idx >= 0) {
+    // Vangnet: sla nooit een spel op dat MINDER ingevulde holes heeft dan wat er al
+    // staat, tenzij je die scores zelf hebt gewist (dan klopt het aantal holes nog wel).
+    // Zonder deze controle kan een half geladen of leeg spel een volle scorekaart
+    // overschrijven, en dat is niet meer terug te halen.
+    const bestaand = saved[idx];
+    const bestaandeHoles = (bestaand.holes || []).length;
+    const nuHoles = (entry.holes || []).length;
+    if (bestaandeHoles > 0 && nuHoles === 0) {
+      console.warn('Opslaan overgeslagen: het spel bevat geen holes, de opgeslagen ronde wel.');
+      return;
+    }
+    saved[idx] = entry;
+  } else saved.unshift(entry);
+  metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
 
   // Alleen golf_active_id zetten voor speler 1
   if (activePlayer !== 2) {
@@ -9386,7 +9521,7 @@ function performDeleteRound(i) {
   const saved = loadSavedRounds();
   const removed = saved.splice(i, 1)[0];
   if (!removed) return;
-  setRoundsAndMark( JSON.stringify(saved));
+  metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
 
   const activeId = storage.getItem('golf_active_id');
   const wasActive = removed && activeId && String(removed.id) === activeId;
@@ -11881,6 +12016,13 @@ async function doResetAll() {
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
    'golf_low_hi','golf_backup_reminder_shown','golf_theme','golf_scorecard_symbols','golf_home_club']
     .forEach(k => storage.removeItem(k));
+  // De opslagcode en -naam blijven staan: die horen bij de PLEK (dit profiel, dit
+  // adres), niet bij de gegevens. Zou de code verdwijnen, dan zouden je eigen oudere
+  // backups ineens "uit een andere opslag" lijken te komen.
+  // Wel de vlag zetten dat de lege-opslagmelding al gehad is: je hebt zojuist zélf
+  // alles gewist, dus de vraag "zit je misschien in een ander profiel?" slaat nergens
+  // op en zou alleen maar verwarren.
+  storage.setItem('golf_leeg_gemeld', '1');
   // Dynamische per-speler sleutels (bv. golf_seen_low_hi_<speler>, voor de gouden
   // 'nieuwe laagste handicap'-melding) staan niet in bovenstaande vaste lijst en
   // moeten apart op prefix opgeruimd worden.
@@ -12255,7 +12397,7 @@ async function exportAllRounds() {
     };
   });
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filename = `rondes_backup_${ts}.json`;
+  const filename = `rondes_backup_${ts}_${opslagCode()}.json`;
   const json = JSON.stringify(data, null, 2);
   try {
     if (!(await tryWriteToExportFolder(filename, json))) {
@@ -12312,12 +12454,44 @@ function backupVingerafdruk(lijst) {
   return String(h) + ':' + relevant.length;
 }
 
+// Verwijderen van rondes mag alleen als JIJ daarom vraagt. De paden die dat doen
+// (een ronde wissen, de bulkacties, een backup terugzetten, snoeien op het maximum)
+// zetten deze vlag om zich te melden. Elke andere schrijfactie die een ingevulde ronde
+// zou laten verdwijnen, wordt geweigerd — dan is er iets anders mis, en een geweigerde
+// opslag is altijd beter dan een scorekaart die weg is.
+let _verwijderenToegestaan = false;
+function metVerwijderen(fn) {
+  _verwijderenToegestaan = true;
+  try { return fn(); } finally { _verwijderenToegestaan = false; }
+}
+
 function setRoundsAndMark(json) {
   // Rem bij onleesbare gegevens: niet over iets heen schrijven wat mogelijk nog te
   // redden is. De aanroeper krijgt false terug en meldt dat het niet gelukt is.
   if (rondesOnleesbaar) {
     console.warn('Opslaan geweigerd: de opgeslagen rondes zijn niet leesbaar.');
     return false;
+  }
+
+  if (!_verwijderenToegestaan) {
+    try {
+      const nieuw = JSON.parse(json);
+      const nieuweIds = new Set(nieuw.map(r => r.id));
+      const kwijt = loadSavedRounds().filter(r =>
+        !nieuweIds.has(r.id) && (r.holes || []).some(h => h.score !== null));
+      if (kwijt.length) {
+        console.error('Opslaan geweigerd: dit zou ingevulde ronde(s) laten verdwijnen:',
+                      kwijt.map(r => `${r.player} ${r.date} ${r.time || ''}`).join(' | '));
+        showInfoModal('Opslaan geblokkeerd',
+          `Er ging iets mis: deze actie zou ${kwijt.length === 1 ? 'een ingevulde ronde' : kwijt.length + ' ingevulde rondes'} laten verdwijnen. Er is niets gewijzigd. Maak een backup en meld dit.`,
+          'red');
+        return false;
+      }
+    } catch (e) {
+      // Kan de nieuwe lijst niet gelezen worden, dan hoort hij er sowieso niet in.
+      console.error('Opslaan geweigerd: onleesbare lijst.', e);
+      return false;
+    }
   }
   const gelukt = storage.setItem('golf_rounds', json) !== false;
   // Alleen stempelen als het BACKUPBESTAND hierdoor verandert (zie backupVingerafdruk):
@@ -12511,7 +12685,7 @@ async function exportAllClubs() {
     return;
   }
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filename = `clubs_backup_${ts}.json`;
+  const filename = `clubs_backup_${ts}_${opslagCode()}.json`;
   const json = JSON.stringify(clubs, null, 2);
   try {
     if (!(await tryWriteToExportFolder(filename, json))) {
@@ -12659,6 +12833,7 @@ function validateImportedClubData(data) {
 function importCourseData(input) {
   const file = input.files[0];
   if (!file) return;
+  meldAndereOpslag(file.name);
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -13060,7 +13235,7 @@ function onRoundLimitChange(v) {
     'Verwijderen',
     () => {
       const newLimit = setRoundStorageLimit(requested);
-      setRoundsAndMark( JSON.stringify(saved.slice(0, newLimit)));
+      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
       loadSaved();
       updateStorageSettingsUI();
     }
@@ -13104,7 +13279,7 @@ function confirmPurgeNonQ(btn) {
     'Verwijderen',
     () => {
       const saved = loadSavedRounds().filter(r => r.qualifying);
-      setRoundsAndMark( JSON.stringify(saved));
+      metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
       loadSaved();
       updateStorageSettingsUI();
     }
@@ -13175,7 +13350,7 @@ function confirmDeleteOtherPlayers(btn) {
     'Verwijderen',
     () => {
       const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase());
-      setRoundsAndMark( JSON.stringify(saved));
+      metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
       loadSaved();
       updateStorageSettingsUI();
       updateOtherPlayerCleanupUI();
@@ -14033,6 +14208,23 @@ document.addEventListener('focusin', (e) => {
   // Headerhoogte meten voor sticky sub-tabs positionering
   updateHeaderHeight();
   setTimeout(() => { adjustThirdHeaderRow(); updateHeaderHeight(); }, 100);
+
+  // ── Lege opslag: eerste keer, of een andere plek? ──
+  // De browser houdt gegevens apart per adres én per browserprofiel. Sta je ineens voor
+  // een lege app, dan kan dat een eerste installatie zijn — maar ook hetzelfde adres in
+  // een ander profiel, met je rondes veilig op de andere plek. De app kan dat verschil
+  // niet zien, dus stelt hij de vraag. Eén keer per opslag; daarna niet meer.
+  if (!storage.getItem('golf_leeg_gemeld')) {
+    const geenRondes = loadSavedRounds().length === 0;
+    const geenClubs = Object.keys(CLUBS || {}).length === 0;
+    if (geenRondes && geenClubs) {
+      storage.setItem('golf_leeg_gemeld', '1');
+      setTimeout(() => showInfoModal('Geen gegevens gevonden',
+        `Er staan hier nog geen rondes en clubs. Is dit je eerste keer, dan klopt dat. `
+        + `Gebruikte je de app al wel, kijk dan of je in een ander browserprofiel zit — `
+        + `elk profiel heeft zijn eigen opslag. Deze opslag: ${opslagLabel()}.`), 800);
+    }
+  }
 
   // ── PWA: registreer service worker voor offline gebruik ──
   // Vereist een los bestand sw-golf-score.js naast dit HTML-bestand (werkt op https /
