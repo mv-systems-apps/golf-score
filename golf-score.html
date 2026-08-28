@@ -583,7 +583,9 @@
 </head>
 <body>
 
-<header style="position:relative">
+<!-- Geen position:relative hier: de kop is sticky (zie CSS) en dat zou dat overschrijven.
+     Sticky is zelf al een positioneringscontext, dus het baanbeeld hangt er gewoon in. -->
+<header>
   <div class="hdr-top-row" style="position:relative;z-index:1">
     <h1><span id="hdrClubName"></span></h1>
     <span id="hdrTrack"></span>
@@ -1304,7 +1306,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-031</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-032</div>
 </div>
 
 <script>
