@@ -929,26 +929,6 @@
     </div>
   </div>
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--white)">Handicap-groep altijd uitgeklapt</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: de Handicap-groep op Statistieken start altijd uitgeklapt; inklappen geldt dan per sessie. Uit: de stand wordt onthouden, net als bij de andere groepen.</div>
-      </div>
-      <label class="switch"><input type="checkbox" id="handicapAlwaysToggle" onchange="toggleHandicapAlways()"><span class="slider"></span></label>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--white)">Oudere jaren bij rondes inklappen</div>
-        <div style="font-size:17px;color:var(--muted)">Aan: alleen dit en vorig jaar staan open, oudere jaren beginnen ingeklapt. Uit: alle jaren staan open. Tikken op een jaarkop klapt altijd in of uit.</div>
-      </div>
-      <label class="switch"><input type="checkbox" id="archiveYearsClosedToggle" onchange="toggleArchiveYearsClosed()"><span class="slider"></span></label>
-    </div>
-  </div>
-
-  <div class="card">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Minimum aantal rondes voor statistieken</div>
     <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Statistieken die op te weinig rondes rusten zeggen vooral iets over toeval. Getallen met minder rondes dan dit worden verborgen (of tonen &mdash;).</div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1059,23 +1039,13 @@
   </div>
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Uitleg</div>
-  <div class="card">
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      <div>
-        <div style="font-size:17px;color:var(--muted)">Net begonnen met de app? De hcp-berekening klopt pas volledig na <b>20 qualifying rondes</b>.</div>
-        <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Het World Handicap System berekent je handicap altijd uit je laatste (maximaal) 20 échte qualifying-scores. Heb je nog geen 20 rondes in de app staan, dan rekent de app met wat er wél is — dat is op zich correct volgens de WHS-regels, maar kan afwijken van je officiële, elders opgebouwde handicap. Een los in te vullen 'beginhandicap' kan dit niet oplossen: de berekening heeft de losse dagresultaten nodig, niet alleen een eindgetal. Zodra je 20 rondes hebt ingevoerd, is het verschil vanzelf verdwenen.</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
+  <div class="card"><div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Minder dan 20 rondes</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">Met minder dan 20 rondes gebruikt WHS een vaste, kleinere staffel van je beste dagresultaten.</div>
+        <div style="font-size:17px;color:var(--muted)">WHS rekent met je laatste 20 qualifying rondes. Heb je er minder, dan gebruikt het een vaste, kleinere staffel van je beste dagresultaten.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-        <div class="more-full">Met minder dan 20 rondes wordt niet zomaar het gemiddelde van al je scores genomen: WHS gebruikt steeds een vaste, kleinere selectie van je beste dagresultaten, soms met een extra aftrek erbovenop.
+        <div class="more-full">Het World Handicap System berekent je handicap altijd uit je laatste (maximaal) 20 échte qualifying-scores. Heb je nog geen 20 rondes in de app staan, dan rekent de app met wat er wél is — dat is op zich correct volgens de WHS-regels, maar kan afwijken van je officiële, elders opgebouwde handicap. Een los in te vullen 'beginhandicap' kan dit niet oplossen: de berekening heeft de losse dagresultaten nodig, niet alleen een eindgetal. Zodra je 20 rondes hebt ingevoerd, is het verschil vanzelf verdwenen.<div style="margin-top:10px"></div>Er wordt dan niet zomaar het gemiddelde van al je scores genomen: WHS gebruikt steeds een vaste, kleinere selectie van je beste dagresultaten, soms met een extra aftrek erbovenop.
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:8px;row-gap:4px;margin-top:10px;font-size:15px;color:var(--muted)">
             <span style="font-weight:700;color:var(--white)">Rondes</span><span style="font-weight:700;color:var(--white)">Beste scores</span><span style="font-weight:700;color:var(--white)">Aftrek</span>
             <span>1</span><span>1 (je enige)</span><span>2.0</span>
@@ -1097,7 +1067,7 @@
       </div>
     </div>
   </div>
-  <div class="card">
+  <div class="card"><div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">9 holes dagresultaat</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       <div>
@@ -1110,31 +1080,31 @@
       </div>
     </div>
   </div>
-  <div class="card">
+  <div class="card"><div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Softcap</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="5" y1="6" x2="19" y2="6"/><line x1="12" y1="19" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">Softcap: stijgt je index meer dan <b>3.0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
+        <div style="font-size:17px;color:var(--muted)">Stijgt je index meer dan <b>3.0 boven je Low HI</b>? Dan telt het deel daarboven maar voor de helft mee.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
         <div class="more-full">Low HI is je laagste index van de 365 dagen vóór je laatst ingevoerde qualifying ronde (dus niet vandaag). Een enkele slechte ronde mag je handicap niet in één klap flink laten stijgen — daarom telt WHS alles boven de 3.0-grens maar voor de helft mee. Speel je bijvoorbeeld 4.0 boven je Low HI, dan wordt dat 3.0 + (1.0 × 0.5) = 3.5. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
-  <div class="card">
+  <div class="card"><div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Hardcap</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="5" y1="4" x2="19" y2="4"/><line x1="5" y1="8" x2="19" y2="8"/><line x1="12" y1="19" x2="12" y2="12"/><polyline points="8 16 12 12 16 16"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">Hardcap: je index kan nooit meer dan <b>5.0 boven je Low HI</b> uitkomen.</div>
+        <div style="font-size:17px;color:var(--muted)">Je index kan nooit meer dan <b>5.0 boven je Low HI</b> uitkomen.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
         <div class="more-full">Ook mét de softcap kan je index maar tot een bepaalde grens stijgen: nooit meer dan 5.0 boven je Low HI. Dit is de absolute bovengrens die WHS hanteert, ongeacht hoe slecht je gespeeld hebt. Let op: de cap vergelijkt de ruwe berekening met je Low HI, niet met je oude hcp — je hcp kan dus best dalen terwijl er tóch een cap actief was.</div>
       </div>
     </div>
   </div>
-  <div class="card">
+  <div class="card"><div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Exceptional Score Reduction (ESR)</div>
     <div style="display:flex;align-items:flex-start;gap:10px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="12" y1="4" x2="12" y2="16"/><polyline points="6 12 12 18 18 12"/></svg>
       <div>
-        <div style="font-size:17px;color:var(--muted)">ESR (Exceptional Score Reduction): speel je een <b>uitzonderlijk goede ronde</b>? Dan telt die extra zwaar mee, en trekt WHS je index automatisch verder omlaag.</div>
+        <div style="font-size:17px;color:var(--muted)">Speel je een <b>uitzonderlijk goede ronde</b>? Dan telt die extra zwaar mee, en trekt WHS je index automatisch verder omlaag.</div>
         <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
         <div class="more-full">Speel je een dagresultaat dat 7.0 tot 9.9 slagen beter is dan je handicap op dat moment, dan gaat er 1.0 extra van je index af. Is het 10.0 slagen of beter, dan gaat er 2.0 extra af. Die aftrek geldt niet alleen voor die ene ronde, maar voor <b>elk van je op dát moment recentste 20 dagresultaten</b> — en blijft gelden zolang een ronde binnen die recentste 20 valt. Speel je meerdere uitzonderlijke rondes, dan stapelen de aftrekken op.
           <div style="margin-top:10px">De gedachte erachter: een uitzonderlijk goede ronde is vaak een teken dat je handicap eigenlijk al lager had moeten zijn, dus WHS laat 'm meteen extra meewegen in plaats van pas na een paar rondes.</div>
@@ -1202,7 +1172,7 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslaglocatie</div>
   <div class="card" id="opslagCard">
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Startadres van de app</div>
     <div id="opslagKenmerkUitleg" style="font-size:17px;color:var(--muted);margin-bottom:8px"></div>
@@ -1276,7 +1246,7 @@
         </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Verwijderen</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opruimen &amp; resetten</div>
   <div class="card">
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
@@ -1306,7 +1276,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-033</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-03F</div>
 </div>
 
 <script>
@@ -5590,20 +5560,19 @@ function renderPlayerStats() {
   // KPI-regel blijft altijd zichtbaar, buiten de groepen. De inklap ván de Wat
   // als-kaart en de legenda-uitklapper binnenin blijven bewust per sessie.
   const grpOpen = key => {
-    // Instelling 'Handicap-groep altijd uitgeklapt' (standaard aan): dan start de
-    // Handicap-groep elke keer open en geldt inklappen alleen voor de sessie —
-    // zo doen de periodeknoppen altijd zichtbaar iets. Staat de instelling uit,
-    // dan wordt de stand onthouden zoals bij de andere groepen.
-    if (key === 'handicap' && handicapAlwaysOpen()) {
-      return window._grpHandicapOpen !== false; // sessie: standaard open
-    }
+    // De stand van alle drie de groepen wordt onthouden. Er was een instelling om de
+    // Handicap-groep élke keer open te laten starten; die is vervallen, want het
+    // onthouden van je eigen keuze doet precies wat je verwacht.
     const v = storage.getItem('golf_stats_grp_' + key);
     return v == null ? key === 'handicap' : v === 'open';
   };
   const grpHeader = (key, title, extra = '') => {
     const open = grpOpen(key);
     return `<div onclick="toggleStatsGroup('${key}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin:10px 2px 4px">`
-      + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">${title}</span>`
+      // Zelfde maat als de sectiekoppen elders (20px, gewicht 800), maar GROEN: de
+      // kaarttitels binnen deze groepen zijn goud, en twee gouden niveaus onder elkaar
+      // laten het onderscheid tussen groep en kaart wegvallen.
+      + `<span style="flex:1;display:flex;align-items:center;gap:8px;font-size:20px;color:var(--green-light);text-transform:uppercase;letter-spacing:.7px;font-weight:800">${title}</span>`
       + extra
       + `${arrowSvg(15, open, 'var(--green-light)')}</div>`;
   };
@@ -7089,11 +7058,6 @@ function toggleWatIfCard() {
 // In-/uitklappen van de drie hoofdgroepen op Statistieken; stand in storage zodat
 // de eigen indeling tussen sessies blijft staan. Standaard alleen Handicap open.
 function toggleStatsGroup(key) {
-  if (key === 'handicap' && handicapAlwaysOpen()) {
-    window._grpHandicapOpen = window._grpHandicapOpen === false; // sessie-toestand
-    renderPlayerStats();
-    return;
-  }
   const v = storage.getItem('golf_stats_grp_' + key);
   const open = v == null ? key === 'handicap' : v === 'open';
   storage.setItem('golf_stats_grp_' + key, open ? 'closed' : 'open');
@@ -12352,8 +12316,11 @@ function buildClubList() {
       emptyMsgEl.innerHTML = allClubNames.length
         ? '<span class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen clubs gevonden</span>'
         : `<div class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700;line-height:1.5">`
-          + `Voeg een club toe (${inlineIcoon(plusIcoon, 18)} hierboven), of importeer een backup `
-          + `via Instellingen (${inlineIcoon(tandwielIcoon, 17)} \u2192 Gegevens \u2192 Backup \u2192 Importeren).</div>`;
+          // Het stukje tussen haakjes bij elkaar houden: anders breekt de regel tussen
+          // het haakje en het symbool, en staat er een los "(" of een losse regel met
+          // alleen "hierboven)".
+          + `Voeg een club toe <span style="white-space:nowrap">(via ${inlineIcoon(plusIcoon, 18)} hierboven)</span>, of importeer een backup `
+          + `via Instellingen <span style="white-space:nowrap">(${inlineIcoon(tandwielIcoon, 17)} \u2192 Gegevens</span> \u2192 Backup \u2192 Importeren).</div>`;
     }
     if (searchInput) searchInput.disabled = !allClubNames.length;
     setClubBtns(!allClubNames.length);
@@ -13231,8 +13198,6 @@ function nav(id) {
     updateStorageSettingsUI();
     updateLastBackupDisplay();
     updateActionsAlwaysVisibleToggle();
-    updateHandicapAlwaysToggle();
-    updateArchiveYearsClosedToggle();
     initSettingsSections();
     updateTrackPuttsToggle();
   updateAutoNextToggle();
@@ -13577,8 +13542,11 @@ function initSettingsSections() {
 // Secties zijn standaard DICHT: één tik opent wat je nodig hebt, lang indrukken op
 // een tabknop klapt alles open of dicht. Alleen "Status" begint open — dat is de
 // informatie die je juist meteen wilt zien.
+// Alle secties in Instellingen starten dicht. Er is geen uitzondering meer: de
+// "Status"-sectie waarvoor die ooit bedoeld was, bestaat niet meer. Wat je zelf
+// openklapt wordt onthouden, dus deze regel geldt alleen de eerste keer.
 function sectieStandaardDicht(key) {
-  return !/\|\s*Status/i.test(key || '');
+  return true;
 }
 
 function applySettingsSections() {
@@ -13908,22 +13876,12 @@ function puttsValUp() {
   puttsHoldFired = false;
 }
 
-// Oudere jaren in het archief standaard inklappen: standaard UIT (alles open), dus het
-// '=== on'-patroon van de bewust-uit-instellingen. Aan: alleen het huidige en vorige
-// jaar starten open — verder terugkijken doe je zelden (Marks redenering).
+// Oudere jaren in het archief starten ingeklapt: alleen het huidige en vorige jaar
+// staan open, verder terugkijken doe je zelden. Dit was een instelling; die is
+// vervallen omdat dit gewoon het bruikbare gedrag is. Tikken op een jaarkop klapt
+// altijd in of uit.
 function archiveYearsClosedDefault() {
-  return storage.getItem('golf_archive_years_closed') === 'on'; // afwezig = uit
-}
-function updateArchiveYearsClosedToggle() {
-  const cb = document.getElementById('archiveYearsClosedToggle');
-  if (cb) cb.checked = archiveYearsClosedDefault();
-}
-function toggleArchiveYearsClosed() {
-  const cb = document.getElementById('archiveYearsClosedToggle');
-  const on = cb ? cb.checked : !archiveYearsClosedDefault();
-  storage.setItem('golf_archive_years_closed', on ? 'on' : 'off');
-  window._flatYearCollapsed = {}; // eigen tikken vervallen: de nieuwe standaard geldt
-  loadSaved();
+  return true;
 }
 // Effectieve stand per jaar: een eigen tik (window._flatYearCollapsed, per sessie) wint
 // van de standaard uit de instelling.
@@ -13939,20 +13897,6 @@ function toggleArchiveYear(jaar) {
   loadSaved();
 }
 
-// Handicap-groep altijd uitgeklapt: standaard AAN, dus het gebruikelijke
-// '!== off'-patroon van de altijd-aan-instellingen.
-function handicapAlwaysOpen() {
-  return storage.getItem('golf_stats_handicap_always') !== 'off'; // afwezig = aan
-}
-function updateHandicapAlwaysToggle() {
-  const cb = document.getElementById('handicapAlwaysToggle');
-  if (cb) cb.checked = handicapAlwaysOpen();
-}
-function toggleHandicapAlways() {
-  const cb = document.getElementById('handicapAlwaysToggle');
-  const on = cb ? cb.checked : !handicapAlwaysOpen();
-  storage.setItem('golf_stats_handicap_always', on ? 'on' : 'off');
-}
 function updateActionsAlwaysVisibleToggle() {
   const cb = document.getElementById('actionsAlwaysVisibleToggle');
   if (cb) cb.checked = actionsAlwaysVisible();
