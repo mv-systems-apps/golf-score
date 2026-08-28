@@ -378,8 +378,19 @@
     .sd-chart-zone { position: relative; }
     .sd-swipe-hint { position:absolute; top:50%; transform:translateY(-50%); opacity:.55; display:flex; align-items:center; padding:10px 2px; cursor:pointer; z-index:2; user-select:none; }
     /* Kort goud oplichten van een archiefkaart waar naartoe gesprongen is vanuit de grafiek */
+    /* Kort goud oplichten om te tonen waar je terechtkomt.
+       Bewust een OUTLINE en geen inset-schaduw: een inset-schaduw op een afgeronde
+       hoek wordt per beeldje opnieuw getekend, en sommige telefoons laten daarbij een
+       hoek weg — hetzelfde euvel als eerder bij de cirkel om een score. Een outline
+       volgt de afronding, telt niet mee voor de opmaak (dus niets verschuift) en is
+       één vorm die niet per beeldje herberekend hoeft te worden.
+       Geen positionering op het element zelf: de kaarten bevatten elementen die
+       absoluut gepositioneerd zijn, en die zouden dan meeverspringen. */
     .saved-item.round-flash, .round-flash { animation: roundFlash 1.6s ease; }
-    @keyframes roundFlash { 0%, 55% { box-shadow: inset 0 0 0 3px var(--gold); } 100% { box-shadow: inset 0 0 0 3px transparent; } }
+    @keyframes roundFlash {
+      0%, 55% { outline: 3px solid var(--gold); outline-offset: -3px; }
+      100%    { outline: 3px solid transparent; outline-offset: -3px; }
+    }
     .pop { animation: pop .22s ease; }
     .ppar-dot     { width: 8px; height: 8px; border-radius: 50%; background: var(--green-light); flex-shrink: 0; }
     .ppar-dot-red { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1px solid transparent; box-sizing: border-box; flex-shrink: 0; }
@@ -572,14 +583,37 @@
 </head>
 <body>
 
-<header>
-  <div class="hdr-top-row">
+<header style="position:relative">
+  <div class="hdr-top-row" style="position:relative;z-index:1">
     <h1><span id="hdrClubName"></span></h1>
     <span id="hdrTrack"></span>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
     <span id="hdrRoundName" class="hdr-round-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto"></span>
     <span id="hdrHoleCount" class="hdr-round-name" style="color:var(--green-light);flex:0 0 auto;white-space:nowrap"></span>
+  </div>
+  <!-- Zonder actieve ronde staan de twee regels hierboven leeg en gaapt er een gat van
+       zo'n 80px. De hoogte vast laten is bewust (inklappen liet het scherm verspringen),
+       dus wordt de ruimte gevuld met een rustig baansilhouet. Puur sfeer; het verdwijnt
+       zodra er een ronde loopt. -->
+  <div id="hdrLeegBeeld" class="hidden" style="position:absolute;left:0;right:0;bottom:0;height:62px;overflow:hidden;pointer-events:none;z-index:0">
+    <svg viewBox="0 0 300 52" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+      <!-- verre heuvel -->
+      <path d="M0 40 C 40 26, 80 30, 120 34 S 210 24, 300 32 L300 52 L0 52Z"
+            fill="var(--green-light)" opacity=".18"/>
+      <!-- fairway -->
+      <path d="M0 46 C 60 36, 110 42, 170 40 S 250 36, 300 42 L300 52 L0 52Z"
+            fill="var(--green-light)" opacity=".30"/>
+      <!-- bunker -->
+      <ellipse cx="66" cy="47" rx="22" ry="4" fill="var(--gold)" opacity=".28"/>
+    </svg>
+    <!-- green met vlag, rechts -->
+    <svg viewBox="0 0 70 62" style="position:absolute;right:14px;bottom:0;height:62px" aria-hidden="true">
+      <ellipse cx="38" cy="52" rx="28" ry="7" fill="var(--green-light)" opacity=".45"/>
+      <line x1="40" y1="52" x2="40" y2="16" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M40 17 L57 22 L40 27 Z" fill="var(--gold)"/>
+      <circle cx="22" cy="51" r="2.6" fill="#fff" stroke="var(--green-light)" stroke-width=".8"/>
+    </svg>
   </div>
   <div class="header-score-wrap hidden">
     <div class="hdr-tee-row">
@@ -1166,6 +1200,22 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslag</div>
+  <div class="card" id="opslagCard">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Startadres van de app</div>
+    <div id="opslagKenmerkUitleg" style="font-size:17px;color:var(--muted);margin-bottom:8px"></div>
+    <!-- Het adres wordt PAS getoond als deze locatie een naam heeft. Anders zou hier een
+         adres staan dat de app zelf verzon, niet te onderscheiden van het adres waarmee
+         je binnenkwam — terwijl er tegelijk "nog geen naam" stond. -->
+    <div id="opslagLinkRegel" style="font-size:15px;color:var(--white);word-break:break-all;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px">—</div>
+    <div id="opslagKopieerMsg" class="hidden" style="font-size:15px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px">Gekopieerd</div>
+    <button id="opslagKopieerBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:6px" onclick="kopieerOpslagLink()">Adres kopiëren</button>
+    <button id="opslagKenmerkBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:8px" onclick="opslagKenmerkKnop()">Naam geven</button>
+    <div style="font-size:15px;color:var(--muted);text-align:center">Opslagcode <span id="opslagCodeTekst" style="color:var(--white);font-weight:700">—</span></div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">Clubs en rondes worden opgeslagen per browserprofiel. Deze opslaglocaties hebben daarom een unieke code. Die code staat in de naam van je backupbestanden, zodat de app kan melden als een bestand uit een andere locatie komt. Door de naam van de opslaglocatie in het adres van de app op te nemen weet je zeker welke opslaglocatie gebruikt wordt. Zo kun je bewust meerdere locaties gebruiken: je gewone locatie <b>hoofd</b>, en bijvoorbeeld een locatie <b>test</b> om iets uit te proberen.</div>
+  </div>
+
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup <span style="text-transform:none;font-weight:400">(export &amp; import)</span></div>
   <div class="card" id="exportCard">
     <!-- De backupstand staat nu in het blokje bovenaan (backupStatusTop), zichtbaar op
@@ -1224,18 +1274,10 @@
         </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opschonen</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Verwijderen</div>
   <div class="card">
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
-      <div class="subpanel" style="margin-top:8px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Maximum aantal opgeslagen rondes</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-          <input type="range" id="roundLimitSlider" aria-label="Maximum aantal opgeslagen rondes" min="20" max="500" step="20" value="300" style="flex:1;touch-action:pan-y" oninput="onRoundLimitSlide(this.value)" onchange="onRoundLimitChange(this.value)" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
-          <span id="roundLimitVal" style="font-size:20px;font-weight:700;color:var(--gold);min-width:44px;text-align:right">300</span>
-        </div>
-        <div style="font-size:17px;color:var(--muted)">Je hebt <span id="roundLimitCurrentCount" style="color:var(--white);font-weight:700">0</span> rondes opgeslagen. Bij het bereiken van dit maximum wordt de oudste ronde automatisch verwijderd.</div>
-      </div>
       <div id="otherPlayerCleanupCard" class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Rondes van andere spelers dan <span id="otherPlayerMainNameLabel" style="color:var(--gold)">hoofdspeler</span> verwijderen</div>
         <div id="otherPlayerCleanupNoMain" class="hidden" style="font-size:17px;color:var(--orange)">Vul eerst je naam in op het Start-scherm (<svg width="14" height="14" viewBox="0.5 -0.5 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg>) — die geldt als hoofdspeler.</div>
@@ -1251,16 +1293,8 @@
         <div id="purgeNonQMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button id="purgeNonQBtn" class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmPurgeNonQ(this)">Verwijder niet-qualifying rondes</button>
       </div>
-    </div>
-  </div>
-
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Resetten</div>
-  <div class="card">
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-    <div class="more-full">
-      <div class="subpanel" style="margin-top:8px">
+      <div class="subpanel" style="margin-top:12px">
         <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Alles wissen</div>
-        <!-- (de opslagnaam staat in zijn eigen kaart hierboven) -->
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
@@ -1268,9 +1302,9 @@
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
-  <div id="opslagNaamRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px;cursor:pointer" onclick="openOpslagNaamModal()" title="Tik om deze opslag een naam te geven"></div>
-  <input type="text" id="opslagNaamInput" class="hidden" oninput="bewaarOpslagNaam()" aria-label="Naam van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-017</div>
+  <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
+  <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-031</div>
 </div>
 
 <script>
@@ -2998,11 +3032,18 @@ function savePlayerProfile() {
 
 // Instelbaar maximum aantal opgeslagen rondes (20-500, standaard 300) — zie het
 // schuifje bij Instellingen → Rondes → Opslag.
-// Snoeien tot het ingestelde maximum. Bewust op DATUM en niet op plaats in de lijst:
-// de opslag staat niet op datum gesorteerd (importeren zet rondes achter de actieve
-// ronde, een datum wijzigen verplaatst niets), dus wegknippen van de staart kon een
-// recente — zelfs volledig ingevulde — ronde weggooien terwijl er veel oudere bleven
-// staan. Dat is precies wat de instelling belooft NIET te doen.
+// Bovengrens aan het aantal opgeslagen rondes. Bewust een VASTE waarde en geen
+// instelling: een instelling nodigt uit hem te verlagen, en dat is precies de handeling
+// die gegevens kost. Een ronde is ongeveer 0,9 kB, dus 2500 rondes is zo'n 2,2 MB —
+// ruim onder de browserlimiet van ongeveer 5 MB, en in de praktijk onbereikbaar.
+function getRoundStorageLimit() {
+  return 2500;
+}
+
+// Snoeien tot dat maximum. Bewust op DATUM en niet op plaats in de lijst: de opslag
+// staat niet op datum gesorteerd (importeren zet rondes achter de actieve ronde, een
+// datum wijzigen verplaatst niets), dus wegknippen van de staart kon een recente — zelfs
+// volledig ingevulde — ronde weggooien terwijl er veel oudere bleven staan.
 function trimRondes(lijst) {
   const max = getRoundStorageLimit();
   if (lijst.length <= max) return lijst;
@@ -3015,21 +3056,9 @@ function trimRondes(lijst) {
   const weg = new Set(opDatum.slice(0, lijst.length - max).map(r => r.id));
   const metScores = opDatum.slice(0, lijst.length - max)
     .filter(r => (r.holes || []).some(h => h.score !== null)).length;
-  if (metScores) {
-    console.warn(`Maximum bereikt: ${metScores} ingevulde ronde(s) verwijderd.`);
-  }
+  if (metScores) console.warn(`Maximum bereikt: ${metScores} ingevulde ronde(s) verwijderd.`);
   // De oorspronkelijke volgorde blijft staan; alleen de oudste vallen eruit.
   return lijst.filter(r => !weg.has(r.id));
-}
-
-function getRoundStorageLimit() {
-  const raw = parseInt(storage.getItem('golf_round_limit'), 10);
-  return (isFinite(raw) && raw >= 20 && raw <= 500) ? raw : 300;
-}
-function setRoundStorageLimit(v) {
-  const clamped = Math.max(20, Math.min(500, Math.round(v / 20) * 20));
-  storage.setItem('golf_round_limit', String(clamped));
-  return clamped;
 }
 
 // Instelbare drempels voor de backup-herinnering (zowel de banner in Archief als de
@@ -6764,18 +6793,117 @@ async function checkAppUpdate() {
 setTimeout(checkAppUpdate, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkAppUpdate, 2500); });
 
+// ══ KENMERK: OPEN JE DE APP OP DE JUISTE PLEK? ═══════════════════════════
+// De browser houdt gegevens apart per adres ÉN per browserprofiel. Dezelfde app in een
+// ander profiel is een lege app, zonder dat er iets kapot is — en dat is van buitenaf
+// niet te zien. Daarom draagt de KOPPELING het kenmerk: zet je snelkoppeling op
+//   .../golf-score.html?opslag=hoofd
+// dan weet de app bij elke start dat je via je vaste route binnenkomt.
+//
+// Het kenmerk staat bewust in de koppeling en niet in dit bestand: bij een nieuwe
+// telefoon zet je dezelfde snelkoppeling neer en klopt alles weer, zonder dat er iets
+// aan de app hoeft te veranderen.
+//
+// Vier gevallen:
+//   1. kenmerk in de koppeling én bekend in deze opslag, gelijk  → niets aan de hand
+//   2. kenmerk in de koppeling, deze opslag kent nog geen kenmerk → onthouden
+//   3. deze opslag kent een kenmerk, maar je komt zonder of met een ander binnen
+//      → melden: je bent waarschijnlijk ergens anders
+//   4. deze opslag kent geen kenmerk en er staan al gegevens → vragen of dit je vaste
+//      plek is; anders zou juist de opslag waar je per ongeluk in belandde zwijgen
+function kenmerkUitAdres() {
+  try {
+    const v = new URLSearchParams(location.search).get('opslag');
+    return v ? v.trim().slice(0, 24) : '';
+  } catch (e) { return ''; }
+}
+
+function bekendKenmerk() {
+  return (storage.getItem('golf_opslag_kenmerk') || '').trim();
+}
+
+function zetKenmerk(waarde) {
+  const schoon = String(waarde || '').trim().slice(0, 24);
+  if (schoon) storage.setItem('golf_opslag_kenmerk', schoon);
+  else storage.removeItem('golf_opslag_kenmerk');
+  toonOpslagRegel();
+}
+
+function controleerOpslagKenmerk() {
+  // Zijn de gegevens onleesbaar, dan staat daar een rode melding over — en die is
+  // belangrijker dan de vraag via welk adres je binnenkwam. Niet overheen schrijven:
+  // wachten tot dat venster vrij is, anders zie je de ernstigste melding nooit.
+  if (rondesOnleesbaar || clubsOnleesbaar) {
+    const venster = document.getElementById('confirmModal');
+    if (!venster || !venster.classList.contains('hidden')) {
+      setTimeout(controleerOpslagKenmerk, 500);
+      return;
+    }
+  }
+  const uitAdres = kenmerkUitAdres();
+  const bekend = bekendKenmerk();
+
+  // Geval 1 en 2: je komt binnen mét kenmerk.
+  if (uitAdres) {
+    if (!bekend) { zetKenmerk(uitAdres); return; }
+    // Hoofdletters negeren: "Hoofd" en "hoofd" zijn dezelfde locatie. Anders zou een
+    // adres met een hoofdletter een valse waarschuwing geven terwijl er niets aan de
+    // hand is.
+    if (uitAdres.toLowerCase() === bekend.toLowerCase()) return;
+    // Zelfde opslag, ander kenmerk in de koppeling: dat is een bewuste wijziging van
+    // jouw kant (of een tikfout). Vragen wat de bedoeling is.
+    showConfirmModal('Andere naam in het adres',
+      `Deze opslaglocatie heet "${bekend}", maar je opende de app als "${uitAdres}". `
+      + `Wil je deze locatie voortaan "${uitAdres}" noemen?`,
+      () => zetKenmerk(uitAdres), 'Laten staan', null, 'Wijzigen');
+    return;
+  }
+
+  // Geval 3: deze opslag kent een kenmerk, maar je komt zonder binnen.
+  if (bekend) {
+    showInfoModal('Niet via je vaste startadres',
+      `Deze opslaglocatie heet "${bekend}", maar je opende de app zonder die naam in het `
+      + `adres. Waarschijnlijk gebruik je een ander browserprofiel of typte je het adres. `
+      + `Controleer of je rondes hier compleet zijn voordat je verder gaat. `
+      + `Opslaglocatie: ${opslagLabel()}.`, 'orange');
+    return;
+  }
+
+  // Geval 4: nog geen kenmerk bekend.
+  const leeg = loadSavedRounds().length === 0 && Object.keys(CLUBS || {}).length === 0;
+  if (storage.getItem('golf_kenmerk_gevraagd')) return;
+  storage.setItem('golf_kenmerk_gevraagd', '1');
+  if (leeg) {
+    showInfoModal('Geen gegevens gevonden',
+      `Er staan hier nog geen rondes en clubs. Is dit je eerste keer, dan klopt dat. `
+      + `Gebruikte je de app al wel, kijk dan of je in een ander browserprofiel zit — `
+      + `elk profiel heeft zijn eigen opslaglocatie. Deze locatie: ${opslagLabel()}.`);
+    return;
+  }
+  showInfoModal('Deze opslaglocatie heeft nog geen naam',
+    `Geef deze locatie een naam bij Instellingen \u2192 Gegevens \u2192 Opslag. Je krijgt `
+    + `daar een adres met die naam erin; zet dat op je beginscherm en start de app er `
+    + `voortaan mee. De app waarschuwt dan zodra je ergens anders binnenkomt — `
+    + `bijvoorbeeld in een ander browserprofiel. Opslagcode: ${opslagCode()}.`);
+}
+
 // Kijkt of een backupbestand uit dezelfde opslag komt. De code staat achteraan in de
 // naam (bijvoorbeeld rondes_backup_20260827_K7QM.json). Staat er geen code in, dan is
 // het een bestand van vóór deze versie of van elders — daar zeggen we niets over.
 function meldAndereOpslag(bestandsnaam) {
-  const m = /_([A-Z0-9]{4})\.json$/i.exec(bestandsnaam || '');
+  // Alleen bestanden die de app ZELF heeft gemaakt beoordelen. Eerder keek deze
+  // controle naar de laatste vier tekens voor .json, en dan sloeg hij ook aan op een
+  // willekeurig bestand als "mijn_data.json" — daar staat "data" en dat leek een code.
+  // Een eventueel " (1)" van de browser bij een dubbele download mag er wel achter.
+  const m = /^(?:rondes|clubs)_backup_\d{8}_([A-Z0-9]{4})(?: \(\d+\))?\.json$/i
+    .exec((bestandsnaam || '').trim());
   if (!m) return;
   const code = m[1].toUpperCase();
   if (code === opslagCode()) return;
   // NA het importeren melden, niet ervoor: het importresultaat gebruikt hetzelfde
   // venster en zou deze melding meteen overschrijven — dan zie je hem nooit.
   meldZodraVensterVrij('Uit een andere opslag',
-    `Dit bestand komt uit opslag ${code}; je gebruikt nu ${opslagLabel()}. `
+    `Dit bestand komt uit opslaglocatie met code ${code}; je gebruikt nu ${opslagLabel()}. `
     + `Dat gebeurt bijvoorbeeld bij een ander browserprofiel of een ander adres. `
     + `Importeren kan gewoon — kies "Toevoegen" als je niets wilt kwijtraken.`);
 }
@@ -6806,46 +6934,100 @@ function meldZodraVensterVrij(titel, tekst) {
 //
 // De CODE is waar de app op vergelijkt (die verandert nooit); de NAAM is alleen wat jij
 // leest. Zo kun je later hernoemen zonder dat oude backups ineens "van elders" lijken.
+let _opslagCode = null;
 function opslagCode() {
+  if (_opslagCode) return _opslagCode;
   let code = storage.getItem('golf_storage_id');
   if (!code) {
     const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // zonder I, O, 0 en 1
     code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
     storage.setItem('golf_storage_id', code);
   }
+  // Ook onthouden buiten de opslag om. Lukt het wegschrijven niet (opslag vol of
+  // geblokkeerd), dan zou elke aanroep anders een NIEUWE code loten: de code in
+  // Instellingen, die in je backupbestandsnaam en die in de controle zouden dan alle
+  // drie verschillen, en je eigen backups zouden als "van elders" worden gemeld.
+  _opslagCode = code;
   return code;
 }
 
-function opslagNaam() {
-  return (storage.getItem('golf_storage_name') || '').trim();
-}
-
-// Wat je leest: de naam als die er is, anders de code.
+// Wat je leest in meldingen: de opslagcode, met het kenmerk erbij als dat er is.
+// Een eigen NAAM per opslag is er bewust niet meer: het kenmerk uit de koppeling doet
+// dat werk al, en beter — dat gaat vanzelf af zodra je ergens anders binnenkomt.
 function opslagLabel() {
-  const naam = opslagNaam();
-  return naam ? `${naam} (${opslagCode()})` : `${opslagCode()} (nog geen naam)`;
+  const naam = bekendKenmerk();
+  return naam ? `${naam} (code ${opslagCode()})` : `zonder naam (code ${opslagCode()})`;
 }
 
-function toonOpslagNaam() {
-  const el = document.getElementById('opslagNaamRegel');
-  if (el) el.textContent = 'Opslag: ' + opslagLabel();
+// Het volledige adres met kenmerk: dat zet je op je beginscherm.
+function opslagLink(kenmerk) {
+  const merk = kenmerk || bekendKenmerk() || 'hoofd';
+  return location.origin + location.pathname + '?opslag=' + encodeURIComponent(merk);
 }
 
-// Hergebruikt het bestaande invoervenster. Dat werkt op een invoerveld, dus er staat
-// een verborgen veldje klaar waar het venster zijn waarde in kwijt kan.
-function openOpslagNaamModal() {
-  const veld = document.getElementById('opslagNaamInput');
+async function kopieerOpslagLink() {
+  const msg = document.getElementById('opslagKopieerMsg');
+  try {
+    await navigator.clipboard.writeText(opslagLink());
+    if (msg) { msg.textContent = 'Gekopieerd'; msg.style.color = 'var(--green-light)'; }
+  } catch (e) {
+    // Kopiëren kan geweigerd worden (geen https, of geen toestemming). Dan blijft het
+    // adres gewoon leesbaar op het scherm staan om over te tikken.
+    if (msg) { msg.textContent = 'Kopiëren lukt niet — neem het adres hierboven over'; msg.style.color = 'var(--orange)'; }
+  }
+  if (msg) {
+    msg.classList.remove('hidden');
+    clearTimeout(msg._timer);
+    msg._timer = setTimeout(() => msg.classList.add('hidden'), 2500);
+  }
+}
+
+// Naam geven of wijzigen. Pas als deze locatie een naam HEEFT verschijnt het adres:
+// zonder naam zou daar een adres staan dat de app zelf verzon, en dat is voor jou niet
+// te onderscheiden van het adres waarmee je binnenkwam.
+function opslagKenmerkKnop() {
+  const veld = document.getElementById('opslagKenmerkInput');
   if (!veld) return;
-  veld.value = opslagNaam();
-  openValueEditModal(veld, 'Naam van deze opslag');
+  veld.value = bekendKenmerk() || 'hoofd';
+  openValueEditModal(veld, 'Naam van deze opslaglocatie');
 }
 
-function bewaarOpslagNaam() {
-  const veld = document.getElementById('opslagNaamInput');
-  const schoon = (veld?.value || '').trim().slice(0, 24);
-  if (schoon) storage.setItem('golf_storage_name', schoon);
-  else storage.removeItem('golf_storage_name');
-  toonOpslagNaam();
+function bewaarOpslagKenmerk() {
+  const veld = document.getElementById('opslagKenmerkInput');
+  zetKenmerk((veld?.value || '').trim());
+}
+
+function toonOpslagRegel() {
+  const kenmerk = bekendKenmerk();
+
+  // Compacte regel onderaan Instellingen: in één oogopslag zien waar je zit.
+  const regel = document.getElementById('opslagRegel');
+  if (regel) regel.textContent = kenmerk
+    ? `Opslaglocatie ${kenmerk} \u00b7 code ${opslagCode()}`
+    : `Opslaglocatie zonder naam \u00b7 code ${opslagCode()}`;
+
+  const codeEl = document.getElementById('opslagCodeTekst');
+  if (codeEl) codeEl.textContent = opslagCode();
+  const linkEl = document.getElementById('opslagLinkRegel');
+  if (linkEl) linkEl.textContent = kenmerk ? opslagLink() : '';
+  const uitleg = document.getElementById('opslagKenmerkUitleg');
+  if (uitleg) {
+    if (kenmerk) {
+      // De naam vet, en via een eigen element zodat hij niet als HTML wordt uitgevoerd.
+      uitleg.textContent = 'Gebruik onderstaand adres om de app te starten met de opslaglocatie ';
+      const naam = document.createElement('b');
+      naam.textContent = kenmerk;
+      uitleg.appendChild(naam);
+      uitleg.appendChild(document.createTextNode('.'));
+    } else {
+      uitleg.textContent = 'Deze opslaglocatie heeft nog geen naam. Geef er een, dan verschijnt hier het adres om op je beginscherm te zetten.';
+    }
+  }
+  const kBtn = document.getElementById('opslagKenmerkBtn');
+  if (kBtn) kBtn.textContent = kenmerk ? 'Naam wijzigen' : 'Naam geven';
+  // Adres en kopieerknop pas tonen zodra er een naam is.
+  document.getElementById('opslagLinkRegel')?.classList.toggle('hidden', !kenmerk);
+  document.getElementById('opslagKopieerBtn')?.classList.toggle('hidden', !kenmerk);
 }
 
 // ── Opslagbescherming: vraag de browser de site-opslag als blijvend te markeren,
@@ -6868,7 +7050,7 @@ async function refreshStorageStatus() {
     el.textContent = tekst;
   } catch (e) { /* status is informatief; stil falen is prima */ }
 }
-toonOpslagNaam();
+toonOpslagRegel();
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {}).finally(() => refreshStorageStatus());
 }
@@ -9612,7 +9794,12 @@ function deleteRoundFromInfoModal(btn) {
   );
 }
 
+function toonLeegBeeld(aan) {
+  document.getElementById('hdrLeegBeeld')?.classList.toggle('hidden', !aan);
+}
+
 function resetHeader() {
+  toonLeegBeeld(true);
   const clubNameEl = document.getElementById('hdrClubName');
   clubNameEl.textContent = 'Geen actieve ronde';
   clubNameEl.classList.add('info-msg');
@@ -9751,10 +9938,12 @@ function updateHeaderClubName() {
     el.textContent = game.clubShort || game.club || '?';
     el.classList.remove('info-msg');
     el.style.color = '';
+    toonLeegBeeld(false);
   } else {
     el.textContent = 'Geen actieve ronde';
     el.classList.add('info-msg');
     el.style.color = 'var(--info-grey)';
+    toonLeegBeeld(true);
   }
 }
 
@@ -12019,10 +12208,10 @@ async function doResetAll() {
   // De opslagcode en -naam blijven staan: die horen bij de PLEK (dit profiel, dit
   // adres), niet bij de gegevens. Zou de code verdwijnen, dan zouden je eigen oudere
   // backups ineens "uit een andere opslag" lijken te komen.
-  // Wel de vlag zetten dat de lege-opslagmelding al gehad is: je hebt zojuist zélf
-  // alles gewist, dus de vraag "zit je misschien in een ander profiel?" slaat nergens
-  // op en zou alleen maar verwarren.
-  storage.setItem('golf_leeg_gemeld', '1');
+  // Wel de vlag zetten dat de vraag over de plek al gesteld is: je hebt zojuist zélf
+  // alles gewist, dus "zit je misschien in een ander profiel?" slaat nergens op en zou
+  // alleen maar verwarren.
+  storage.setItem('golf_kenmerk_gevraagd', '1');
   // Dynamische per-speler sleutels (bv. golf_seen_low_hi_<speler>, voor de gouden
   // 'nieuwe laagste handicap'-melding) staan niet in bovenstaande vaste lijst en
   // moeten apart op prefix opgeruimd worden.
@@ -12129,9 +12318,17 @@ function buildClubList() {
   if (!filteredClubs.length) {
     if (emptyMsgEl) {
       emptyMsgEl.classList.remove('hidden');
+      // Zijn er nog helemaal geen clubs, dan is dit het EERSTE scherm dat een nieuwe
+      // gebruiker ziet. Alleen "Geen clubs" laat hem raden; daarom staan hier de twee
+      // wegen die er zijn, met dezelfde symbolen als op de knoppen erboven en bij
+      // Instellingen — zo hoef je niet te zoeken wat waar zit.
+      const plusIcoon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+      const tandwielIcoon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>';
       emptyMsgEl.innerHTML = allClubNames.length
         ? '<span class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen clubs gevonden</span>'
-        : '<span class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen clubs</span>';
+        : `<div class="info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700;line-height:1.5">`
+          + `Voeg een club toe (${inlineIcoon(plusIcoon, 18)} hierboven), of importeer een backup `
+          + `via Instellingen (${inlineIcoon(tandwielIcoon, 17)} \u2192 Gegevens \u2192 Backup \u2192 Importeren).</div>`;
     }
     if (searchInput) searchInput.disabled = !allClubNames.length;
     setClubBtns(!allClubNames.length);
@@ -13179,19 +13376,12 @@ function switchSettingsTab(tab) {
     btn.style.color = active ? 'var(--green-deep)' : '';
     btn.style.borderColor = active ? 'var(--gold)' : '';
   });
+  if (tab === 'data') toonOpslagRegel();   // het opslagblok staat op dit tabblad
 }
 
 // ══ OPSLAG (Instellingen → Rondes) ═══════════════════════════════════════
 function updateStorageSettingsUI(rondes) {
-  const slider = document.getElementById('roundLimitSlider');
-  const val = document.getElementById('roundLimitVal');
-  const limit = getRoundStorageLimit();
-  if (slider) slider.value = limit;
-  if (val) val.textContent = limit;
   const saved = rondes || loadSavedRounds();
-  window._savedRoundCount = saved.length; // cache voor onRoundLimitSlide (geen parse per sleepstap)
-  const countEl = document.getElementById('roundLimitCurrentCount');
-  if (countEl) countEl.textContent = saved.length;
   const nonQEl = document.getElementById('nonQCount');
   const nonQCount = saved.filter(r => !r.qualifying).length;
   if (nonQEl) nonQEl.textContent = nonQCount;
@@ -13200,57 +13390,6 @@ function updateStorageSettingsUI(rondes) {
   updateOtherPlayerCleanupUI();
 }
 
-// Alleen het label live bijwerken tijdens het slepen — nog niet opslaan (dat gebeurt
-// pas bij loslaten, via onRoundLimitChange/'change').
-function onRoundLimitSlide(v) {
-  const val = document.getElementById('roundLimitVal');
-  if (val) val.textContent = v;
-  // Verhogen kan nooit rondes kosten: meteen vastleggen, zodat de waarde blijft staan
-  // ook als het change-event niet aankomt (bv. loslaten buiten de slider). Verlagen
-  // gebeurt bewust NIET hier — dat loopt via de bevestiging in onRoundLimitChange.
-  // Het aantal rondes komt uit een teller die updateStorageSettingsUI bijhoudt, zodat
-  // er tijdens het slepen niet telkens het hele archief geparseerd wordt.
-  const requested = parseInt(v, 10);
-  const count = window._savedRoundCount;
-  if (isFinite(requested) && typeof count === 'number' && requested >= count && requested >= getRoundStorageLimit()) {
-    setRoundStorageLimit(requested);
-  }
-}
-
-function onRoundLimitChange(v) {
-  const requested = parseInt(v, 10);
-  const saved = loadSavedRounds();
-  if (saved.length <= requested) {
-    // Geen rondes zouden verloren gaan — gewoon opslaan, geen aparte bevestiging nodig.
-    const newLimit = setRoundStorageLimit(requested);
-    const val = document.getElementById('roundLimitVal');
-    if (val) val.textContent = newLimit;
-    updateStorageSettingsUI();
-    return;
-  }
-  const toRemove = saved.length - requested;
-  showDangerModal(
-    'Rondes verwijderen',
-    `Dit maximum verwijdert direct de oudste ${toRemove} ${toRemove === 1 ? 'ronde' : 'rondes'}. Dit kan niet ongedaan worden gemaakt.`,
-    'Verwijderen',
-    () => {
-      const newLimit = setRoundStorageLimit(requested);
-      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
-      loadSaved();
-      updateStorageSettingsUI();
-    }
-  );
-  // showDangerModal's eigen Annuleren-knop verbergt alleen de modal; wij moeten zelf de
-  // schuifpositie terugzetten naar de nog steeds geldende, oude limiet — anders blijft
-  // die op de net aangeraakte (maar nooit opgeslagen) positie staan.
-  const cancelBtn = document.getElementById('dangerModalCancelBtn');
-  if (cancelBtn) {
-    cancelBtn.onclick = () => {
-      document.getElementById('resetAllModal').classList.add('hidden');
-      updateStorageSettingsUI();
-    };
-  }
-}
 
 function confirmPurgeNonQ(btn) {
   const msg = document.getElementById('purgeNonQMsg');
@@ -13441,9 +13580,18 @@ function openSectie(key, markeerId) {
   applySettingsSections();
   const kop = document.querySelector('[data-section-key="' + key + '"]');
   if (!kop) return;
-  // Geen scroll: de sectie staat bovenaan het tabblad en is dus al in beeld. Alleen
-  // kort goud oplichten, zodat je ziet waar je terechtkomt.
+  // Naar de sectie toe scrollen én kort goud oplichten. Het scrollen is nodig sinds er
+  // secties boven kunnen staan (Opslag staat vóór Backup); zonder scroll kom je op een
+  // tabblad terecht waar het doel buiten beeld ligt.
   setTimeout(() => {
+    // Springen, niet glijden — en met de hoogte van de vaste kop ertussen, anders
+    // verdwijnt de sectiekop erachter. scrollIntoView houdt daar geen rekening mee.
+    // Het scherm zelf scrolt niet; dat doet de pagina.
+    const houder = document.scrollingElement || document.documentElement;
+    const header = document.querySelector('header');
+    const marge = (header ? header.getBoundingClientRect().height : 0) + 8;
+    const y = kop.getBoundingClientRect().top + houder.scrollTop - marge;
+    houder.scrollTo({ top: Math.max(y, 0), behavior: 'auto' });
     const doel = (markeerId && document.getElementById(markeerId))
       || (kop.nextElementSibling && kop.nextElementSibling.querySelector('.card'));
     if (doel) {
@@ -14209,22 +14357,7 @@ document.addEventListener('focusin', (e) => {
   updateHeaderHeight();
   setTimeout(() => { adjustThirdHeaderRow(); updateHeaderHeight(); }, 100);
 
-  // ── Lege opslag: eerste keer, of een andere plek? ──
-  // De browser houdt gegevens apart per adres én per browserprofiel. Sta je ineens voor
-  // een lege app, dan kan dat een eerste installatie zijn — maar ook hetzelfde adres in
-  // een ander profiel, met je rondes veilig op de andere plek. De app kan dat verschil
-  // niet zien, dus stelt hij de vraag. Eén keer per opslag; daarna niet meer.
-  if (!storage.getItem('golf_leeg_gemeld')) {
-    const geenRondes = loadSavedRounds().length === 0;
-    const geenClubs = Object.keys(CLUBS || {}).length === 0;
-    if (geenRondes && geenClubs) {
-      storage.setItem('golf_leeg_gemeld', '1');
-      setTimeout(() => showInfoModal('Geen gegevens gevonden',
-        `Er staan hier nog geen rondes en clubs. Is dit je eerste keer, dan klopt dat. `
-        + `Gebruikte je de app al wel, kijk dan of je in een ander browserprofiel zit — `
-        + `elk profiel heeft zijn eigen opslag. Deze opslag: ${opslagLabel()}.`), 800);
-    }
-  }
+  setTimeout(controleerOpslagKenmerk, 800);
 
   // ── PWA: registreer service worker voor offline gebruik ──
   // Vereist een los bestand sw-golf-score.js naast dit HTML-bestand (werkt op https /
