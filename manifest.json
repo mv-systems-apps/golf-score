@@ -2,7 +2,7 @@
   "name": "Golf Score",
   "short_name": "Golf Score",
   "description": "Golf score app",
-  "start_url": "./golf-score.html",
+  "start_url": "./golf-score.html?opslag=hoofd",
   "scope": "./",
   "display": "standalone",
   "background_color": "#1a3a2a",
