@@ -637,7 +637,7 @@
   </div>
 </header>
 
-<div id="updateBanner" class="hidden" style="position:fixed;left:12px;right:12px;bottom:76px;z-index:200;background:var(--gold);color:var(--green-deep);font-size:17px;font-weight:700;padding:12px 14px;border-radius:10px;text-align:center;cursor:pointer" onclick="location.reload()"></div>
+<div id="updateBanner" class="hidden" style="position:fixed;left:12px;right:12px;bottom:76px;z-index:200;background:var(--gold);color:var(--green-deep);font-size:17px;font-weight:700;padding:12px 14px;border-radius:10px;text-align:center;cursor:pointer" onclick="updateBannerKlik()"></div>
 <div class="tabs">
   <button class="tab"        onclick="nav('club')"    id="tab-club"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg></button>
   <button class="tab active" onclick="nav('setup')"   id="tab-setup"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7"/><path d="M12 13l4 6"/><path d="M9 11l6-1"/></svg></button>
@@ -1306,7 +1306,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-032</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-033</div>
 </div>
 
 <script>
@@ -6771,6 +6771,22 @@ async function copyAnalysisForAi() {
 // die nu draait, dan is één herlaad genoeg — dit balkje maakt dat zichtbaar en
 // bespaart het "twee keer openen"-ritueel. Geen netwerkverkeer: leest alleen de
 // cache. Buiten de PWA-context (lokaal bestand, geen cache) doet dit stil niets.
+// Tikken op de banner: bij een nieuwe versie is herladen genoeg. Staat er juist een
+// VEROUDERDE kopie in het geheugen van de browser, dan helpt herladen niet — dan moet
+// die kopie eerst weg, anders komt de melding meteen weer terug.
+async function updateBannerKlik() {
+  const b = document.getElementById('updateBanner');
+  if (b && b.dataset.ouder === '1') {
+    try {
+      const namen = await caches.keys();
+      await Promise.all(namen.map(n => caches.delete(n)));
+      const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
+      await Promise.all(regs.map(r => r.update()));
+    } catch (e) { /* lukt het niet, dan is herladen alsnog de beste zet */ }
+  }
+  location.reload();
+}
+
 async function checkAppUpdate() {
   try {
     if (!('caches' in window)) return;
@@ -6783,13 +6799,20 @@ async function checkAppUpdate() {
     const res = await caches.match('./golf-score.html');
     if (!res) return;
     const cacheVersie = (await res.text()).match(/Versie ([0-9A-F]+-[0-9A-F]+)/);
-    if (cacheVersie && cacheVersie[1] !== eigen[1]) {
-      const b = document.getElementById('updateBanner');
-      if (b) {
-        b.textContent = 'Nieuwe versie (' + cacheVersie[1] + ') beschikbaar — tik om te verversen';
-        b.classList.remove('hidden');
-      }
+    if (!cacheVersie || cacheVersie[1] === eigen[1]) return;
+    const b = document.getElementById('updateBanner');
+    if (!b) return;
+    // Welke kant staat het verschil op? Het stempel loopt op en beide delen hebben een
+    // vaste lengte, dus gewone tekstvergelijking klopt. Eerder gaf ELK verschil de
+    // melding "nieuwe versie beschikbaar" — ook als de cache juist OUDER was, en dan
+    // klopte de tekst niet en hielp verversen niet.
+    if (cacheVersie[1] > eigen[1]) {
+      b.textContent = 'Nieuwe versie (' + cacheVersie[1] + ') beschikbaar — tik om te verversen';
+    } else {
+      b.textContent = 'Verouderde kopie in het geheugen (' + cacheVersie[1] + ') — tik om op te ruimen';
     }
+    b.dataset.ouder = cacheVersie[1] > eigen[1] ? '' : '1';
+    b.classList.remove('hidden');
   } catch (e) { /* stil: puur informatief */ }
 }
 setTimeout(checkAppUpdate, 4000);
