@@ -906,6 +906,7 @@
   <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Exporteren', 'exportCard');">
     <div id="lastBackupInfoTop" style="font-size:17px;color:var(--muted)"></div>
     <div id="newRoundsInfoTop" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px"></div>
+    <div id="clubBackupInfoTop" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px"></div>
   </div>
 
   <div id="settingsTabMain">
@@ -1179,6 +1180,7 @@
          updateLastBackupDisplay vult ze en kopieert de inhoud naar boven. -->
     <div id="lastBackupInfo" style="display:none"></div>
     <div id="newRoundsInfo" class="hidden" style="display:none"></div>
+    <div id="clubBackupInfo" class="hidden" style="display:none"></div>
     <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exportmap: <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
@@ -1209,7 +1211,7 @@
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Herinnering</div>
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Herinnering rondes</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Herinner me als het langer geleden is dan:</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <span style="font-size:17px;color:var(--muted);flex:1">Dagen</span>
@@ -1283,7 +1285,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-051</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-054</div>
 </div>
 
 <script>
@@ -1326,13 +1328,33 @@ function rebuildCourseLookup() {
 
 // Geeft true/false terug: de baaneditor moet weten of het echt gelukt is, anders zou
 // hij "Opgeslagen" melden terwijl de wijziging bij de volgende start weg is.
+// Vingerafdruk van de clubgegevens, zoals backupVingerafdruk dat voor de rondes doet.
+// Alleen om te WETEN of er iets veranderd is, niet om iets te herstellen.
+function clubsVingerafdruk() {
+  const tekst = JSON.stringify(CLUBS || {});
+  let h = 5381;
+  for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
 function saveClubsToStorage() {
   if (clubsOnleesbaar) {
     console.warn('Opslaan geweigerd: de opgeslagen clubgegevens zijn niet leesbaar.');
     return false;
   }
   try {
-    return storage.setItem('golf_clubs', JSON.stringify(CLUBS)) !== false;
+    const gelukt = storage.setItem('golf_clubs', JSON.stringify(CLUBS)) !== false;
+    // Stempelen zodra de clubgegevens ECHT anders zijn. Clubs verander je zelden, dus
+    // er is bewust geen dagen- of aantallendrempel: de melding komt alleen als er iets
+    // te beschermen valt, en zwijgt zolang je niets wijzigt.
+    try {
+      const nu = clubsVingerafdruk();
+      if (nu !== storage.getItem('golf_clubs_fingerprint')) {
+        storage.setItem('golf_clubs_fingerprint', nu);
+        storage.setItem('golf_clubs_changed', new Date().toISOString());
+      }
+    } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
+    return gelukt;
   } catch(e) {
     console.error('Opslaan van clubs is mislukt:', e);
     const warn = document.getElementById('storageWarning');
@@ -6070,12 +6092,12 @@ function refreshTabDot(rondes) {
   // Eerst de Instellingen-stip: die hangt alleen aan de backupstatus. Als de telling
   // voor Rondes onverhoopt struikelt, blijft deze stip toch correct (Marks melding dat
   // de stip na een backup bleef staan).
+  // De stip gaat aan bij een te oude RONDE-backup óf gewijzigde clubs.
+  const stipNodig = isBackupOverdue(rondes) || isClubsBackupOverdue();
   const tabSet0 = document.getElementById('tab-settings');
-  if (tabSet0) tabSet0.classList.toggle('has-dot', isBackupOverdue(rondes));
+  if (tabSet0) tabSet0.classList.toggle('has-dot', stipNodig);
   const tab = document.getElementById('tab-archive');
   if (tab) tab.classList.toggle('has-dot', openStaandeMeldingen(rondes).length > 0);
-  const tabSet = document.getElementById('tab-settings');
-  if (tabSet) tabSet.classList.toggle('has-dot', isBackupOverdue());
 }
 
 // Mogelijke duplicaten: zelfde datum, tijd én speler. Komt normaal niet voor (de
@@ -12859,6 +12881,30 @@ function afgerondeRondesCount(lijst) {
   }).length;
 }
 
+// Clubs zijn 'achterstallig' zodra ze sinds de laatste clubbackup zijn gewijzigd.
+// Geen dagen- of aantallendrempel: clubs verander je een paar keer per jaar, dus een
+// tijdsdrempel zou maandenlang zeuren over iets wat niet verandert.
+function isClubsBackupOverdue() {
+  if (!Object.keys(CLUBS || {}).length) return false;   // niets om te bewaren
+  const backupFp = storage.getItem('golf_clubs_backup_fingerprint');
+  if (!backupFp) return true;                            // nog nooit een clubbackup
+  return backupFp !== huidigeClubsVingerafdruk();
+}
+
+// De vingerafdruk van de HUIDIGE clubs, uit de opslag. Bewust niet telkens opnieuw
+// berekenen: deze controle loopt bij elke verversing van de tabstippen, en dan zou de
+// hele clublijst steeds opnieuw worden doorlopen — gemeten 7 ms per keer bij 55 clubs.
+// De waarde wordt bijgehouden bij het opslaan van clubs; ontbreekt hij (eerste keer),
+// dan wordt hij één keer berekend en bewaard.
+function huidigeClubsVingerafdruk() {
+  let fp = storage.getItem('golf_clubs_fingerprint');
+  if (!fp) {
+    fp = clubsVingerafdruk();
+    storage.setItem('golf_clubs_fingerprint', fp);
+  }
+  return fp;
+}
+
 function isBackupOverdue(lijst) {
   const total = afgerondeRondesCount(lijst);
   if (total === 0) return false;
@@ -12921,6 +12967,7 @@ function toonNieuweRondesRegel(overdue) {
     const doel = document.getElementById('lastBackupInfoTop');
     if (bron && doel) doel.innerHTML = bron.innerHTML;
   }
+  toonClubBackupRegel();
   const el = document.getElementById('newRoundsInfo');
   if (!el) return;
   const total = afgerondeRondesCount();
@@ -12946,6 +12993,34 @@ function toonNieuweRondesRegel(overdue) {
   el.innerHTML = delen.join(' \u00b7 ');
   el.classList.remove('hidden');
   if (elTop) { elTop.innerHTML = el.innerHTML; elTop.classList.remove('hidden'); }
+}
+
+// Eigen regel voor de clubs, naast die voor de rondes. Verschijnt alleen als er iets
+// te melden is: nooit geëxporteerd, of sinds de laatste clubbackup gewijzigd.
+function toonClubBackupRegel() {
+  const el = document.getElementById('clubBackupInfo');
+  const elTop = document.getElementById('clubBackupInfoTop');
+  const verbergen = () => {
+    if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+    if (elTop) { elTop.classList.add('hidden'); elTop.innerHTML = ''; }
+  };
+  if (!el && !elTop) return;
+  if (!isClubsBackupOverdue()) return verbergen();
+
+  const datum = storage.getItem('golf_clubs_backup_date');
+  const gewijzigd = storage.getItem('golf_clubs_changed');
+  let tekst;
+  if (!datum) {
+    tekst = 'Backup clubs: nog nooit';
+  } else {
+    const dagen = Math.floor((new Date(todayISO()) - new Date(datum)) / 86400000);
+    const wanneer = dagen <= 0 ? 'vandaag' : dagen === 1 ? 'gisteren' : `${dagen} dagen geleden`;
+    tekst = `Backup clubs: ${wanneer}`
+          + (gewijzigd ? ` \u00b7 gewijzigd: ${formatWijzigMoment(gewijzigd)}` : ' \u00b7 sindsdien gewijzigd');
+  }
+  const html = `<span style="color:var(--orange);font-weight:700">${tekst}</span>`;
+  if (el) { el.innerHTML = html; el.classList.remove('hidden'); }
+  if (elTop) { elTop.innerHTML = html; elTop.classList.remove('hidden'); }
 }
 
 // "vandaag 14:12", "gisteren 09:05" of "12 aug 14:12" — kort genoeg voor één regel.
@@ -13009,6 +13084,11 @@ async function exportAllClubs() {
   }
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const filename = `clubs_backup_${ts}_${opslagCode()}.json`;
+  // Vastleggen dat de clubs nu veilig staan; de melding verdwijnt daarmee vanzelf.
+  // Alleen de datum (voor de tekst) en de vingerafdruk (voor de vergelijking) — een
+  // tijdstempel is hier niet nodig, want er is geen dagen- of aantallendrempel.
+  storage.setItem('golf_clubs_backup_date', todayISO());
+  storage.setItem('golf_clubs_backup_fingerprint', clubsVingerafdruk());
   const json = JSON.stringify(clubs, null, 2);
   try {
     if (!(await tryWriteToExportFolder(filename, json))) {
