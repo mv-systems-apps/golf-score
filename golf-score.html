@@ -1283,7 +1283,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04E</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04F</div>
 </div>
 
 <script>
@@ -13695,18 +13695,12 @@ function openSectie(key, markeerId) {
   applySettingsSections();
   const kop = document.querySelector('[data-section-key="' + key + '"]');
   if (!kop) return;
-  // Naar de sectie toe scrollen én kort goud oplichten. Het scrollen is nodig sinds er
-  // secties boven kunnen staan (Opslag staat vóór Backup); zonder scroll kom je op een
-  // tabblad terecht waar het doel buiten beeld ligt.
+  // Naar BOVEN springen en de sectie kort goud laten oplichten. Bewust naar de top van
+  // de pagina en niet naar de sectiekop: daar staat de backupstand, en juist die wil je
+  // zien als je erop tikt. Springen, niet glijden.
   setTimeout(() => {
-    // Springen, niet glijden — en met de hoogte van de vaste kop ertussen, anders
-    // verdwijnt de sectiekop erachter. scrollIntoView houdt daar geen rekening mee.
-    // Het scherm zelf scrolt niet; dat doet de pagina.
     const houder = document.scrollingElement || document.documentElement;
-    const header = document.querySelector('header');
-    const marge = (header ? header.getBoundingClientRect().height : 0) + 8;
-    const y = kop.getBoundingClientRect().top + houder.scrollTop - marge;
-    houder.scrollTo({ top: Math.max(y, 0), behavior: 'auto' });
+    houder.scrollTo({ top: 0, behavior: 'auto' });
     const doel = (markeerId && document.getElementById(markeerId))
       || (kop.nextElementSibling && kop.nextElementSibling.querySelector('.card'));
     if (doel) {
