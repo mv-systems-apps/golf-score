@@ -1276,7 +1276,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-03F</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-043</div>
 </div>
 
 <script>
@@ -1982,10 +1982,14 @@ function getPriorityGroupClub() {
   const saved = loadSavedRounds();
   const activeRound = (activeId && saved.find(r => String(r.id) === activeId))
     || (game2Id2 && saved.find(r => String(r.id) === game2Id2));
+  // Volgorde: eerst de club van de ronde die je nú speelt, daarna de club die op het
+  // Start-scherm geselecteerd staat (die waar je op dat moment mee bezig bent), en pas
+  // als laatste je thuisclub. De geselecteerde club zegt meer over waar je nu naar
+  // zoekt dan de vaste thuisclub.
   const activeClub = activeRound?.club;
-  const homeClub = storage.getItem('golf_home_club');
   const defaultClub = storage.getItem('golf_default_club');
-  return activeClub || homeClub || defaultClub || null;
+  const homeClub = storage.getItem('golf_home_club');
+  return activeClub || defaultClub || homeClub || null;
 }
 
 loadClubsFromStorage();
@@ -8406,7 +8410,9 @@ function toggleGroupByTrack() {
   openQuickClub();
 }
 
-// Long-press op 'groepeer op club': alles inklappen (geen club uitgeklapt, geen scroll).
+// Long-press op 'groepeer op club': alles in- of uitklappen. Een toggle, net als lang
+// indrukken elders in de app — anders kun je met dezelfde handeling niet terug, en lijkt
+// een tweede lange druk niets te doen.
 function collapseAllClubs() {
   window._forceShowPlanned = false;
   window._groupByTrack = true;
@@ -8416,9 +8422,32 @@ function collapseAllClubs() {
   const gb = document.getElementById('groupByTrackBtn');
   if (gb) { gb.style.background = 'var(--gold)'; gb.style.color = 'var(--green-deep)'; }
   ['groupByPlayerBtn', 'groupByCategoryBtn', 'groupByWhsBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.style.background = ''; b.style.color = ''; } });
-  window._pgCollapsed = {};
-  window._clubTrkCollapsed = {};
+  // Stond alles al dicht, dan is de volgende lange druk "alles open".
+  if (window._allesClubsDicht) {
+    window._allesClubsDicht = false;
+    window._pgCollapsed = {};
+    window._clubTrkCollapsed = {};
+    alleClubGroepenOpen();
+    loadSaved();
+    openAlleSubgroepen('#screen-archive', '_clubTrkCollapsed');
+  } else {
+    window._allesClubsDicht = true;
+    window._pgCollapsed = {};
+    window._clubTrkCollapsed = {};
+  }
   loadSaved();
+}
+
+// Zet elke club- en baangroep expliciet open. De standaard is "dicht", dus alleen de
+// verzameling leegmaken is niet genoeg — elke sleutel moet op false.
+function alleClubGroepenOpen() {
+  const rondes = loadSavedRounds();
+  rondes.forEach(r => {
+    const club = r.club || r.clubShort || '';
+    if (club) window._clubTrkCollapsed['club_' + club.replace(/\W/g, '_')] = false;
+    const baan = r.track || '';
+    if (club && baan) window._clubTrkCollapsed['trk_' + (club + '_' + baan).replace(/\W/g, '_')] = false;
+  });
 }
 
 function openQuickClub() {
@@ -8487,9 +8516,18 @@ function collapseAllCategories() {
   const gb = document.getElementById('groupByCategoryBtn');
   if (gb) { gb.style.background = 'var(--gold)'; gb.style.color = 'var(--green-deep)'; }
   ['groupByPlayerBtn', 'groupByTrackBtn', 'groupByWhsBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.style.background = ''; b.style.color = ''; } });
+  // Toggle: alle categorieën dicht, of allemaal open. De sleutels liggen vast, dus ze
+  // worden hier expliciet gezet (de standaard is 'dicht').
+  const catKeys = ['actief', 'import', 'opgeslagen', 'afgerond', 'gepland'];
+  const catDicht = catKeys.every(k => (window._catCollapsed || {})[k] !== false);
   window._catCollapsed = {};
+  catKeys.forEach(k => { window._catCollapsed[k] = !catDicht; });
   window._finYearCollapsed = {};
   loadSaved();
+  if (catDicht) {     // alles open: ook de jaargroepen binnen elke categorie
+    openAlleSubgroepen('#screen-archive', '_finYearCollapsed');
+    loadSaved();
+  }
 }
 
 // Klik op 'groepeer op speler': activeert de groepering en klapt daarbij altijd
@@ -8521,10 +8559,19 @@ function collapseAllPlayers() {
   ['groupByCategoryBtn', 'groupByTrackBtn', 'groupByWhsBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.style.background = ''; b.style.color = ''; } });
   const rounds = loadSavedRounds();
   const players = [...new Set(rounds.map(r => r.player).filter(Boolean))];
+  // Toggle: staat alles al dicht, dan gaat alles open. Zo kun je met dezelfde handeling
+  // terug, net als bij lang indrukken op een tabblad in Instellingen.
+  const huidig = window._pgCollapsed || {};
+  const allesDicht = players.length > 0
+    && players.every(p => huidig['pg_' + p.replace(/\W/g, '_')]);
   window._pgCollapsed = {};
   window._pgYearCollapsed = {};
-  players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = true; });
+  players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = !allesDicht; });
   loadSaved();
+  if (allesDicht) {   // alles open: ook de jaargroepen binnen elke speler
+    openAlleSubgroepen('#screen-archive', '_pgYearCollapsed');
+    loadSaved();
+  }
 }
 
 function openQuickLast20() {
@@ -8597,15 +8644,16 @@ function toggleWhsShort() {
   loadSaved();
 }
 
-// Long-press op 'groepeer op WHS': gaat direct naar de verkorte kaarten (geen toggle) —
-// long-press betekent altijd 'verkort', ongeacht de huidige staat.
+// Long-press op 'groepeer op WHS': wisselt tussen verkorte en volledige kaarten. Stond
+// de WHS-groepering nog uit, dan gaat die eerst aan en begin je verkort.
 function setWhsShort() {
+  const stondUit = !window._groupByWhs;
   window._forceShowPlanned = false;
   window._groupByWhs = true;
   window._groupByPlayer = false;
   window._groupByCategory = false;
   window._groupByTrack = false;
-  window._whsShort = true;
+  window._whsShort = stondUit ? true : !window._whsShort;
   window._whsExpandedIds = new Set();
   const gb = document.getElementById('groupByWhsBtn');
   if (gb) { gb.style.background = 'var(--gold)'; gb.style.color = 'var(--green-deep)'; }
@@ -9445,7 +9493,10 @@ function loadSaved() {
       const jaar = jaarVan(r);
       const dicht = jaar ? isArchiveYearCollapsed(jaar) : false;
       if (jaar && jaar !== vorigJaar) {
-        kop = `<div class="year-sep" onclick="toggleArchiveYear('${jaar}')" style="cursor:pointer;display:flex;align-items:center;gap:8px">`
+        kop = `<div class="year-sep" onclick="jaarKopKlik('${jaar}')"`
+          + ` onpointerdown="jaarKopDown('${jaar}')" onpointerup="jaarKopUp()" onpointerleave="jaarKopUp()"`
+          + ` onpointercancel="jaarKopUp()" oncontextmenu="return false"`
+          + ` style="cursor:pointer;display:flex;align-items:center;gap:8px">`
           + `<span style="flex:1">${jaar}</span>`
           + `<span style="font-size:15px;font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
           + `${arrowSvg(15, !dicht)}`
@@ -10476,12 +10527,40 @@ let genderLongPressTimer = null;
 let genderLongPressFired = false;
 const LONG_PRESS_MS = 500;
 
+// Lang indrukken werkt overal hetzelfde: dezelfde duur, altijd een trilling als
+// bevestiging, en de tik die erop volgt wordt onderdrukt zodat de knop niet óók zijn
+// gewone actie doet. Eerder had elke plek zijn eigen kopie hiervan, met net andere
+// tijden (550 tegen 500 ms) en zonder trilling.
+function bindLangIndrukken(el, actie) {
+  if (!el) return;
+  let timer = null, gedaan = false;
+  const start = () => {
+    gedaan = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      gedaan = true;
+      if (navigator.vibrate) navigator.vibrate(20);
+      actie();
+    }, LONG_PRESS_MS);
+  };
+  const stop = () => clearTimeout(timer);
+  el.addEventListener('pointerdown', start);
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointerleave', stop);
+  el.addEventListener('pointercancel', stop);
+  el.addEventListener('click', e => {
+    if (gedaan) { e.stopImmediatePropagation(); e.preventDefault(); gedaan = false; }
+  }, true);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
 function startGenderLongPress(btn) {
   if (isTeeRowLocked()) return;
   genderLongPressFired = false;
   clearTimeout(genderLongPressTimer);
   genderLongPressTimer = setTimeout(() => {
     genderLongPressFired = true;
+    if (navigator.vibrate) navigator.vibrate(20);
     selectTeeRow(btn.closest('.tee-editor-row'));
   }, LONG_PRESS_MS);
 }
@@ -10498,6 +10577,7 @@ function startArrowLongPress(btn) {
   clearTimeout(arrowLongPressTimer);
   arrowLongPressTimer = setTimeout(() => {
     arrowLongPressFired = true;
+    if (navigator.vibrate) navigator.vibrate(20);
     cancelTeeRowSelection(btn.closest('.tee-editor-row'));
   }, LONG_PRESS_MS);
 }
@@ -13614,11 +13694,15 @@ function toggleAllSettingsSections() {
   // Alleen de secties van de tab die NU zichtbaar is: anders bepaalt de stand van de
   // andere tabs mee of er open- of dichtgeklapt wordt, en lijkt de knop niets te doen
   // (dat gebeurde op de Gegevens-tab).
-  const zichtbareTab = ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData']
+  // ALLE zichtbare blokken, niet alleen het eerste: het tabblad Algemeen bestaat uit
+  // twee blokken (settingsTabMain en settingsTabMain2 met Clubs & Rondes). Werd alleen
+  // het eerste gepakt, dan bleef Clubs & Rondes achter terwijl de rest openklapte.
+  const zichtbareBlokken = ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData']
     .map(id => document.getElementById(id))
-    .find(t => t && !t.classList.contains('hidden'));
-  const bron = zichtbareTab || document;
-  const koppen = [...bron.querySelectorAll('[data-section-key]')];
+    .filter(t => t && !t.classList.contains('hidden'));
+  const koppen = zichtbareBlokken.length
+    ? zichtbareBlokken.flatMap(b => [...b.querySelectorAll('[data-section-key]')])
+    : [...document.querySelectorAll('[data-section-key]')];
   if (!koppen.length) return;
   const isDicht = k => {
     const v = window._setSectionCollapsed[k.dataset.sectionKey];
@@ -13627,14 +13711,17 @@ function toggleAllSettingsSections() {
   const allesDicht = koppen.every(isDicht);
   koppen.forEach(k => { window._setSectionCollapsed[k.dataset.sectionKey] = !allesDicht; });
   bewaarSectieStanden();
-  if (navigator.vibrate) navigator.vibrate(20);
   applySettingsSections();
 }
 let settingsTabHoldTimer = null, settingsTabHoldFired = false;
 function settingsTabDown() {
   settingsTabHoldFired = false;
   clearTimeout(settingsTabHoldTimer);
-  settingsTabHoldTimer = setTimeout(() => { settingsTabHoldFired = true; toggleAllSettingsSections(); }, LONG_PRESS_MS);
+  settingsTabHoldTimer = setTimeout(() => {
+    settingsTabHoldFired = true;
+    if (navigator.vibrate) navigator.vibrate(20);
+    toggleAllSettingsSections();
+  }, LONG_PRESS_MS);
 }
 function settingsTabUp() {
   clearTimeout(settingsTabHoldTimer);
@@ -13869,7 +13956,11 @@ let puttsHoldTimer = null, puttsHoldFired = false;
 function puttsValDown(i) {
   puttsHoldFired = false;
   clearTimeout(puttsHoldTimer);
-  puttsHoldTimer = setTimeout(() => { puttsHoldFired = true; clearPutts(i); }, PLUS_HOLD_MS);
+  puttsHoldTimer = setTimeout(() => {
+    puttsHoldFired = true;
+    if (navigator.vibrate) navigator.vibrate(20);
+    clearPutts(i);
+  }, PLUS_HOLD_MS);
 }
 function puttsValUp() {
   clearTimeout(puttsHoldTimer);
@@ -13891,6 +13982,33 @@ function isArchiveYearCollapsed(jaar) {
   if (!archiveYearsClosedDefault()) return false;
   return +jaar < new Date().getFullYear() - 1; // dit en vorig jaar blijven open
 }
+// Lang indrukken op een jaarkop: alle jaren in- of uitklappen. Zijn ze allemaal al
+// dicht, dan gaan ze open; anders gaan ze dicht. Kort tikken doet één jaar.
+let jaarHoldTimer = null, jaarHoldFired = false;
+function jaarKopDown(jaar) {
+  jaarHoldFired = false;
+  clearTimeout(jaarHoldTimer);
+  jaarHoldTimer = setTimeout(() => {
+    jaarHoldFired = true;
+    if (navigator.vibrate) navigator.vibrate(20);
+    toggleAlleArchiefJaren();
+  }, LONG_PRESS_MS);
+}
+function jaarKopUp() { clearTimeout(jaarHoldTimer); }
+function jaarKopKlik(jaar) {
+  if (jaarHoldFired) { jaarHoldFired = false; return; }
+  toggleArchiveYear(jaar);
+}
+
+function toggleAlleArchiefJaren() {
+  const jaren = [...new Set(loadSavedRounds().map(r => (r.date || '').slice(0, 4)).filter(Boolean))];
+  if (!jaren.length) return;
+  const allesDicht = jaren.every(j => isArchiveYearCollapsed(j));
+  window._flatYearCollapsed = window._flatYearCollapsed || {};
+  jaren.forEach(j => { window._flatYearCollapsed[j] = !allesDicht; });
+  loadSaved();
+}
+
 function toggleArchiveYear(jaar) {
   window._flatYearCollapsed = window._flatYearCollapsed || {};
   window._flatYearCollapsed[jaar] = !isArchiveYearCollapsed(jaar);
@@ -13948,12 +14066,40 @@ function toggleClubGroupByCategory() {
 }
 
 // Long-press op 'groepeer op categorie' bij Clubs: alle categorieën inklappen.
+// Bij "alles openklappen" is het niet genoeg om de hoofdgroepen open te zetten: de
+// groepen dáárin (jaren binnen een speler, jaren binnen een categorie) staan standaard
+// dicht en hebben elk een eigen sleutel. Die sleutels staan in de zojuist opgebouwde
+// lijst, dus ze worden daaruit gelezen en op 'open' gezet.
+function openAlleSubgroepen(scherm, ...stateNamen) {
+  stateNamen.forEach(naam => {
+    window[naam] = window[naam] || {};
+    document.querySelectorAll(`${scherm} [onclick*="${naam}"]`).forEach(kop => {
+      const oc = kop.getAttribute('onclick') || '';
+      const m = new RegExp(`${naam}'?\\]?\\['([^']+)'\\]`).exec(oc)
+             || new RegExp(`${naam}\\['([^']+)'\\]`).exec(oc);
+      if (m) window[naam][m[1]] = false;
+    });
+  });
+}
+
+// Lang indrukken op 'groepeer clubs op categorie': alle groepen in- of uitklappen.
 function collapseAllClubCategories() {
   window._clubGrouped = true;
+  const huidig = window._clubSectionCollapsed || {};
+  // De standaard is 'dicht'; alles staat dus dicht zolang geen enkele sleutel false is.
+  const allesDicht = !Object.keys(huidig).some(k => huidig[k] === false);
   window._clubSectionCollapsed = {};
   const btn = document.getElementById('clubGroupByCategoryBtn');
   if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = 'var(--green-deep)'; }
   buildClubList();
+  if (allesDicht) {
+    // Openzetten kan alleen per sleutel; die staan in de zojuist gebouwde lijst.
+    document.querySelectorAll("#screen-club [onclick*='_clubSectionCollapsed']").forEach(kop => {
+      const m = /_clubSectionCollapsed\['([^']+)'\]/.exec(kop.getAttribute('onclick') || '');
+      if (m) window._clubSectionCollapsed[m[1]] = false;
+    });
+    buildClubList();
+  }
 }
 
 // Instellingen: 'Meer uitleg'-uitklapper (korte standaardtekst + volledige uitleg op aanvraag)
@@ -14177,92 +14323,13 @@ document.addEventListener('focusin', (e) => {
   applyBadWeather();
 
   // Long-press op 'groepeer op speler' (optioneel): alle spelers inklappen
-  (function bindQuickLast20() {
-    const btn = document.getElementById('groupByPlayerBtn');
-    if (!btn) return;
-    let timer = null, fired = false;
-    const start = () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; collapseAllPlayers(); }, 550);
-    };
-    const cancel = () => { clearTimeout(timer); };
-    btn.addEventListener('pointerdown', start);
-    btn.addEventListener('pointerup', cancel);
-    btn.addEventListener('pointerleave', cancel);
-    btn.addEventListener('pointercancel', cancel);
-    // Voorkom dat de gewone klik volgt op een geslaagde long-press
-    btn.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
-  })();
-
-  // Long-press op 'groepeer op categorie' (optioneel): alles inklappen
-  (function bindQuickPlanned() {
-    const btn = document.getElementById('groupByCategoryBtn');
-    if (!btn) return;
-    let timer = null, fired = false;
-    const start = () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; collapseAllCategories(); }, 550);
-    };
-    const cancel = () => { clearTimeout(timer); };
-    btn.addEventListener('pointerdown', start);
-    btn.addEventListener('pointerup', cancel);
-    btn.addEventListener('pointerleave', cancel);
-    btn.addEventListener('pointercancel', cancel);
-    btn.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
-  })();
-
-  // Long-press op 'groepeer op categorie' bij Clubs (optioneel): alles inklappen
-  (function bindQuickClubCategory() {
-    const btn = document.getElementById('clubGroupByCategoryBtn');
-    if (!btn) return;
-    let timer = null, fired = false;
-    const start = () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; collapseAllClubCategories(); }, 550);
-    };
-    const cancel = () => { clearTimeout(timer); };
-    btn.addEventListener('pointerdown', start);
-    btn.addEventListener('pointerup', cancel);
-    btn.addEventListener('pointerleave', cancel);
-    btn.addEventListener('pointercancel', cancel);
-    btn.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
-  })();
-
-  // Long-press op 'groepeer op club' (optioneel): alles inklappen
-  (function bindQuickClub() {
-    const btn = document.getElementById('groupByTrackBtn');
-    if (!btn) return;
-    let timer = null, fired = false;
-    const start = () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; collapseAllClubs(); }, 550);
-    };
-    const cancel = () => { clearTimeout(timer); };
-    btn.addEventListener('pointerdown', start);
-    btn.addEventListener('pointerup', cancel);
-    btn.addEventListener('pointerleave', cancel);
-    btn.addEventListener('pointercancel', cancel);
-    btn.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
-  })();
-
-  // Long-press op 'groepeer op WHS' (optioneel): gaat direct naar verkorte kaarten
-  // (datumregel + laatste twee regels). Het pijltje bij de naam schakelt terug naar
-  // uitgebreid (of weer verkort), zie staticHeader/toggleWhsShort.
-  (function bindQuickWhs() {
-    const btn = document.getElementById('groupByWhsBtn');
-    if (!btn) return;
-    let timer = null, fired = false;
-    const start = () => {
-      fired = false;
-      timer = setTimeout(() => { fired = true; setWhsShort(); }, 550);
-    };
-    const cancel = () => { clearTimeout(timer); };
-    btn.addEventListener('pointerdown', start);
-    btn.addEventListener('pointerup', cancel);
-    btn.addEventListener('pointerleave', cancel);
-    btn.addEventListener('pointercancel', cancel);
-    btn.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
-  })();
+  // Lang indrukken op de groepeerknoppen: alles in- of uitklappen (een toggle), met
+  // trilling. Alle vijf via dezelfde hulpfunctie, zodat duur en gedrag gelijk zijn.
+  bindLangIndrukken(document.getElementById('groupByPlayerBtn'), collapseAllPlayers);
+  bindLangIndrukken(document.getElementById('groupByCategoryBtn'), collapseAllCategories);
+  bindLangIndrukken(document.getElementById('clubGroupByCategoryBtn'), collapseAllClubCategories);
+  bindLangIndrukken(document.getElementById('groupByTrackBtn'), collapseAllClubs);
+  bindLangIndrukken(document.getElementById('groupByWhsBtn'), setWhsShort);
 
   const savedName   = storage.getItem('golf_profile_name');
   const savedHcp    = storage.getItem('golf_profile_hcp');
