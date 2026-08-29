@@ -1283,7 +1283,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04B</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04E</div>
 </div>
 
 <script>
@@ -5020,7 +5020,10 @@ function renderPlayerStats() {
     const style = `flex:1;padding:10px 4px;font-size:17px;font-weight:700;white-space:nowrap`
       + (active ? ';background:var(--gold);color:var(--green-deep)' : '')
       + (disabled ? ';opacity:.4;pointer-events:none' : '');
-    return `<button class="btn-secondary" style="${style}" ${disabled ? 'disabled' : ''} onclick="window._statChartPeriod='${key}';renderPlayerStats()">${label}</button>`;
+    // De klasse 'stat-periode-knop' is het aanknopingspunt voor lang indrukken: dat
+    // klapt de drie hoofdgroepen op dit scherm in of uit, net als op een tabblad in
+    // Instellingen.
+    return `<button class="btn-secondary stat-periode-knop" style="${style}" ${disabled ? 'disabled' : ''} onclick="window._statChartPeriod='${key}';renderPlayerStats()">${label}</button>`;
   };
   const periodBar = `<div style="display:flex;gap:6px">`
     + periodBtn('Laatste 20', 'l20') + periodBtn('12 maanden', 'jaar') + periodBtn('Alles', 'alles')
@@ -5527,16 +5530,23 @@ function renderPlayerStats() {
   // ruiziger. Daarom staan de aantallen erbij; drempel is 1 van elk type (Marks keuze:
   // het aantal staat er netjes bij, dus de lezer ziet zelf hoe hard het getal is).
   const typeAvg = (aantalHoles) => {
-    const vals = periodRounds
+    const gebruikt = periodRounds
       .filter(r => r.qualifying && ((r.holesCount ?? (r.holes || []).length) === aantalHoles))
-      .map(r => { const e = effectiveSD(r); return e ? e.value : null; })
-      .filter(v => v != null);
-    return vals.length ? { avg: vals.reduce((s, v) => s + v, 0) / vals.length, n: vals.length } : { avg: null, n: 0 };
+      .map(r => ({ r, e: effectiveSD(r) }))
+      .filter(x => x.e && x.e.value != null);
+    const vals = gebruikt.map(x => x.e.value);
+    // Zelfde regel als bij de andere gemiddelden op dit scherm (per tee, per baan, per
+    // club, per dagdeel): zit er een ronde bij die zelf een waarschuwing heeft, dan
+    // krijgt het gemiddelde het driehoekje. Ontbrak hier als enige.
+    const warn = gebruikt.some(x => roundHasWarning(x.r));
+    return vals.length
+      ? { avg: vals.reduce((s, v) => s + v, 0) / vals.length, n: vals.length, warn }
+      : { avg: null, n: 0, warn: false };
   };
   const t9 = typeAvg(9), t18 = typeAvg(18);
   // Eigen regel per rondetype (zebra-striping zoals de andere datarijen).
   const typeLine = (label, t, zebra) => t.n < getMinRoundsStat() ? '' :
-    `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">${label}</span><span style="font-size:17px;font-weight:700">${fmt1(t.avg)} <span style="font-size:15px;color:var(--muted);font-weight:400">${t.n}×</span></span></div>`;
+    `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">${label}</span><span style="font-size:17px;font-weight:700;display:flex;align-items:center;gap:5px">${t.warn ? warningIconSmall : ''}${fmt1(t.avg)} <span style="font-size:15px;color:var(--muted);font-weight:400">${t.n}×</span></span></div>`;
   const typeRow = typeLine('Gem. dagresultaat 9 holes', t9, false) + typeLine('Gem. dagresultaat 18 holes', t18, true);
   const formBody = trendRow + spreadRow + typeRow + hdSubHead + hdBody + threeRow + nineRow;
   // ── Kaart "Putten en greens" ─────────────────────────────────────────────
@@ -5625,6 +5635,7 @@ function renderPlayerStats() {
   // derivedLowHiDetailed) of als de gebruiker dit zelf heeft uitgezet.
   renderSdChart(sdView, hiView, capView, capTypeView, esrAppliedView, warnView, whs ? whs.usedIds : null, periodRounds, new Set(last20.map(r => r.id)), lowHiGraphEnabled() ? lowHiDetailForGraph : null);
   initSdSwipe();
+  koppelPeriodeKnoppen();   // de knoppen zijn zojuist opnieuw opgebouwd
 }
 
 // SD-lijngrafiek (SVG) met tweede lijn voor het handicapverloop
@@ -7065,6 +7076,29 @@ if (navigator.storage && navigator.storage.persist) {
 function toggleWatIfCard() {
   window._watIfCollapsed = window._watIfCollapsed === false; // false (open) -> true, anders -> false
   renderPlayerStats();
+}
+
+// Lang indrukken op een periodeknop: alle drie de hoofdgroepen tegelijk in- of
+// uitklappen. Staat er nog iets open, dan gaat alles dicht; anders alles open —
+// dezelfde regel als bij lang indrukken op een tabblad in Instellingen.
+function toggleAlleStatsGroepen() {
+  const keys = ['handicap', 'prestaties', 'banen'];
+  const allesDicht = keys.every(k => {
+    const v = storage.getItem('golf_stats_grp_' + k);
+    return v == null ? k !== 'handicap' : v === 'closed';
+  });
+  keys.forEach(k => storage.setItem('golf_stats_grp_' + k, allesDicht ? 'open' : 'closed'));
+  renderPlayerStats();
+}
+
+// De knoppen worden bij elke weergave opnieuw opgebouwd, dus de koppeling moet daarna
+// steeds opnieuw gelegd worden.
+function koppelPeriodeKnoppen() {
+  document.querySelectorAll('.stat-periode-knop').forEach(knop => {
+    if (knop._langGekoppeld) return;
+    knop._langGekoppeld = true;
+    bindLangIndrukken(knop, toggleAlleStatsGroepen);
+  });
 }
 
 // In-/uitklappen van de drie hoofdgroepen op Statistieken; stand in storage zodat
