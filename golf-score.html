@@ -903,7 +903,7 @@
   <!-- Backupstand: koploos blokje onder de tabknoppen, BUITEN de drie tabbladen zodat
        het overal zichtbaar is. Stond eerst achter de kop "Backup" op de Gegevens-tab
        en zat daar verstopt — zeker nu de secties standaard ingeklapt zijn. -->
-  <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Backup (export &amp; import)', 'exportCard');">
+  <div class="card" id="backupStatusTop" style="cursor:pointer" onclick="switchSettingsTab('data'); openSectie('settingsTabData|Exporteren', 'exportCard');">
     <div id="lastBackupInfoTop" style="font-size:17px;color:var(--muted)"></div>
     <div id="newRoundsInfoTop" class="hidden" style="font-size:17px;color:var(--muted);margin-top:4px"></div>
   </div>
@@ -1172,37 +1172,26 @@
 
   </div>
   <div id="settingsTabData" class="hidden">
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslaglocatie</div>
-  <div class="card" id="opslagCard">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Startadres van de app</div>
-    <div id="opslagKenmerkUitleg" style="font-size:17px;color:var(--muted);margin-bottom:8px"></div>
-    <!-- Het adres wordt PAS getoond als deze locatie een naam heeft. Anders zou hier een
-         adres staan dat de app zelf verzon, niet te onderscheiden van het adres waarmee
-         je binnenkwam — terwijl er tegelijk "nog geen naam" stond. -->
-    <div id="opslagLinkRegel" style="font-size:15px;color:var(--white);word-break:break-all;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px">—</div>
-    <div id="opslagKopieerMsg" class="hidden" style="font-size:15px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px">Gekopieerd</div>
-    <button id="opslagKopieerBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:6px" onclick="kopieerOpslagLink()">Adres kopiëren</button>
-    <button id="opslagKenmerkBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:8px" onclick="opslagKenmerkKnop()">Naam geven</button>
-    <div style="font-size:15px;color:var(--muted);text-align:center">Opslagcode <span id="opslagCodeTekst" style="color:var(--white);font-weight:700">—</span></div>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-    <div class="more-full">Clubs en rondes worden opgeslagen per browserprofiel. Deze opslaglocaties hebben daarom een unieke code. Die code staat in de naam van je backupbestanden, zodat de app kan melden als een bestand uit een andere locatie komt. Door de naam van de opslaglocatie in het adres van de app op te nemen weet je zeker welke opslaglocatie gebruikt wordt. Zo kun je bewust meerdere locaties gebruiken: je gewone locatie <b>hoofd</b>, en bijvoorbeeld een locatie <b>test</b> om iets uit te proberen.</div>
-  </div>
-
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Backup <span style="text-transform:none;font-weight:400">(export &amp; import)</span></div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Exporteren</div>
   <div class="card" id="exportCard">
     <!-- De backupstand staat nu in het blokje bovenaan (backupStatusTop), zichtbaar op
          alle drie de tabbladen. Deze twee elementen blijven bestaan maar zijn verborgen:
          updateLastBackupDisplay vult ze en kopieert de inhoud naar boven. -->
     <div id="lastBackupInfo" style="display:none"></div>
     <div id="newRoundsInfo" class="hidden" style="display:none"></div>
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exporteren naar <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exportmap: <span id="exportFolderName" style="color:var(--muted)">Downloads</span></div>
     <div class="export-clubs-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-clubs-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
     <div class="export-rounds-error hidden" style="font-size:17px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px"></div>
     <div class="export-rounds-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
-    <div style="display:flex;gap:10px;margin-bottom:12px">
+    <!-- Rondes bovenaan en in de hoofdactiestijl: dat is de knop die je na elke ronde
+         gebruikt, en waar de backupherinnering naar verwijst. Clubs verandert zelden,
+         dagresultaten is een export naar buiten en geen backup. -->
+    <div style="display:flex;margin-bottom:10px">
+      <button class="btn-primary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:0" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
+    </div>
+    <div style="display:flex;margin-bottom:10px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllClubs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs</b></button>
-      <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportAllRounds()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes</b></button>
     </div>
     <div style="display:flex;margin-bottom:12px">
       <button class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="exportDagresultaten()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg><b>Dagresultaten</b></button>
@@ -1210,12 +1199,12 @@
     <div class="more-toggle" onclick="toggleMoreInfo(this)">Toon opties<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
     <div class="more-full">
       <div class="subpanel" style="margin-top:8px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Exportmap</div>
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Kies exportmap</div>
         <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Huidige map: <span id="exportFolderNameInBlock" style="color:var(--white);font-weight:700">Downloads</span></div>
         <div id="exportFolderUnsupported" class="hidden" style="font-size:15px;color:var(--muted);margin-bottom:8px">Mapkeuze wordt niet ondersteund op dit toestel/deze browser — exports gaan naar Downloads.</div>
         <div class="export-folder-success hidden" style="font-size:17px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px"></div>
         <div style="display:flex;gap:10px">
-          <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map kiezen…</button>
+          <button id="pickExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="pickExportFolder()">Map…</button>
           <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
         </div>
       </div>
@@ -1238,12 +1227,30 @@
     </div>
   </div>
 
-    <div class="card">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Importeren</div>
-    <div style="display:flex;gap:10px">
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
-          <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
-        </div>
+<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Importeren</div>
+  <div class="card">
+    <div style="display:flex;margin-bottom:10px">
+      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importRoundFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M3 7v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg><b>Rondes…</b></button>
+    </div>
+    <div style="display:flex">
+      <button class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="document.getElementById('importClubFile').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg><b>Clubs…</b></button>
+    </div>
+  </div>
+
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslaglocatie</div>
+  <div class="card" id="opslagCard">
+    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Startadres van de app</div>
+    <div id="opslagKenmerkUitleg" style="font-size:17px;color:var(--muted);margin-bottom:8px"></div>
+    <!-- Het adres wordt PAS getoond als deze locatie een naam heeft. Anders zou hier een
+         adres staan dat de app zelf verzon, niet te onderscheiden van het adres waarmee
+         je binnenkwam — terwijl er tegelijk "nog geen naam" stond. -->
+    <div id="opslagLinkRegel" style="font-size:15px;color:var(--white);word-break:break-all;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px">—</div>
+    <div id="opslagKopieerMsg" class="hidden" style="font-size:15px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px">Gekopieerd</div>
+    <button id="opslagKopieerBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:6px" onclick="kopieerOpslagLink()">Adres kopiëren</button>
+    <button id="opslagKenmerkBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:8px" onclick="opslagKenmerkKnop()">Naam geven</button>
+    <div style="font-size:15px;color:var(--muted);text-align:center">Opslagcode <span id="opslagCodeTekst" style="color:var(--white);font-weight:700">—</span></div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
+    <div class="more-full">Clubs en rondes worden opgeslagen per browserprofiel. Deze opslaglocaties hebben daarom een unieke code. Die code staat in de naam van je backupbestanden, zodat de app kan melden als een bestand uit een andere locatie komt. Door de naam van de opslaglocatie in het adres van de app op te nemen weet je zeker welke opslaglocatie gebruikt wordt. Zo kun je bewust meerdere locaties gebruiken: je gewone locatie <b>hoofd</b>, en bijvoorbeeld een locatie <b>test</b> om iets uit te proberen.</div>
   </div>
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opruimen &amp; resetten</div>
@@ -1276,7 +1283,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-043</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04B</div>
 </div>
 
 <script>
@@ -3958,6 +3965,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       ['Tee',      game.tee],
       ['Course Rating (CR)', game.CR ?? '—'],
       ['Slope Rating (SR)',  game.SR ?? '—'],
+      ['Qualifying', game.qualifying ? 'Ja' : 'Nee'],
     ]],
     ['Resultaat', [
       ['Holes',    played.length + ' / ' + game.holes.length + ' gespeeld'],
