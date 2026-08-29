@@ -1283,7 +1283,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-04F</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-051</div>
 </div>
 
 <script>
@@ -5613,12 +5613,16 @@ function renderPlayerStats() {
   const controlChartInner = bouwRegelkaartGrafiek({ period, periodRounds, sdView });
   el.innerHTML = kpiRow
     + stickyPeriodBar
-    + grpHeader('handicap', 'Handicap')
+    // Alle drie de hoofdgroepen krijgen het driehoekje als er in hún cijfers een ronde
+    // zonder dagresultaat meetelt. Eerder had alleen Clubs dat, waardoor je bij een
+    // dichtgeklapte groep niet kon zien dat er iets onzeker was.
+    // Handicap rekent met de laatste 20; Prestaties met de rondes van de gekozen periode.
+    + grpHeader('handicap', `Handicap${hcpUncertain ? warningIconSmall : ''}`)
     + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}><div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdChart"></div></div><div id="sdDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>${lowHiDateLine}<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:13px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
-    + grpHeader('prestaties', 'Prestaties')
+    + grpHeader('prestaties', `Prestaties${periodRounds.some(roundHasWarning) ? warningIconSmall : ''}`)
     + (grpOpen('prestaties') ? distCard + puttCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
     + grpHeader('banen', `Clubs${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
     + (grpOpen('banen') ? trackCard : '')
@@ -9527,7 +9531,15 @@ function loadSaved() {
     const shown = zichtbaar.slice(0, limit);
     const shownIds = new Set(shown.map(r => String(r.id)));
     const jaarTotaal = {};
-    if (toonJaarkoppen) rest.forEach(r => { const j = jaarVan(r); if (j) jaarTotaal[j] = (jaarTotaal[j] || 0) + 1; });
+    // Per jaar ook bijhouden of er een ronde zonder dagresultaat in zit, zodat de
+    // jaarkop hetzelfde driehoekje kan tonen als de andere inklapkoppen.
+    const jaarWaarschuwing = {};
+    if (toonJaarkoppen) rest.forEach(r => {
+      const j = jaarVan(r);
+      if (!j) return;
+      jaarTotaal[j] = (jaarTotaal[j] || 0) + 1;
+      if (roundHasWarning(r)) jaarWaarschuwing[j] = true;
+    });
     let vorigJaar = null;
     html += (toonJaarkoppen ? rest : shown).map(r => {
       if (!toonJaarkoppen) return makeCard(r);
@@ -9539,7 +9551,7 @@ function loadSaved() {
           + ` onpointerdown="jaarKopDown('${jaar}')" onpointerup="jaarKopUp()" onpointerleave="jaarKopUp()"`
           + ` onpointercancel="jaarKopUp()" oncontextmenu="return false"`
           + ` style="cursor:pointer;display:flex;align-items:center;gap:8px">`
-          + `<span style="flex:1">${jaar}</span>`
+          + `<span style="flex:1;display:flex;align-items:center;gap:6px">${jaar}${jaarWaarschuwing[jaar] ? warningIconSmall : ''}</span>`
           + `<span style="font-size:15px;font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
           + `${arrowSvg(15, !dicht)}`
           + `</div>`;
