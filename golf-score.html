@@ -657,7 +657,7 @@
     </div>
     <div class="fg">
       <label for="iName">Naam</label>
-      <input id="iName" type="text" placeholder="Jouw naam" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,''); savePlayerProfile()" onblur="this.value=this.value.trim(); savePlayerProfile()" />
+      <input id="iName" type="text" placeholder="Jouw naam" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+.,!'&]/g,''); savePlayerProfile()" onfocus="this.dataset.vorigeNaam=this.value.trim()" onblur="this.value=this.value.trim(); controleerNaamswijziging(this)" />
     </div>
     <div class="fg">
       <label>Handicap</label>
@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-06D</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-077</div>
 </div>
 
 <script>
@@ -1947,17 +1947,27 @@ const storage = (() => {
       setItem:    (k,v) => {
         try {
           ls.setItem(k, v);
+          // Gelukt: de storingsmelding mag weg, maar alleen als het DEZELFDE sleutel is
+          // die eerder faalde. De app schrijft voortdurend andere sleutels weg, en die
+          // slagen wél — die zouden de waarschuwing meteen weer wissen terwijl je rondes
+          // nog steeds niet worden opgeslagen. De melding blijft dus staan tot precies
+          // dat wegschrijven weer lukt; niet een paar seconden, want dan speel je verder
+          // in de veronderstelling dat je scores bewaard worden.
+          if (storage._faalKey === k) {
+            storage._faalKey = null;
+            document.getElementById('opslagStoringMelding')?.remove();
+          }
           return true;
         } catch(e) {
           console.error('localStorage vol of geblokkeerd:', e);
-          // Toon eenmalige melding
-          if (!storage._fullWarned) {
-            storage._fullWarned = true;
+          // Melding blijft staan zolang die sleutel niet weggeschreven kan worden.
+          if (!storage._faalKey) {
+            storage._faalKey = k;
             const el = document.createElement('div');
+            el.id = 'opslagStoringMelding';
             el.textContent = 'Opslaan mislukt — geheugen vol';
             el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#b41e1e;color:#fff;font-size:17px;font-weight:700;padding:10px 20px;border-radius:10px;z-index:9999';
             document.body.appendChild(el);
-            setTimeout(() => { el.remove(); storage._fullWarned = false; }, 2000);
           }
           return false;
         }
@@ -3097,6 +3107,83 @@ function setHeaderInfo(track, tee, chcp) {
   setTimeout(() => { adjustThirdHeaderRow(); updateHeaderHeight(); }, 0);
 }
 
+// De app groepeert alles op de NAAM in het startveld: je laatste 20, je gemiddelden en
+// je Low HI. Twee dingen kunnen daar stilletjes misgaan.
+//   * Hernoemen ("Mark" -> "Mark V"): je oude rondes staan nog op de oude naam en tellen
+//     ineens niet meer mee. Gemeten: van 20 meetellende rondes naar nul, Low HI weg.
+//   * Botsen: neem je een naam die al bij iemand anders in je archief staat, dan gaan
+//     diens rondes meetellen in JOUW handicap.
+// Allebei zonder één woord uitleg. Daarom deze controle bij het verlaten van het veld —
+// niet bij elke toetsaanslag, want dan zou hij tijdens het typen al afgaan.
+function controleerNaamswijziging(el) {
+  const oud = (el.dataset.vorigeNaam || '').trim();
+  const nieuw = (el.value || '').trim();
+  el.dataset.vorigeNaam = nieuw;
+  if (!nieuw || oud === nieuw) { savePlayerProfile(); return; }
+
+  const rondes = leesRondes();
+  const opNieuw = rondes.filter(r => (r.player || '') === nieuw).length;
+  const opOud   = rondes.filter(r => (r.player || '') === oud).length;
+
+  const terug = () => { el.value = oud; el.dataset.vorigeNaam = oud; savePlayerProfile(); };
+
+  // Botsing gaat vóór: dat is het ernstigste geval, ook als er tegelijk rondes op de
+  // oude naam staan.
+  if (opNieuw) {
+    toonNaamWijzigModal(
+      'Naam bestaat al', 'orange',
+      `Er ${opNieuw === 1 ? 'staat al 1 ronde' : `staan al ${opNieuw} rondes`} op "${nieuw}". `
+      + 'Die gaan meetellen in je handicap en je statistieken.',
+      [{ tekst: 'Annuleren', hoofd: true,  actie: terug },
+       { tekst: 'Toch gebruiken',          actie: () => savePlayerProfile() }]);
+    return;
+  }
+
+  if (opOud) {
+    toonNaamWijzigModal(
+      'Naam gewijzigd', null,
+      `Er ${opOud === 1 ? 'staat 1 ronde' : `staan ${opOud} rondes`} op "${oud}". `
+      + `Wil je die meenemen naar "${nieuw}"?`,
+      [{ tekst: 'Alles aanpassen', hoofd: true, actie: () => {
+           const lijst = loadSavedRounds();
+           lijst.forEach(r => { if ((r.player || '') === oud) r.player = nieuw; });
+           setRoundsAndMark(JSON.stringify(lijst));
+           savePlayerProfile();
+           loadSaved();
+         } },
+       { tekst: 'Alleen nieuwe rondes', actie: () => savePlayerProfile() },
+       { tekst: 'Annuleren',            actie: terug }]);
+    return;
+  }
+
+  savePlayerProfile();
+}
+
+function toonNaamWijzigModal(titel, kleur, tekst, knoppen) {
+  const t = document.getElementById('naamWijzigTitel');
+  if (t) { t.textContent = titel; t.style.color = kleur ? `var(--${kleur})` : 'var(--gold)'; }
+  const tx = document.getElementById('naamWijzigTekst');
+  if (tx) tx.textContent = tekst;
+  ['naamWijzigKnop1', 'naamWijzigKnop2', 'naamWijzigKnop3'].forEach((id, i) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    const k = knoppen[i];
+    b.classList.toggle('hidden', !k);
+    if (!k) return;
+    b.textContent = k.tekst;
+    // De aangeraden of veilige keuze staat bovenaan en valt op.
+    b.className = (k.hoofd ? 'btn-primary' : 'btn-secondary');
+    b.style.cssText = k.hoofd
+      ? 'width:100%;padding:12px;font-size:20px;margin-top:0'
+      : 'width:100%;padding:12px;font-size:17px';
+    b.onclick = () => {
+      document.getElementById('naamWijzigModal').classList.add('hidden');
+      k.actie();
+    };
+  });
+  document.getElementById('naamWijzigModal').classList.remove('hidden');
+}
+
 function savePlayerProfile() {
   const name = document.getElementById('iName').value.trim();
   const hcp  = getHcp();
@@ -3350,29 +3437,38 @@ function openRoundEditChoice(idx) {
   }
   const infoBtn = document.getElementById('roundEditChoiceInfo');
   if (infoBtn) {
-    infoBtn.innerHTML = `${EDIT_ICON}<span>Ronde bewerken</span>`;
+    infoBtn.innerHTML = `${EDIT_ICON}<span>Bewerken</span>`;
     infoBtn.onclick = () => { sluitRoundEditChoice(); openRoundInfoModal(idx); };
   }
-  // Bij een ronde zonder scores heeft 'Ronde resultaat' geen betekenis — erger nog: je
-  // zou daar een dagresultaat kunnen invullen voor een ronde die niet gespeeld is, en
-  // dat telt mee in de handicapberekening. Dus uit.
+  // De drie keuzes staan er altijd, in de volgorde waarin een ronde zijn leven doorloopt:
+  // eerst herplannen, dan bewerken, dan vaststellen. Wat niet van toepassing is staat
+  // uit in plaats van te verdwijnen, zodat de plek van elke knop vast blijft.
   const nogNietGespeeld = gespeeldeHoles(r) === 0;
+
+  const herplanBtn = document.getElementById('roundEditChoiceHerplan');
+  if (herplanBtn) {
+    // Herplannen kan alleen bij een ronde zonder ENKELE score: bij een gespeelde ronde
+    // zou dit de omstandigheden achteraf herschrijven en klopt het dagresultaat niet
+    // meer met wat je speelde.
+    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Herplannen</span>`;
+    herplanBtn.disabled = !nogNietGespeeld;
+    herplanBtn.style.opacity = nogNietGespeeld ? '' : '.4';
+    herplanBtn.title = nogNietGespeeld ? '' : 'Er zijn al scores ingevuld';
+    herplanBtn.onclick = nogNietGespeeld
+      ? () => { sluitRoundEditChoice(); herplanRonde(String(r.id)); } : null;
+  }
+
   const resBtn = document.getElementById('roundEditChoiceResult');
   if (resBtn) {
-    resBtn.innerHTML = `${RESULT_ICON}<span>Ronde resultaat</span>`;
+    // Vaststellen heeft geen betekenis zonder scores — erger nog: je zou een
+    // dagresultaat kunnen invullen voor een ronde die niet gespeeld is, en dat telt
+    // mee in de handicapberekening.
+    resBtn.innerHTML = `${RESULT_ICON}<span>Vaststellen</span>`;
     resBtn.disabled = nogNietGespeeld;
     resBtn.style.opacity = nogNietGespeeld ? '.4' : '';
     resBtn.title = nogNietGespeeld ? 'Nog geen scores ingevuld' : '';
     resBtn.onclick = nogNietGespeeld ? null
       : () => { sluitRoundEditChoice(); openRoundResultModal(idx); };
-  }
-  // Opnieuw plannen hoort bij een ronde die nog niet gespeeld is; onderaan, zodat hij
-  // met de duim goed te bereiken is.
-  const herplanBtn = document.getElementById('roundEditChoiceHerplan');
-  if (herplanBtn) {
-    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Opnieuw plannen</span>`;
-    herplanBtn.classList.toggle('hidden', !nogNietGespeeld);
-    herplanBtn.onclick = () => { sluitRoundEditChoice(); herplanRonde(String(r.id)); };
   }
   document.getElementById('roundEditChoiceModal').classList.remove('hidden');
 }
@@ -7912,14 +8008,23 @@ let _exportModalFormat = null;
 function openExportModal(idx) {
   _exportModalIdx = idx;
   _exportModalFormat = null;
-  // De agenda-optie alleen bij een ronde die nog moet komen: een afspraak voor een
-  // ronde van vorige week heeft geen zin.
+  // De agenda-optie staat er altijd, maar gaat UIT bij een ronde die al geweest is: een
+  // afspraak in het verleden zetten heeft geen zin. Uitzetten in plaats van verbergen,
+  // zoals overal in de app — dan blijft de plek van elke optie vast en zie je dat de
+  // mogelijkheid bestaat.
   const r = loadSavedRounds()[idx];
   const toekomst = !!r &&
     new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now();
-  document.getElementById('exportOptAgenda')?.classList.toggle('hidden', !toekomst);
+  const agendaBtn = document.getElementById('exportOptAgenda');
+  if (agendaBtn) {
+    agendaBtn.classList.remove('hidden');
+    agendaBtn.disabled = !toekomst;
+    agendaBtn.style.opacity = toekomst ? '' : '.4';
+    agendaBtn.title = toekomst ? '' : 'Alleen bij een geplande ronde';
+  }
   document.querySelectorAll('.export-opt').forEach(btn => {
     btn.classList.remove('active-bg');
+    if (btn.disabled) { btn.onclick = null; return; }
     btn.onclick = () => {
       _exportModalFormat = btn.dataset.format;
       document.querySelectorAll('.export-opt').forEach(b => b.classList.toggle('active-bg', b === btn));
@@ -7955,6 +8060,56 @@ function confirmExportModal() {
   setTimeout(() => status.classList.add('hidden'), 2000);
 }
 
+// Beoordeelt één ronde uit een importbestand. Bewust een KORTE lijst: alleen waarden
+// die de app zelf nooit kan maken en die, als ze binnenkomen, ongemerkt doorwerken in je
+// handicap. Elke extra regel is een kans om een geldige ronde ten onrechte te weigeren.
+// Geeft null terug als de ronde deugt, anders de reden.
+function keurRonde(r) {
+  if (!r || typeof r !== 'object') return 'geen ronde';
+  if (!r.date) return 'geen datum';
+  if (!r.player) return 'geen speler';
+  if (!Array.isArray(r.holes) || !r.holes.length) return 'geen holes';
+
+  const getal = (v) => (v == null || v === '') ? null : Number(v);
+  const buiten = (v, min, max) => v !== null && (!isFinite(v) || v < min || v > max);
+
+  if (buiten(getal(r.hcp), -10, 54)) return 'handicap buiten -10 tot 54';
+  if (buiten(getal(r.sdFinal), -10, 60)) return 'dagresultaat buiten -10 tot 60';
+  if (buiten(getal(r.sd), -10, 60)) return 'dagresultaat buiten -10 tot 60';
+  if (buiten(getal(r.CR), 20, 90)) return 'course rating buiten 20 tot 90';
+  if (buiten(getal(r.SR), 55, 155)) return 'slope rating buiten 55 tot 155';
+
+  // Het aantal holes moet kloppen met de lijst: anders geldt een ronde als niet
+  // afgerond (of juist wel) op grond van een getal dat nergens op slaat.
+  const aantal = getal(r.holesCount);
+  if (aantal !== null && aantal !== r.holes.length) return 'holesCount klopt niet met de holes';
+
+  for (const h of r.holes) {
+    if (!h || typeof h !== 'object') return 'onleesbare hole';
+    if (buiten(getal(h.par), 3, 6)) return 'par buiten 3 tot 6';
+    if (buiten(getal(h.score), 1, 20)) return 'score buiten 1 tot 20';
+    if (buiten(getal(h.putts), 0, 20)) return 'putts buiten 0 tot 20';
+  }
+  return null;
+}
+
+// Splitst een lijst rondes in de goede en de overgeslagen, met reden.
+function schiftRondes(lijst) {
+  const goed = [], over = [];
+  lijst.forEach(r => {
+    const reden = keurRonde(r);
+    if (reden) over.push({ r, reden }); else goed.push(r);
+  });
+  return { goed, over };
+}
+
+// Korte melding onder een importresultaat, als er iets is overgeslagen.
+function overgeslagenTekst(over, totaal) {
+  if (!over.length) return '';
+  const redenen = [...new Set(over.map(x => x.reden))].slice(0, 3).join(', ');
+  return ` ${over.length} van de ${totaal} overgeslagen (${redenen}).`;
+}
+
 function importRound(input) {
   const file = input.files[0];
   if (!file) return;
@@ -7972,11 +8127,15 @@ function importRound(input) {
 
       // Array van meerdere rondes (backup)
       if (Array.isArray(parsed) && parsed.length > 1) {
-        // Eerst alles valideren, vóór er iets gebeurt
-        for (const r of parsed) {
-          if (!r.date || !r.player || !Array.isArray(r.holes) || !r.holes.length) {
-            return showStatus('Ongeldig bestand — een of meer rondes missen verplichte gegevens', true);
-          }
+        // Rondes met onmogelijke waarden worden OVERGESLAGEN, niet geweigerd: anders
+        // blokkeert één rotte ronde je hele herstel, precies op het moment dat je het
+        // nodig hebt. Wat er niet in kwam, staat in de melding.
+        const totaalInBestand = parsed.length;
+        const geschift = schiftRondes(parsed);
+        parsed = geschift.goed;
+        const overslagTekst = overgeslagenTekst(geschift.over, totaalInBestand);
+        if (!parsed.length) {
+          return showStatus(`Geen bruikbare rondes in dit bestand.${overslagTekst}`, true);
         }
 
         const existingCount = loadSavedRounds().length;
@@ -7985,14 +8144,14 @@ function importRound(input) {
         // Archief nu al leeg: toevoegen en vervangen zijn functioneel identiek, dus geen
         // keuzescherm nodig.
         if (existingCount === 0) {
-          doAdditiveImport(parsed);
+          doAdditiveImport(parsed, overslagTekst);
           return;
         }
 
         showConfirmModal(
           'Meerdere rondes importeren',
           `Dit bestand bevat ${n} ronde${n !== 1 ? 's' : ''}. Wil je ze toevoegen aan je bestaande rondes (${existingCount} ronde${existingCount !== 1 ? 's' : ''}), of al je rondes volledig vervangen door dit bestand?`,
-          () => doAdditiveImport(parsed),
+          () => doAdditiveImport(parsed, overslagTekst),
           'Volledig herstellen…',
           () => {
             showDangerModal(
@@ -8001,7 +8160,7 @@ function importRound(input) {
               'Vervangen',
               () => {
                 doFullRestoreImport(parsed);
-                showStatus(`Rondes hersteld: ${n} ronde${n !== 1 ? 's' : ''}`, false);
+                showStatus(`Rondes hersteld: ${n} ronde${n !== 1 ? 's' : ''}.${overslagTekst}`, false);
               }
             );
           },
@@ -8129,7 +8288,7 @@ function doImportRound(r, saved, skipImportFlag = false, deferSave = false) {
 // 'Toevoegen': verwerkt elke ronde apart. Eén probleemronde blokkeert niet meer de hele
 // batch — exacte duplicaten en volle datum/tijd-slots worden overgeslagen en aan het eind
 // in één samenvattende melding gerapporteerd.
-function doAdditiveImport(parsed) {
+function doAdditiveImport(parsed, overslagTekst = '') {
   let imported = 0, exactDup = 0, slotFull = 0;
   const coupledPartners = [];
   // Archief één keer laden; doImportRound muteert deze lijst in-place (deferSave),
@@ -8179,7 +8338,7 @@ function doAdditiveImport(parsed) {
   if (exactDup) parts.push(`${exactDup} ronde${exactDup !== 1 ? 's' : ''} overgeslagen: bestond${exactDup !== 1 ? 'en' : ''} al (zelfde datum, tijd en speler).`);
   if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} overgeslagen: er stonden al 2 rondes op die datum/tijd — importeer die apart als je alsnog wilt overschrijven.`);
   if (coupledPartners.length) parts.push(`${coupledPartners.length} ronde${coupledPartners.length !== 1 ? 's kunnen' : ' kan'} gekoppeld worden aan een bestaande ronde op dezelfde datum/tijd (${coupledPartners.join(', ')}).`);
-  showInfoModal('Import voltooid', parts.join(' '));
+  showInfoModal('Import voltooid', parts.join(' ') + (overslagTekst || ''));
 }
 
 // 'Volledig herstellen': vervangt het hele archief in één keer door de inhoud van het
@@ -8699,7 +8858,6 @@ function toggleGroupByCategory() {
   window._catCollapsed = {
     actief: true, import: true, opgeslagen: true, afgerond: true, gepland: true,
   };
-  window._finYearCollapsed = {};
   loadSaved();
 }
 
@@ -8717,10 +8875,8 @@ function collapseAllCategories() {
   const catDicht = catKeys.every(k => (window._catCollapsed || {})[k] !== false);
   window._catCollapsed = {};
   catKeys.forEach(k => { window._catCollapsed[k] = !catDicht; });
-  window._finYearCollapsed = {};
   loadSaved();
   if (catDicht) {     // alles open: ook de jaargroepen binnen elke categorie
-    openAlleSubgroepen('#screen-archive', '_finYearCollapsed');
     loadSaved();
   }
 }
@@ -9623,24 +9779,10 @@ function loadSaved() {
     else if (toonLeeg)     html += legeGroep('Gepauzeerd', 'gepauzeerd', 'Er zijn geen gepauzeerde rondes.');
     if (finished.length) {
       html += collapsibleHeader('Afgerond', finished.length, 'afgerond', '_catCollapsed', finished.some(roundHasWarning));
-      // 'Laatste 12 maanden' en 'Overig' i.p.v. per jaar
-      const cutoff12 = Date.now() - 365 * 24 * 60 * 60 * 1000;
-      const last12 = [];
-      const rest = [];
-      finished.forEach(r => {
-        const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
-        (isFinite(t) && t >= cutoff12 ? last12 : rest).push(r);
-      });
-      if (last12.length) {
-        html += `<div style="padding-left:12px">`
-          + collapsibleHeader('Laatste 12 maanden', last12.length, 'fin_last12', '_finYearCollapsed', last12.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
-          + cardsIfExpanded(last12, 'fin_last12', '_finYearCollapsed') + '</div></div>';
-      }
-      if (rest.length) {
-        html += `<div style="padding-left:12px">`
-          + collapsibleHeader('Overig', rest.length, 'fin_overig', '_finYearCollapsed', rest.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
-          + cardsIfExpanded(rest, 'fin_overig', '_finYearCollapsed') + '</div></div>';
-      }
+      // Eén lijst op datum, nieuwste eerst. Een indeling binnen 'Afgerond' is niet nodig
+      // voor de snelheid — het dichtklappen van de groep zelf bespaart al het werk — en
+      // deze weergave gaat over de STATUS van een ronde, niet over wanneer je speelde.
+      html += cardsIfExpanded(finished, 'afgerond', '_catCollapsed');
       html += '</div>';
     }
     else if (toonLeeg)     html += legeGroep('Afgerond', 'afgerond', 'Er zijn geen afgeronde rondes.');
@@ -14823,10 +14965,22 @@ document.addEventListener('focusin', (e) => {
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
     <div id="roundEditChoiceTitle" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-secondary" id="roundEditChoiceHerplan" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
       <button class="btn-secondary" id="roundEditChoiceInfo" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
       <button class="btn-secondary" id="roundEditChoiceResult" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
-      <button class="btn-secondary hidden" id="roundEditChoiceHerplan" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
       <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px" onclick="sluitRoundEditChoice()">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<div id="naamWijzigModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:340px">
+    <div id="naamWijzigTitel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center"></div>
+    <div id="naamWijzigTekst" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button id="naamWijzigKnop1" class="btn-primary" style="width:100%;padding:12px;font-size:20px;margin-top:0"></button>
+      <button id="naamWijzigKnop2" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
+      <button id="naamWijzigKnop3" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
     </div>
   </div>
 </div>
@@ -15075,15 +15229,19 @@ document.addEventListener('focusin', (e) => {
 <div id="exportModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:380px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px">Deel / Exporteer</div>
+      <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px">Exporteer / Deel</div>
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeExportModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="txt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Tekst delen (TXT)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
+      <!-- Boven de streep gaat het naar een bestand, eronder naar het deelvenster van
+           je telefoon. Agenda hoort bij die tweede groep: hij probeert eerst te delen en
+           valt alleen terug op een download als de browser het bestandstype weigert. -->
+      <div style="border-top:1px solid var(--hairline);margin:4px 0"></div>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
-      <button class="btn-secondary export-opt hidden" id="exportOptAgenda" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="ics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>Zet in agenda (ICS)</button>
+      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="txt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Tekst (TXT)</button>
+      <button class="btn-secondary export-opt hidden" id="exportOptAgenda" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="ics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>Agenda (ICS)</button>
     </div>
     <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
