@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-066</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-06A</div>
 </div>
 
 <script>
@@ -9257,7 +9257,11 @@ function loadSaved() {
   };
   // Eén gedeelde bron voor de knoppen die precies hetzelfde aan/uit-gedrag volgen
   // (alleen actief zodra er rondes zijn).
-  const groupSearchBtns = ['groupByPlayerBtn', 'groupByCategoryBtn', 'groupByTrackBtn', 'groupByWhsBtn', 'archiveSearchBtn'];
+  // Alle knoppen boven de lijst, om ze in één keer uit te zetten als er niets te tonen
+  // is. Bewust afgeleid van GROEPEER_KNOPPEN: dat is de enige plek waar een groepeerknop
+  // bekend hoeft te zijn. Twee losse lijstjes leverden twee keer dezelfde fout op — een
+  // nieuwe knop stond er niet in en bleef dan als enige aan.
+  const groupSearchBtns = [...GROEPEER_KNOPPEN, 'archiveSearchBtn'];
 
   if (!saved.length) {
     el.innerHTML = '';
@@ -9324,6 +9328,7 @@ function loadSaved() {
     : bron;
 
   if (!filtered.length) {
+    werkAgendaKnopBij(0);   // ook hier: zonder rondes is er niets gepland
     el.innerHTML = '<span class="archive-empty-msg info-msg" style="font-size:20px;color:var(--info-grey);font-weight:700">Geen rondes gevonden</span>';
     return;
   }
@@ -9525,7 +9530,7 @@ function loadSaved() {
   const playerGroupHeader = (player, count, hasWarning = false) => {
     const key = 'pg_' + player.replace(/\W/g, '_');
     const collapsed = window._pgCollapsed && window._pgCollapsed[key];
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=!window._pgCollapsed?.['${key}'];loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=window._pgCollapsed['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
 
   const actives    = filtered.filter(r => (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id));
@@ -12523,7 +12528,15 @@ async function doResetAll() {
    'golf_actions_always_visible',
    'golf_lowhi_graph',
    'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
-   'golf_low_hi','golf_backup_reminder_shown','golf_theme','golf_scorecard_symbols','golf_home_club']
+   'golf_low_hi','golf_theme','golf_scorecard_symbols','golf_home_club',
+   // De clubbackup-stand hoort bij de GEGEVENS en gaat dus mee: blijft hij staan, dan
+   // vergelijkt de app straks een verse clublijst met de vingerafdruk van de oude.
+   'golf_clubs_backup_date','golf_clubs_backup_fingerprint',
+   'golf_clubs_changed','golf_clubs_fingerprint',
+   // Deze drie zijn niet meer in gebruik; ze worden nog gewist zodat ze bij bestaande
+   // installaties niet blijven rondslingeren.
+   'golf_archive_years_closed','golf_round_limit','golf_quick_grouping',
+   'golf_backup_reminder_shown','golf_stats_handicap_always']
     .forEach(k => storage.removeItem(k));
   // De opslagcode en -naam blijven staan: die horen bij de PLEK (dit profiel, dit
   // adres), niet bij de gegevens. Zou de code verdwijnen, dan zouden je eigen oudere
@@ -13891,8 +13904,14 @@ window._setSectionCollapsed = window._setSectionCollapsed || (() => {
   try { return JSON.parse(storage.getItem('golf_set_sections') || '{}'); } catch (e) { return {}; }
 })();
 
+// De blokken waaruit het instellingenscherm bestaat. Let op: het tabblad 'Algemeen'
+// bestaat uit TWEE blokken (settingsTabMain en settingsTabMain2), dus wie deze lijst
+// ergens nodig heeft, moet ze allemaal langslopen — één blok pakken laat secties buiten
+// beeld. Daarom staat de lijst hier één keer.
+const SETTINGS_BLOKKEN = ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData'];
+
 function initSettingsSections() {
-  ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData'].forEach(tabId => {
+  SETTINGS_BLOKKEN.forEach(tabId => {
     const tab = document.getElementById(tabId);
     if (!tab || tab.dataset.sectionsInit === '1') return;
     tab.dataset.sectionsInit = '1';
@@ -14000,7 +14019,7 @@ function toggleAllSettingsSections() {
   // ALLE zichtbare blokken, niet alleen het eerste: het tabblad Algemeen bestaat uit
   // twee blokken (settingsTabMain en settingsTabMain2 met Clubs & Rondes). Werd alleen
   // het eerste gepakt, dan bleef Clubs & Rondes achter terwijl de rest openklapte.
-  const zichtbareBlokken = ['settingsTabMain', 'settingsTabWhs', 'settingsTabMain2', 'settingsTabData']
+  const zichtbareBlokken = SETTINGS_BLOKKEN
     .map(id => document.getElementById(id))
     .filter(t => t && !t.classList.contains('hidden'));
   const koppen = zichtbareBlokken.length
@@ -14280,6 +14299,10 @@ function archiveYearsClosedDefault() {
 // Effectieve stand per jaar: een eigen tik (window._flatYearCollapsed, per sessie) wint
 // van de standaard uit de instelling.
 function isArchiveYearCollapsed(jaar) {
+  // Zonder geldig jaartal nooit inklappen. Een ronde zonder datum kreeg hier een lege
+  // tekst, en die telt als 0 — dus "ouder dan vorig jaar" en dicht. Er hoort bij zo'n
+  // ronde geen jaarkop, dus was hij daarna nergens meer open te klappen: onzichtbaar.
+  if (!/^\d{4}$/.test(String(jaar || ''))) return false;
   const eigen = window._flatYearCollapsed || {};
   if (Object.prototype.hasOwnProperty.call(eigen, jaar)) return eigen[jaar];
   if (!archiveYearsClosedDefault()) return false;
