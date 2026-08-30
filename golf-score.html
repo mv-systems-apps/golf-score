@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-06A</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-06D</div>
 </div>
 
 <script>
@@ -3353,10 +3353,26 @@ function openRoundEditChoice(idx) {
     infoBtn.innerHTML = `${EDIT_ICON}<span>Ronde bewerken</span>`;
     infoBtn.onclick = () => { sluitRoundEditChoice(); openRoundInfoModal(idx); };
   }
+  // Bij een ronde zonder scores heeft 'Ronde resultaat' geen betekenis — erger nog: je
+  // zou daar een dagresultaat kunnen invullen voor een ronde die niet gespeeld is, en
+  // dat telt mee in de handicapberekening. Dus uit.
+  const nogNietGespeeld = gespeeldeHoles(r) === 0;
   const resBtn = document.getElementById('roundEditChoiceResult');
   if (resBtn) {
     resBtn.innerHTML = `${RESULT_ICON}<span>Ronde resultaat</span>`;
-    resBtn.onclick = () => { sluitRoundEditChoice(); openRoundResultModal(idx); };
+    resBtn.disabled = nogNietGespeeld;
+    resBtn.style.opacity = nogNietGespeeld ? '.4' : '';
+    resBtn.title = nogNietGespeeld ? 'Nog geen scores ingevuld' : '';
+    resBtn.onclick = nogNietGespeeld ? null
+      : () => { sluitRoundEditChoice(); openRoundResultModal(idx); };
+  }
+  // Opnieuw plannen hoort bij een ronde die nog niet gespeeld is; onderaan, zodat hij
+  // met de duim goed te bereiken is.
+  const herplanBtn = document.getElementById('roundEditChoiceHerplan');
+  if (herplanBtn) {
+    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Opnieuw plannen</span>`;
+    herplanBtn.classList.toggle('hidden', !nogNietGespeeld);
+    herplanBtn.onclick = () => { sluitRoundEditChoice(); herplanRonde(String(r.id)); };
   }
   document.getElementById('roundEditChoiceModal').classList.remove('hidden');
 }
@@ -3366,34 +3382,7 @@ function sluitRoundEditChoice() {
 const EDIT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
 const RESULT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 
-// Menu met de zelden gebruikte acties van een ronde zonder scores. De agenda-regel
-// verschijnt alleen bij een ronde die nog moet komen.
-function openPlanActions(id) {
-  const r = loadSavedRounds().find(x => String(x.id) === String(id));
-  if (!r) return;
-  const titel = document.getElementById('planActionsTitle');
-  const dagKort = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '')
-    ? WEEKDAY_ABBR[new Date(r.date + 'T00:00:00').getDay()] + ' · ' : '';
-  if (titel) titel.textContent = `${dagKort}${formatFullDate(r.date)}${r.time ? ' \u00b7 ' + r.time : ''}`;
-  const toekomst = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now();
-  const agendaBtn = document.getElementById('planActionAgenda');
-  if (agendaBtn) {
-    agendaBtn.innerHTML = `${AGENDA_ICON}<span>Zet in agenda</span>`;
-    agendaBtn.classList.toggle('hidden', !toekomst);
-    agendaBtn.onclick = () => { sluitPlanActions(); exportRoundIcs(String(id)); };
-  }
-  const herplanBtn = document.getElementById('planActionHerplan');
-  if (herplanBtn) {
-    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Opnieuw plannen</span>`;
-    herplanBtn.onclick = () => { sluitPlanActions(); herplanRonde(String(id)); };
-  }
-  document.getElementById('planActionsModal').classList.remove('hidden');
-}
-function sluitPlanActions() {
-  document.getElementById('planActionsModal').classList.add('hidden');
-}
 const HERPLAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 12 13 15 16"/><line x1="12" y1="13" x2="12" y2="19"/></svg>';
-const AGENDA_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>';
 
 // ── Ronde opnieuw plannen ────────────────────────────────────────────────
 // Alleen voor rondes zonder ENKELE score (gepland of allang verstreken): dan is er
@@ -7923,6 +7912,12 @@ let _exportModalFormat = null;
 function openExportModal(idx) {
   _exportModalIdx = idx;
   _exportModalFormat = null;
+  // De agenda-optie alleen bij een ronde die nog moet komen: een afspraak voor een
+  // ronde van vorige week heeft geen zin.
+  const r = loadSavedRounds()[idx];
+  const toekomst = !!r &&
+    new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime() > Date.now();
+  document.getElementById('exportOptAgenda')?.classList.toggle('hidden', !toekomst);
   document.querySelectorAll('.export-opt').forEach(btn => {
     btn.classList.remove('active-bg');
     btn.onclick = () => {
@@ -7949,6 +7944,7 @@ function confirmExportModal() {
   switch (_exportModalFormat) {
     case 'txt':    shareScore(null, round, null); closeExportModal(); return;
     case 'png':    shareScoreImage(round); closeExportModal(); return;
+    case 'ics':    exportRoundIcs(String(round.id)); closeExportModal(); return;
     case 'csv':    exportCsv(round);          break;
     case 'backup': exportBackup(_exportModalIdx); break;
   }
@@ -9473,7 +9469,7 @@ function loadSaved() {
     const actionsBlock = `
       <div class="hidden orange-msg" data-round-save-msg="${r.id}" style="color:var(--orange);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="saved-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
-        ${playedCount === 0 ? `<button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="event.stopPropagation(); openPlanActions('${r.id}')" title="Meer acties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>` : ''}<button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+        <button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="openExportModal(${saved.indexOf(r)})" title="Exporteer/Deel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         <button class="btn-secondary" style="padding:8px 14px;min-height:39px" onclick="openRoundEditChoice(${saved.indexOf(r)})" title="Ronde bewerken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
         
         ${isActive
@@ -9524,8 +9520,13 @@ function loadSaved() {
     const db = (b.date || '') + (b.time || '');
     return db.localeCompare(da);
   };
-  const groupHeader = (title) =>
-    `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">${title}</div>`;
+  // Kop zonder inklappijl, met rechts het aantal — zoals de inklapbare koppen dat ook
+  // tonen, zodat je in één oogopslag ziet hoeveel er staan.
+  const groupHeader = (title, count = null) =>
+    `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">`
+    + `<span style="flex:1">${title}</span>`
+    + (count === null ? '' : `<span style="font-weight:400">${count}</span>`)
+    + `</div>`;
 
   const playerGroupHeader = (player, count, hasWarning = false) => {
     const key = 'pg_' + player.replace(/\W/g, '_');
@@ -9590,7 +9591,7 @@ function loadSaved() {
     const sortAsc = (a, b) => ((a.date || '') + (a.time || ''))
       .localeCompare((b.date || '') + (b.time || ''));
     const komend = [...planned].sort(sortAsc);
-    html += groupHeader('Gepland')
+    html += groupHeader('Gepland', komend.length)
       // Alleen verkorten als er nog NIETS is ingevuld: een toekomstige ronde waarin je al
       // een hole hebt gespeeld telt ook als gepland, en dan zouden die drie regels echte
       // gegevens verbergen.
@@ -14824,29 +14825,14 @@ document.addEventListener('focusin', (e) => {
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-secondary" id="roundEditChoiceInfo" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
       <button class="btn-secondary" id="roundEditChoiceResult" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
+      <button class="btn-secondary hidden" id="roundEditChoiceHerplan" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
       <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px" onclick="sluitRoundEditChoice()">Annuleren</button>
     </div>
   </div>
 </div>
 
-<div id="planActionsModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
-    <div id="planActionsTitle" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center"></div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn-secondary" id="planActionAgenda" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
-      <button class="btn-secondary" id="planActionHerplan" style="width:100%;padding:12px;font-size:20px;display:flex;align-items:center;gap:12px;text-align:left"></button>
-      <button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px" onclick="sluitPlanActions()">Annuleren</button>
-    </div>
-  </div>
-</div>
-
-<!-- Clubnaam gewijzigd: bestaande rondes meenemen of niet? Rondes bewaren de clubnaam
-     als KOPIE (net als CR/SR/par), zodat een ronde blijft kloppen als de club later
-     verandert of verdwijnt. Bij hernoemen moet je dus kiezen wat er met de historie
-     gebeurt — anders staat dezelfde club straks dubbel in de statistieken. -->
 <div id="clubRenameModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:300px">
-    <div style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;text-align:center">Naam gewijzigd</div>
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:340px">
     <div id="clubRenameText" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-primary" style="width:100%;padding:12px;font-size:20px" onclick="clubRenameKeuze(true)">Alles aanpassen</button>
@@ -15097,6 +15083,7 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
+      <button class="btn-secondary export-opt hidden" id="exportOptAgenda" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="ics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>Zet in agenda (ICS)</button>
     </div>
     <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
