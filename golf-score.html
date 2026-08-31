@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-089</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-08A</div>
 </div>
 
 <script>
@@ -9979,9 +9979,14 @@ function loadSaved() {
     // Platte lijst: actief bovenaan zonder header, rest op datum nieuw→oud (incl. gepland)
     if (actives.length) html += sortedActives.map(r => makeCard(r)).join('');
     // Geen geplande rondes in de vlakke lijst: die staan onder de agendaknop, in de
-    // volgorde die daar past (eerstvolgende bovenaan). Bij groeperen op categorie, club
-    // en speler staan ze wél gewoon tussen de rest.
-    const rest = [...imported, ...inProgress, ...finished].sort(sortDesc);
+    // volgorde die daar past (eerstvolgende bovenaan). Deze lijst gebruik je om terug te
+    // kijken; de planning verandert voortdurend en hoort daar niet doorheen.
+    // TENZIJ je zoekt: dan zoek je in alles en horen de treffers ook allemaal zichtbaar
+    // te zijn. Anders staat er "2 rondes gevonden" boven een lijst met er één, en is de
+    // tweede nergens te vinden — de agendaweergave gaat bij zoeken immers uit.
+    const zoektNu = !!(query || hasDateCriteria);
+    const rest = [...imported, ...inProgress, ...finished,
+                  ...(zoektNu ? planned : [])].sort(sortDesc);
     // Lazy render: bij veel rondes niet in één keer alles opbouwen — alleen de
     // eerste FLAT_LIST_PAGE_SIZE, met een knop om de rest desgewenst te laden.
     const limit = window._flatListLimit || FLAT_LIST_PAGE_SIZE;
