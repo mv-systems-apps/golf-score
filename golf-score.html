@@ -367,7 +367,7 @@
     /* Wisknopje (×) rechts in een zoekveld */
     .search-clear { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:24px; font-weight:700; line-height:1; padding:6px 12px; cursor:pointer; }
     /* Plakkende jaarkop in het archief (blijft bovenin hangen tijdens scrollen) */
-    .year-sep { position: sticky; top: var(--header-h, 60px); z-index: 90; background: var(--green-deep); color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: .7px; line-height: 1; padding: 16px 2px 8px; margin-bottom: 4px; }
+    .year-sep { position: sticky; top: var(--header-h, 60px); z-index: 90; background: var(--green-deep); color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: .7px; line-height: 1; padding: 16px 0 8px; margin-bottom: 4px; }
     /* Driehoekjes-hints links/rechts op de grafiekkaart: swipe (of tik erop) wisselt tussen verloopgrafiek en regelkaart */
     /* Blokje om de grafiek zelf: de swipe-pijltjes centreren hierop, zodat ze niet
        meezakken als er onder de grafiek regels bij komen (detail, Low HI, legenda). */
@@ -840,13 +840,13 @@
       onclick="toggleGroupByPlayer()"
       title="Groepeer op speler"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="7" r="2"/><path d="M23 21v-1a3 3 0 0 0-3-3h-1"/></svg></button>
     <button id="groupByWhsBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByWhs()" title="Groepeer op WHS (laatste 20 qualifying)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></button>
-    <button id="archiveSearchBtn" class="btn-secondary" style="padding:10px 14px" onclick="var w=document.getElementById('archiveSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('archiveSearch').focus();else{document.getElementById('archiveSearch').value='';loadSaved();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button id="archiveSearchBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleArchiefZoeken()" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
     <div id="archiveDateErrMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:4px">Ongeldige datum</div>
     <div style="position:relative">
-      <input id="archiveSearch" aria-label="Zoeken in rondes" type="text" placeholder="Club, baan, speler, notitie, @datum" oninput="loadSaved()" onblur="archiveSearchBlur()" style="padding-right:40px">
-      <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', loadSaved)" title="Wissen">&times;</button>
+      <input id="archiveSearch" aria-label="Zoeken in rondes" type="text" placeholder="Club, baan, speler, notitie, @datum" oninput="zoekInRondes()" onblur="archiveSearchBlur()" style="padding-right:40px">
+      <button id="archiveSearchClear" class="search-clear hidden" onclick="clearSearchField('archiveSearch', herstelNaZoeken)" title="Wissen">&times;</button>
     </div>
   </div>
   <div id="archiveStatus" class="hidden" style="margin-bottom:10px"></div>
@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-086</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-089</div>
 </div>
 
 <script>
@@ -6098,8 +6098,9 @@ function jumpToArchiveRound(roundId) {
   window._groupByCategory = false;
   window._groupByTrack = false;
   window._groupByWhs = false;
-  window._pgCollapsed = {};
-  window._pgYearCollapsed = {};
+  // Bewust NIET de indeling wissen: kwam je hier via het sluiten van het zoekveld of
+  // vanuit WHS, dan was je spelersindeling ineens weg en zette de volgende tik weer de
+  // uitgangsstand. Alles dichtklappen doe je met een lange druk.
   zetGroepeerKnop(null);
   const inp = document.getElementById('archiveSearch');
   if (inp) inp.value = '';
@@ -8987,7 +8988,9 @@ function toggleGroupByWhs() {
   window._groupByPlayer = false;
   window._groupByCategory = false;
   window._groupByTrack = false;
-  window._whsShort = false;
+  // De kaartvorm (verkort of volledig) blijft staan zoals je hem achterliet — een
+  // enkele klik is 'ga hierheen', niet 'begin opnieuw'. Alleen de kaarten die je
+  // individueel had opengeklapt vervallen: dat is een keuze per kaart, geen indeling.
   window._whsExpandedIds = new Set();
   zetGroepeerKnop('groupByWhsBtn');
   loadSaved();
@@ -9209,6 +9212,58 @@ function parseArchiveSearch(raw) {
 // Bij het verlaten van het zoekveld telt 'nog niet af' als fout: een half getypte
 // datum die blijft staan, krijgt dan alsnog de rode melding (tijdens het typen niet,
 // om geflits te voorkomen).
+// Zoeken en groeperen zijn twee verschillende dingen: je zoekt één ronde, je groepeert
+// om te overzien. Door elkaar heen leverde dat tegenstrijdige uitkomsten op — bij de
+// WHS-weergave stond er "3 rondes gevonden" boven een LEGE lijst, omdat die weergave
+// alleen je laatste 20 toont en de treffers er daarna weer uit filterde.
+// Daarom: zodra je zoekt, gaat de groepering uit en zie je de vlakke lijst. Wis je het
+// zoekveld, dan kom je terug in de weergave waar je vandaan kwam.
+function zoekInRondes() {
+  const term = (document.getElementById('archiveSearch')?.value || '').trim();
+  if (term && !window._zoekVorigeWeergave) {
+    window._zoekVorigeWeergave = {
+      speler: !!window._groupByPlayer, categorie: !!window._groupByCategory,
+      club: !!window._groupByTrack, whs: !!window._groupByWhs,
+      gepland: !!window._groupByPlanned,
+    };
+    window._groupByPlayer = false; window._groupByCategory = false;
+    window._groupByTrack = false; window._groupByWhs = false;
+    window._groupByPlanned = false;
+    zetGroepeerKnop(null);
+  }
+  loadSaved();
+}
+
+// Zoekveld leeg of gesloten: terug naar de weergave van vóór het zoeken.
+function herstelNaZoeken() {
+  const vorige = window._zoekVorigeWeergave;
+  window._zoekVorigeWeergave = null;
+  if (!vorige) { loadSaved(); return; }
+  if (vorige.speler)         { openQuickLast20(); return; }
+  if (vorige.categorie)      { toggleGroupByCategory(); return; }
+  if (vorige.club)           { openQuickClub(); return; }
+  if (vorige.whs)            { toggleGroupByWhs(); return; }
+  if (vorige.gepland)        { toggleGroupByPlanned(); return; }
+  loadSaved();
+}
+
+// Zoekveld openen of sluiten.
+function toggleArchiefZoeken() {
+  const wrap = document.getElementById('archiveSearchWrap');
+  const knop = document.getElementById('archiveSearchBtn');
+  const veld = document.getElementById('archiveSearch');
+  if (!wrap) return;
+  wrap.classList.toggle('hidden');
+  const open = !wrap.classList.contains('hidden');
+  if (knop) {
+    knop.style.background = open ? 'var(--gold)' : '';
+    knop.style.color = open ? 'var(--green-deep)' : '';
+  }
+  if (open) { veld?.focus(); return; }
+  if (veld) veld.value = '';
+  herstelNaZoeken();
+}
+
 function archiveSearchBlur() {
   const inp = document.getElementById('archiveSearch');
   const msg = document.getElementById('archiveDateErrMsg');
@@ -9800,7 +9855,11 @@ function loadSaved() {
       const dicht = window._planCollapsed?.[key] !== false;
       return `<div onclick="window._planCollapsed=window._planCollapsed||{};`
         + `window._planCollapsed['${key}']=window._planCollapsed['${key}']===false;loadSaved();"`
-        + ` style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer">`
+        // line-height:1 zoals de andere koppen (die krijgen dat via collapsibleHeader);
+        // zonder deze regel viel de kop terug op de standaard van de browser en was hij
+        // vier pixels hoger — net genoeg om de lijst te laten verspringen bij het
+        // wisselen van weergave.
+        + ` style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;line-height:1;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer">`
         + `<span style="flex:1">${titel}</span>`
         + `<span style="font-weight:400">${lijst.length}</span>`
         + `${arrowSvg(15, !dicht)}</div>`
