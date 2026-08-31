@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-077</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-07C</div>
 </div>
 
 <script>
@@ -8005,7 +8005,22 @@ function copyShareText(btn) {
 let _exportModalIdx = null;
 let _exportModalFormat = null;
 
+// 'Meer' staat standaard dicht: het venster is dan klein en wat je zelden gebruikt zit
+// niet in de weg. De stand geldt per keer dat je het venster opent.
+function toggleExportMeer(open) {
+  const blok = document.getElementById('exportMeerBlok');
+  const pijl = document.getElementById('exportMeerPijl');
+  if (!blok) return;
+  const nu = open === undefined ? blok.classList.contains('hidden') : open;
+  blok.classList.toggle('hidden', !nu);
+  if (pijl) pijl.innerHTML = arrowSvg(15, nu, 'var(--green-light)');
+  // Uitgeklapt heet de kop 'Minder': dan zegt hij wat de volgende tik doet.
+  const label = document.getElementById('exportMeerLabel');
+  if (label) label.textContent = nu ? 'Minder' : 'Meer';
+}
+
 function openExportModal(idx) {
+  toggleExportMeer(false);          // altijd ingeklapt beginnen
   _exportModalIdx = idx;
   _exportModalFormat = null;
   // De agenda-optie staat er altijd, maar gaat UIT bij een ronde die al geweest is: een
@@ -9747,13 +9762,46 @@ function loadSaved() {
     const sortAsc = (a, b) => ((a.date || '') + (a.time || ''))
       .localeCompare((b.date || '') + (b.time || ''));
     const komend = [...planned].sort(sortAsc);
-    html += groupHeader('Gepland', komend.length)
-      // Alleen verkorten als er nog NIETS is ingevuld: een toekomstige ronde waarin je al
-      // een hole hebt gespeeld telt ook als gepland, en dan zouden die drie regels echte
-      // gegevens verbergen.
-      + (komend.length
-          ? komend.map(r => makeCard(r, null, false, false, gespeeldeHoles(r) === 0)).join('')
-          : `<div class="saved-item" style="font-size:20px;color:var(--info-grey);font-weight:700">Er zijn geen geplande rondes.</div>`);
+    // Drie groepen op tijdsafstand. De grens is de kalenderweek, niet een schuivend
+    // venster van zeven dagen: dat is hoe je zelf over je agenda praat.
+    const eindDezeWeek = (() => {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      // 0 = zondag; van maandag tot zondag telt als 'deze week'.
+      const naarZondag = (7 - d.getDay()) % 7;
+      d.setDate(d.getDate() + naarZondag);
+      return d.getTime();
+    })();
+    const eindVolgendeWeek = eindDezeWeek + 7 * 86400000;
+    const momentVan = r => new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
+
+    const dezeWeek     = komend.filter(r => momentVan(r) <= eindDezeWeek);
+    const volgendeWeek = komend.filter(r => momentVan(r) > eindDezeWeek && momentVan(r) <= eindVolgendeWeek);
+    const later        = komend.filter(r => momentVan(r) > eindVolgendeWeek);
+
+    // Kaarten altijd verkort, behalve als er al holes zijn ingevuld: dan zouden die
+    // drie regels echte gegevens verbergen.
+    const planKaarten = lijst => lijst
+      .map(r => makeCard(r, null, false, false, gespeeldeHoles(r) === 0)).join('');
+
+    const planGroep = (titel, lijst, key, leegTekst) => {
+      const dicht = window._planCollapsed?.[key] !== false;
+      return `<div onclick="window._planCollapsed=window._planCollapsed||{};`
+        + `window._planCollapsed['${key}']=window._planCollapsed['${key}']===false;loadSaved();"`
+        + ` style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer">`
+        + `<span style="flex:1">${titel}</span>`
+        + `<span style="font-weight:400">${lijst.length}</span>`
+        + `${arrowSvg(15, !dicht)}</div>`
+        + (dicht ? ''
+           : (lijst.length ? planKaarten(lijst)
+              : `<div class="saved-item" style="font-size:20px;color:var(--info-grey);font-weight:700">${leegTekst}</div>`));
+    };
+
+    // 'Deze week' begint open, de andere twee dicht: wat het eerst komt zie je meteen.
+    window._planCollapsed = window._planCollapsed || { plan_deze: false };
+    html += planGroep('Deze week', dezeWeek, 'plan_deze', 'Geen geplande rondes.')
+          + planGroep('Volgende week', volgendeWeek, 'plan_volgende', 'Geen geplande rondes.')
+          + planGroep('Later', later, 'plan_later', 'Geen geplande rondes.');
   } else if (window._groupByCategory) {
     // Elke hoofdgroep verschijnt, ook met nul rondes; klap je zo'n lege groep open, dan
     // staat er wat er ontbreekt. Alleen de hoofdgroepen: bij de subgroepen (Laatste 12
@@ -12893,11 +12941,21 @@ function buildClubList() {
 
   if (window._clubGrouped) {
     // Categorie weergave met inklapbare headers, actieve club (evt. samengevoegd met
-    // thuisclub) bovenaan
-    if (activeClubs.length) html += clubCollapsibleHeader(activeLabel, activeClubs.length, 'active') + activeClubs.map(renderClub).join('') + '</div>';
-    if (homeClubs.length)   html += clubCollapsibleHeader('Thuisclub', homeClubs.length, 'home') + homeClubs.map(renderClub).join('') + '</div>';
-    if (favClubs.length)    html += clubCollapsibleHeader('Favorieten', favClubs.length, 'fav') + favClubs.map(renderClub).join('') + '</div>';
-    if (otherClubs.length)  html += clubCollapsibleHeader('Overig', otherClubs.length, 'other') + otherClubs.map(renderClub).join('') + '</div>';
+    // thuisclub) bovenaan. Lege groepen krijgen ook een kop, net als bij de rondes: zo
+    // zie je in één blik wat er is én wat er niet is. Klap je zo'n groep open, dan staat
+    // er wat er ontbreekt.
+    const clubGroep = (titel, lijst, key, leegTekst) => {
+      const kop = clubCollapsibleHeader(titel, lijst.length, key);
+      const open = window._clubSectionCollapsed?.[key] === false;
+      if (lijst.length) return kop + (open ? lijst.map(renderClub).join('') : '') + '</div>';
+      return kop
+        + (open ? `<div class="card" style="font-size:20px;color:var(--info-grey);font-weight:700">${leegTekst}</div>` : '')
+        + '</div>';
+    };
+    html += clubGroep(activeLabel, activeClubs, 'active', 'Er is geen actieve club.');
+    if (!activeIsHome) html += clubGroep('Thuisclub', homeClubs, 'home', 'Er is geen thuisclub ingesteld.');
+    html += clubGroep('Favorieten', favClubs, 'fav', 'Er zijn geen favoriete clubs.');
+    html += clubGroep('Overig', otherClubs, 'other', 'Er zijn geen overige clubs.');
   } else {
     // Platte lijst - actieve club (evt. samengevoegd met thuisclub) bovenaan zonder
     // header, rest alfabetisch
@@ -15233,14 +15291,18 @@ document.addEventListener('focusin', (e) => {
       <button class="btn-secondary" style="padding:8px 14px" onclick="closeExportModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <!-- 'Meer' verbergt wat je zelden gebruikt, zodat het venster klein blijft. De
+           twee die je wél gebruikt staan er altijd: de backup, en bij een geplande ronde
+           de agenda. -->
+      <div id="exportMeerKop" onclick="toggleExportMeer()" style="font-size:17px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 6px;display:flex;align-items:center;gap:8px;cursor:pointer">
+        <span id="exportMeerLabel" style="flex:1">Meer</span><span id="exportMeerPijl"></span>
+      </div>
+      <div id="exportMeerBlok" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
-      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
-      <!-- Boven de streep gaat het naar een bestand, eronder naar het deelvenster van
-           je telefoon. Agenda hoort bij die tweede groep: hij probeert eerst te delen en
-           valt alleen terug op een download als de browser het bestandstype weigert. -->
-      <div style="border-top:1px solid var(--hairline);margin:4px 0"></div>
-      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="txt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Tekst (TXT)</button>
+      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
+      </div>
+      <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup (JSON)</button>
       <button class="btn-secondary export-opt hidden" id="exportOptAgenda" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="ics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>Agenda (ICS)</button>
     </div>
     <div id="exportModalStatus" class="hidden" style="font-size:20px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:12px"></div>
