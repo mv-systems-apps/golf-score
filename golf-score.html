@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-085</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-086</div>
 </div>
 
 <script>
@@ -7099,41 +7099,19 @@ function controleerOpslagKenmerk() {
 // Kijkt of een backupbestand uit dezelfde opslag komt. De code staat achteraan in de
 // naam (bijvoorbeeld rondes_backup_20260827_K7QM.json). Staat er geen code in, dan is
 // het een bestand van vóór deze versie of van elders — daar zeggen we niets over.
-function meldAndereOpslag(bestandsnaam) {
-  // Alleen bestanden die de app ZELF heeft gemaakt beoordelen. Eerder keek deze
-  // controle naar de laatste vier tekens voor .json, en dan sloeg hij ook aan op een
-  // willekeurig bestand als "mijn_data.json" — daar staat "data" en dat leek een code.
-  // Een eventueel " (1)" van de browser bij een dubbele download mag er wel achter.
+// Welke opslagcode staat er in deze bestandsnaam, als hij afwijkt van de onze? Geeft
+// null als de naam niets prijsgeeft (hernoemd bestand) of als het onze eigen opslag is.
+// De naam is de ENIGE bron: in het bestand zelf staat geen herkomst. Daarom is dit een
+// extra aanwijzing bovenop de waarschuwing bij vervangen, nooit de enige drempel.
+function andereOpslagCode(bestandsnaam) {
   const m = /^(?:rondes|clubs)_backup_\d{8}_([A-Z0-9]{4})(?: \(\d+\))?\.json$/i
     .exec((bestandsnaam || '').trim());
-  if (!m) return;
+  if (!m) return null;
   const code = m[1].toUpperCase();
-  if (code === opslagCode()) return;
-  // NA het importeren melden, niet ervoor: het importresultaat gebruikt hetzelfde
-  // venster en zou deze melding meteen overschrijven — dan zie je hem nooit.
-  meldZodraVensterVrij('Uit een andere opslag',
-    `Dit bestand komt uit opslaglocatie met code ${code}; je gebruikt nu ${opslagLabel()}. `
-    + `Dat gebeurt bijvoorbeeld bij een ander browserprofiel of een ander adres. `
-    + `Importeren kan gewoon — kies "Toevoegen" als je niets wilt kwijtraken.`);
+  return code === opslagCode() ? null : code;
 }
 
-// Wacht tot het meldingsvenster vrij is en toont dan pas. Er is één gedeeld venster in
-// de app, dus twee meldingen vlak na elkaar zouden elkaar verdringen.
-function meldZodraVensterVrij(titel, tekst) {
-  const start = Date.now();
-  const probeer = () => {
-    const venster = document.getElementById('confirmModal');
-    const open = venster && !venster.classList.contains('hidden');
-    // Even wachten tot een eventuele eerste melding er staat, daarna tot hij weg is.
-    if (Date.now() - start < 400 || open) {
-      if (Date.now() - start > 120000) return;   // niet eindeloos blijven proberen
-      setTimeout(probeer, 300);
-      return;
-    }
-    showInfoModal(titel, tekst);
-  };
-  setTimeout(probeer, 300);
-}
+
 
 // ══ WELKE OPSLAG IS DIT? ═════════════════════════════════════════════════
 // De browser houdt gegevens apart per adres ÉN per profiel. Dezelfde app in een ander
@@ -8139,7 +8117,12 @@ function importRound(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
-  meldAndereOpslag(file.name);
+  // Komt dit bestand aantoonbaar uit een andere opslaglocatie? Die zin komt te staan
+  // waar de beslissing valt — in het keuzevenster en bij het vervangen — en niet meer in
+  // een los venster achteraf, dat advies gaf over een keuze die al gemaakt was.
+  const andereCode = andereOpslagCode(file.name);
+  const herkomstZin = andereCode
+    ? ` Dit bestand komt uit een andere opslaglocatie (code ${andereCode}).` : '';
 
   const showStatus = (msg, isError) => showInfoModal(isError ? 'Import mislukt' : 'Import voltooid', msg, isError ? 'red' : null);
 
@@ -8168,8 +8151,10 @@ function importRound(input) {
 
         // Archief nu al leeg: toevoegen en vervangen zijn functioneel identiek, dus geen
         // keuzescherm nodig.
+        // Lege app: er valt niets fout te doen, dus de herkomst is hier een mededeling
+        // achteraf in plaats van een waarschuwing vooraf.
         if (existingCount === 0) {
-          doAdditiveImport(parsed, overslagTekst);
+          doAdditiveImport(parsed, overslagTekst + herkomstZin);
           return;
         }
 
@@ -8180,13 +8165,15 @@ function importRound(input) {
         const meervoud = (aantal) => `${aantal} ronde${aantal !== 1 ? 's' : ''}`;
         toonKeuzeModal(
           'Rondes importeren', null,
-          `Dit bestand bevat ${meervoud(n)}. Je hebt er nu ${existingCount}.`,
+          `Dit bestand bevat ${meervoud(n)}. Je hebt er nu ${existingCount}.`
+          + (andereCode ? `\n\nLet op: dit bestand komt uit een andere opslaglocatie (code ${andereCode}).` : ''),
           [{ tekst: 'Toevoegen', hoofd: true,
              actie: () => doAdditiveImport(parsed, overslagTekst) },
            { tekst: 'Vervangen…', actie: () => {
                showDangerModal(
                  'Alle rondes vervangen',
-                 `Je huidige ${meervoud(existingCount)} worden vervangen door de ${meervoud(n)} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`,
+                 `Je huidige ${meervoud(existingCount)} ${existingCount === 1 ? 'wordt' : 'worden'} vervangen door de ${meervoud(n)} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`
+                 + (andereCode ? ` Dit bestand komt uit een andere opslaglocatie, dus je huidige rondes staan mogelijk nergens anders.` : ''),
                  'Vervangen',
                  () => {
                    doFullRestoreImport(parsed);
@@ -8260,7 +8247,7 @@ function importRound(input) {
       }
 
       doImportRound(r, saved);
-      showStatus('Ronde geïmporteerd', false);
+      showStatus(`Ronde geïmporteerd.${herkomstZin}`, false);
     } catch(e) {
       showStatus('Ongeldig JSON-bestand', true);
     }
@@ -13676,7 +13663,12 @@ function validateImportedClubData(data) {
 function importCourseData(input) {
   const file = input.files[0];
   if (!file) return;
-  meldAndereOpslag(file.name);
+  // Ook hier de herkomst als zin bij het resultaat, in plaats van een los venster
+  // achteraf. Clubs importeren overschrijft niets onherroepelijk, dus dit is een
+  // mededeling en geen waarschuwing.
+  const andereCode = andereOpslagCode(file.name);
+  const herkomstZin = andereCode
+    ? ` Dit bestand komt uit een andere opslaglocatie (code ${andereCode}).` : '';
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -13708,7 +13700,7 @@ function importCourseData(input) {
           rebuildAll();
           saveClubsToStorage();
           const skippedCount = invalid.length + (overwriteExisting ? 0 : existing.length);
-          showInfoModal('Import voltooid', `${toImport.length} club${toImport.length !== 1 ? 's' : ''} geïmporteerd${skippedCount ? `, ${skippedCount} overgeslagen` : ''}`);
+          showInfoModal('Import voltooid', `${toImport.length} club${toImport.length !== 1 ? 's' : ''} geïmporteerd${skippedCount ? `, ${skippedCount} overgeslagen` : ''}.${herkomstZin}`);
           input.value = '';
         };
 
@@ -13737,7 +13729,7 @@ function importCourseData(input) {
         rebuildAll();
         saveClubsToStorage();
         const n = Object.keys(data.courses).length;
-        showInfoModal('Import voltooid', `"${data.club}" geïmporteerd (${n} baan${n !== 1 ? 'en' : ''})`);
+        showInfoModal('Import voltooid', `"${data.club}" geïmporteerd (${n} baan${n !== 1 ? 'en' : ''}).${herkomstZin}`);
       };
 
       if (CLUBS[data.club]) {
