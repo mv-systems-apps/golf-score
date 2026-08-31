@@ -897,9 +897,9 @@
 
 <div id="screen-settings" class="screen">
   <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Algemeen</button>
-    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">WHS</button>
-    <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')" onpointerdown="settingsTabDown()" onpointerup="settingsTabUp()" onpointerleave="settingsTabUp()" onpointercancel="settingsTabUp()" oncontextmenu="return false">Gegevens</button>
+    <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')">Algemeen</button>
+    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">WHS</button>
+    <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')">Gegevens</button>
   </div>
   <!-- Backupstand: koploos blokje onder de tabknoppen, BUITEN de drie tabbladen zodat
        het overal zichtbaar is. Stond eerst achter de kop "Backup" op de Gegevens-tab
@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-07D</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-084</div>
 </div>
 
 <script>
@@ -5213,7 +5213,7 @@ function renderPlayerStats() {
     // De klasse 'stat-periode-knop' is het aanknopingspunt voor lang indrukken: dat
     // klapt de drie hoofdgroepen op dit scherm in of uit, net als op een tabblad in
     // Instellingen.
-    return `<button class="btn-secondary stat-periode-knop" style="${style}" ${disabled ? 'disabled' : ''} onclick="window._statChartPeriod='${key}';renderPlayerStats()">${label}</button>`;
+    return `<button class="btn-secondary stat-periode-knop" data-periode="${key}" style="${style}" ${disabled ? 'disabled' : ''} onclick="window._statChartPeriod='${key}';renderPlayerStats()">${label}</button>`;
   };
   const periodBar = `<div style="display:flex;gap:6px">`
     + periodBtn('Laatste 20', 'l20') + periodBtn('12 maanden', 'jaar') + periodBtn('Alles', 'alles')
@@ -7272,6 +7272,8 @@ function toggleWatIfCard() {
 // uitklappen. Staat er nog iets open, dan gaat alles dicht; anders alles open —
 // dezelfde regel als bij lang indrukken op een tabblad in Instellingen.
 function toggleAlleStatsGroepen() {
+  // Op dit scherm valt niets te kiezen — je bent er al — dus de lange druk wisselt
+  // meteen tussen alles dicht en alles open.
   const keys = ['handicap', 'prestaties', 'banen'];
   const allesDicht = keys.every(k => {
     const v = storage.getItem('golf_stats_grp_' + k);
@@ -7287,7 +7289,13 @@ function koppelPeriodeKnoppen() {
   document.querySelectorAll('.stat-periode-knop').forEach(knop => {
     if (knop._langGekoppeld) return;
     knop._langGekoppeld = true;
-    bindLangIndrukken(knop, toggleAlleStatsGroepen);
+    bindLangIndrukken(knop, () => {
+      // Ook bij een lange druk hoort de PERIODE gekozen te worden: de tik erna wordt
+      // onderdrukt, dus zonder dit blijft de oude periode staan.
+      const periode = knop.dataset.periode;
+      if (periode) window._statChartPeriod = periode;
+      toggleAlleStatsGroepen();
+    });
   });
 }
 
@@ -8731,7 +8739,7 @@ function toggleGroupByTrack() {
 // indrukken elders in de app — anders kun je met dezelfde handeling niet terug, en lijkt
 // een tweede lange druk niets te doen.
 function collapseAllClubs() {
-  window._groupByPlanned = false;
+  const wasActief = !!window._groupByTrack;
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   window._groupByTrack = true;
@@ -8739,32 +8747,11 @@ function collapseAllClubs() {
   window._groupByPlayer = false;
   window._groupByWhs = false;
   zetGroepeerKnop('groupByTrackBtn');
-  // Stond alles al dicht, dan is de volgende lange druk "alles open".
-  if (window._allesClubsDicht) {
-    window._allesClubsDicht = false;
-    window._pgCollapsed = {};
-    window._clubTrkCollapsed = {};
-    alleClubGroepenOpen();
-    loadSaved();
-    openAlleSubgroepen('#screen-archive', '_clubTrkCollapsed');
-  } else {
-    window._allesClubsDicht = true;
-    window._pgCollapsed = {};
-    window._clubTrkCollapsed = {};
-  }
+  const openen = wasActief && allesDichtIn('_clubTrkCollapsed');
+  window._pgCollapsed = {};
+  window._clubTrkCollapsed = {};   // de standaard is 'dicht'
   loadSaved();
-}
-
-// Zet elke club- en baangroep expliciet open. De standaard is "dicht", dus alleen de
-// verzameling leegmaken is niet genoeg — elke sleutel moet op false.
-function alleClubGroepenOpen() {
-  const rondes = loadSavedRounds();
-  rondes.forEach(r => {
-    const club = r.club || r.clubShort || '';
-    if (club) window._clubTrkCollapsed['club_' + club.replace(/\W/g, '_')] = false;
-    const baan = r.track || '';
-    if (club && baan) window._clubTrkCollapsed['trk_' + (club + '_' + baan).replace(/\W/g, '_')] = false;
-  });
+  if (openen) klapAllesOpen('#screen-archive', loadSaved, '_clubTrkCollapsed');
 }
 
 function openQuickClub() {
@@ -8777,9 +8764,13 @@ function openQuickClub() {
   window._groupByWhs = false;
   zetGroepeerKnop('groupByTrackBtn');
 
-  // Alles inklappen; alleen de geselecteerde club (eerste niveau) openklappen
+  // De eerste keer: alles dicht en alleen de voorrangsclub open. Daarna houdt deze
+  // weergave de indeling die jij hebt achtergelaten, en wordt er ook niet meer
+  // gescrold — je komt terug waar je was.
+  const eersteKeer = !window._clubTrkCollapsed;
   window._pgCollapsed = {};
-  window._clubTrkCollapsed = {};
+  window._clubTrkCollapsed = window._clubTrkCollapsed || {};
+  if (!eersteKeer) { loadSaved(); return; }
   const club = getPriorityGroupClub();
   if (!club) { loadSaved(); return; }
   const ck = 'club_' + club.replace(/\W/g, '_');
@@ -8842,6 +8833,7 @@ function werkAgendaKnopBij(aantal) {
 // tegelijk in- of uitklappen. Zoals bij de andere groepeerknoppen zet dit de weergave
 // ook zelf aan, zodat één lange druk je meteen bij het volledige overzicht brengt.
 function collapseAllPlanned() {
+  const wasActief = !!window._groupByPlanned;
   window._toonLegeCategorieen = false;
   window._groupByPlanned = true;
   window._groupByCategory = false;
@@ -8850,12 +8842,10 @@ function collapseAllPlanned() {
   window._groupByWhs = false;
   zetGroepeerKnop('groupByPlannedBtn');
 
-  const sleutels = ['plan_deze', 'plan_volgende', 'plan_later'];
-  const huidig = window._planCollapsed || {};
-  // Staat alles dicht, dan gaat alles open; anders gaat alles dicht.
-  const allesDicht = sleutels.every(k => huidig[k] !== false);
+  const openen = wasActief && allesDichtIn('_planCollapsed');
   window._planCollapsed = {};
-  sleutels.forEach(k => { window._planCollapsed[k] = !allesDicht; });
+  ['plan_deze', 'plan_volgende', 'plan_later']
+    .forEach(k => { window._planCollapsed[k] = openen ? false : true; });
   loadSaved();
 }
 
@@ -8889,34 +8879,33 @@ function toggleGroupByCategory() {
   window._groupByTrack = false;
   window._groupByWhs = false;
   zetGroepeerKnop('groupByCategoryBtn');
-  // Alle vijf de categorieën tonen, ook die met nul rondes, en allemaal ingeklapt: je
-  // ziet dan in één oogopslag wat er is en klapt open wat je nodig hebt.
+  // Alle vijf de categorieën tonen, ook die met nul rondes. De uitgangsstand is
+  // 'allemaal dicht', maar alleen de eerste keer: daarna houdt de weergave de indeling
+  // die jij hebt achtergelaten.
   window._toonLegeCategorieen = true;
-  window._catCollapsed = {
-    actief: true, import: true, opgeslagen: true, afgerond: true, gepland: true,
-  };
+  if (!window._catCollapsed) {
+    window._catCollapsed = {
+      actief: true, import: true, opgeslagen: true, afgerond: true, gepland: true,
+    };
+  }
   loadSaved();
 }
 
 // Long-press op 'groepeer op categorie': alle categorieën inklappen.
 function collapseAllCategories() {
-  window._groupByPlanned = false;
+  const wasActief = !!window._groupByCategory;
   window._groupByPlanned = false;
   window._groupByCategory = true;
   window._groupByPlayer = false;
   window._groupByTrack = false;
   window._groupByWhs = false;
   zetGroepeerKnop('groupByCategoryBtn');
-  // Toggle: alle categorieën dicht, of allemaal open. De sleutels liggen vast, dus ze
-  // worden hier expliciet gezet (de standaard is 'dicht').
-  const catKeys = ['actief', 'import', 'opgeslagen', 'afgerond', 'gepland'];
-  const catDicht = catKeys.every(k => (window._catCollapsed || {})[k] !== false);
+  const openen = wasActief && allesDichtIn('_catCollapsed');
   window._catCollapsed = {};
-  catKeys.forEach(k => { window._catCollapsed[k] = !catDicht; });
+  ['actief', 'import', 'opgeslagen', 'afgerond', 'gepland']
+    .forEach(k => { window._catCollapsed[k] = true; });
   loadSaved();
-  if (catDicht) {     // alles open: ook de jaargroepen binnen elke categorie
-    loadSaved();
-  }
+  if (openen) klapAllesOpen('#screen-archive', loadSaved, '_catCollapsed');
 }
 
 // Klik op 'groepeer op speler': activeert de groepering en klapt daarbij altijd
@@ -8926,9 +8915,9 @@ function toggleGroupByPlayer() {
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   if (window._groupByPlayer) {
+    // De weergave uitzetten wist je indeling NIET: kom je terug, dan staat alles zoals
+    // je het achterliet. Alles dicht doe je met een lange druk.
     window._groupByPlayer = false;
-    window._pgCollapsed = {};
-    window._pgYearCollapsed = {};
     zetGroepeerKnop(null);
     loadSaved();
     return;
@@ -8938,7 +8927,7 @@ function toggleGroupByPlayer() {
 
 // Long-press op 'groepeer op speler': alle spelers inklappen.
 function collapseAllPlayers() {
-  window._groupByPlanned = false;
+  const wasActief = !!window._groupByPlayer;   // al in deze weergave?
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   window._groupByPlayer = true;
@@ -8948,19 +8937,14 @@ function collapseAllPlayers() {
   zetGroepeerKnop('groupByPlayerBtn');
   const rounds = loadSavedRounds();
   const players = [...new Set(rounds.map(r => r.player).filter(Boolean))];
-  // Toggle: staat alles al dicht, dan gaat alles open. Zo kun je met dezelfde handeling
-  // terug, net als bij lang indrukken op een tabblad in Instellingen.
-  const huidig = window._pgCollapsed || {};
-  const allesDicht = players.length > 0
-    && players.every(p => huidig['pg_' + p.replace(/\W/g, '_')]);
+  // Eerste keer: kiezen en alles dicht. Zit je er al in, dan wisselt de lange druk
+  // tussen alles dicht en alles open.
+  const openen = wasActief && allesDichtIn('_pgCollapsed', '_pgYearCollapsed');
   window._pgCollapsed = {};
   window._pgYearCollapsed = {};
-  players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = !allesDicht; });
+  players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = true; });
   loadSaved();
-  if (allesDicht) {   // alles open: ook de jaargroepen binnen elke speler
-    openAlleSubgroepen('#screen-archive', '_pgYearCollapsed');
-    loadSaved();
-  }
+  if (openen) klapAllesOpen('#screen-archive', loadSaved, '_pgCollapsed', '_pgYearCollapsed');
 }
 
 // Klik op 'groepeer op speler': alle spelers ingeklapt. Deze weergave is bedoeld om
@@ -8977,10 +8961,15 @@ function openQuickLast20() {
   window._groupByWhs = false;
   zetGroepeerKnop('groupByPlayerBtn');
 
-  const players = [...new Set(loadSavedRounds().map(r => r.player).filter(Boolean))];
-  window._pgCollapsed = {};
-  window._pgYearCollapsed = {};
-  players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = true; });
+  // Alleen de EERSTE keer een uitgangsstand zetten: alle spelers dicht. Daarna houdt
+  // deze weergave de indeling die jij hebt achtergelaten — een enkele klik is 'ga
+  // hierheen', lang indrukken is 'ruim op'.
+  if (!window._pgCollapsed) {
+    const players = [...new Set(loadSavedRounds().map(r => r.player).filter(Boolean))];
+    window._pgCollapsed = {};
+    window._pgYearCollapsed = window._pgYearCollapsed || {};
+    players.forEach(p => { window._pgCollapsed['pg_' + p.replace(/\W/g, '_')] = true; });
+  }
   loadSaved();
 }
 
@@ -9019,15 +9008,16 @@ function toggleWhsShort() {
 // Long-press op 'groepeer op WHS': wisselt tussen verkorte en volledige kaarten. Stond
 // de WHS-groepering nog uit, dan gaat die eerst aan en begin je verkort.
 function setWhsShort() {
-  window._groupByPlanned = false;
+  const wasActief = !!window._groupByWhs;
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
-  const stondUit = !window._groupByWhs;
   window._groupByWhs = true;
   window._groupByPlayer = false;
   window._groupByCategory = false;
   window._groupByTrack = false;
-  window._whsShort = stondUit ? true : !window._whsShort;
+  // 'Alles dicht' is hier de verkorte kaart. Zit je al in deze weergave, dan wisselt de
+  // lange druk tussen verkort en volledig.
+  window._whsShort = wasActief ? !window._whsShort : true;
   window._whsExpandedIds = new Set();
   zetGroepeerKnop('groupByWhsBtn');
   loadSaved();
@@ -9822,7 +9812,8 @@ function loadSaved() {
               : `<div class="saved-item" style="font-size:20px;color:var(--info-grey);font-weight:700">${leegTekst}</div>`));
     };
 
-    // 'Deze week' begint open, de andere twee dicht: wat het eerst komt zie je meteen.
+    // 'Deze week' begint open, de andere twee dicht — maar alleen de eerste keer.
+    // Daarna houdt de weergave de indeling die jij hebt achtergelaten.
     window._planCollapsed = window._planCollapsed || { plan_deze: false };
     html += planGroep('Deze week', dezeWeek, 'plan_deze', 'Geen geplande rondes.')
           + planGroep('Volgende week', volgendeWeek, 'plan_volgende', 'Geen geplande rondes.')
@@ -10999,10 +10990,35 @@ let genderLongPressTimer = null;
 let genderLongPressFired = false;
 const LONG_PRESS_MS = 500;
 
-// Lang indrukken werkt overal hetzelfde: dezelfde duur, altijd een trilling als
-// bevestiging, en de tik die erop volgt wordt onderdrukt zodat de knop niet óók zijn
-// gewone actie doet. Eerder had elke plek zijn eigen kopie hiervan, met net andere
-// tijden (550 tegen 500 ms) en zonder trilling.
+// Alles openklappen binnen een scherm. De standaard van deze groepen is 'dicht', dus
+// leegmaken is niet genoeg: elke sleutel moet expliciet op false. De sleutels staan in
+// de opgebouwde lijst, dus er wordt twee keer doorlopen — de tweede ronde vangt de
+// groepen die pas verschijnen als hun bovenliggende groep open is.
+function klapAllesOpen(scherm, hertekenen, ...stateNamen) {
+  stateNamen.forEach(n => { window[n] = window[n] || {}; });
+  for (let ronde = 0; ronde < 2; ronde++) {
+    document.querySelectorAll(`${scherm} [onclick*="Collapsed"]`).forEach(kop => {
+      const oc = kop.getAttribute('onclick') || '';
+      stateNamen.forEach(n => {
+        // Twee schrijfwijzen in de handlers: window._naam['sleutel'] en
+        // window['_naam']['sleutel']. Beide moeten gevonden worden.
+        const m = new RegExp(n + "(?:'\\])?\\['([^']+)'\\]").exec(oc);
+        if (m) window[n][m[1]] = false;
+      });
+    });
+    hertekenen();
+  }
+}
+
+// Staat alles dicht binnen deze groepen?
+function allesDichtIn(...stateNamen) {
+  return !stateNamen.some(n => Object.values(window[n] || {}).some(v => v === false));
+}
+
+// Lang indrukken werkt overal hetzelfde: het kiest die weergave en klapt alles dicht.
+// Geen wisselknop dus — één handeling met één uitkomst, op elk scherm. Ook de techniek
+// is gedeeld: dezelfde duur, altijd een trilling als bevestiging, en de tik die erop
+// volgt wordt onderdrukt zodat de knop niet óók zijn gewone actie doet.
 function bindLangIndrukken(el, actie) {
   if (!el) return;
   let timer = null, gedaan = false;
@@ -13974,8 +13990,8 @@ function toggleBadWeather() {
 // restant van toen de WHS-uitleg daar nog fysiek tussenin stond), die samen als één tab
 // getoond/verborgen worden.
 function switchSettingsTab(tab) {
-  // Na een lange druk (alles in-/uitklappen) niet ook nog van tab wisselen.
-  if (settingsTabHoldFired) { settingsTabHoldFired = false; return; }
+  // De onderdrukking van de tik na een lange druk zit in bindLangIndrukken; hier is
+  // niets meer nodig.
   const main1 = document.getElementById('settingsTabMain');
   const main2 = document.getElementById('settingsTabMain2');
   const whs = document.getElementById('settingsTabWhs');
@@ -14252,28 +14268,44 @@ function toggleAllSettingsSections() {
     ? zichtbareBlokken.flatMap(b => [...b.querySelectorAll('[data-section-key]')])
     : [...document.querySelectorAll('[data-section-key]')];
   if (!koppen.length) return;
+  // Zit je al op deze tab, dan wisselt de lange druk; kwam je van een andere tab, dan
+  // is het kiezen en alles dicht.
+  // Welke tab is dit? Bij een lange druk op een tabknop wordt die rechtstreeks
+  // meegegeven — afleiden uit het zichtbare blok liep één druk achter, omdat de nieuwe
+  // tab pas na deze doorloop zichtbaar wordt.
+  const huidigeTab = window._langeTabDoel || (zichtbareBlokken[0] || {}).id || '';
+  window._langeTabDoel = null;
+  const wasActief = window._laatsteLangeTab === huidigeTab;
+  window._laatsteLangeTab = huidigeTab;
   const isDicht = k => {
     const v = window._setSectionCollapsed[k.dataset.sectionKey];
     return v === undefined ? sectieStandaardDicht(k.dataset.sectionKey) : v === true;
   };
-  const allesDicht = koppen.every(isDicht);
-  koppen.forEach(k => { window._setSectionCollapsed[k.dataset.sectionKey] = !allesDicht; });
+  const openen = wasActief && koppen.every(isDicht);
+  koppen.forEach(k => { window._setSectionCollapsed[k.dataset.sectionKey] = !openen; });
   bewaarSectieStanden();
   applySettingsSections();
 }
-let settingsTabHoldTimer = null, settingsTabHoldFired = false;
-function settingsTabDown() {
-  settingsTabHoldFired = false;
-  clearTimeout(settingsTabHoldTimer);
-  settingsTabHoldTimer = setTimeout(() => {
-    settingsTabHoldFired = true;
-    if (navigator.vibrate) navigator.vibrate(20);
-    toggleAllSettingsSections();
-  }, LONG_PRESS_MS);
+// De tabknoppen in Instellingen gebruiken dezelfde langedruk-functie als alle andere
+// knoppen: eigen handlers gaven op een echt toestel een ander resultaat (de tik werd niet
+// altijd onderdrukt en de trilling bleef weg).
+function koppelSettingsTabs() {
+  [['settingsTabBtnMain', 'main'], ['settingsTabBtnWhs', 'whs'],
+   ['settingsTabBtnData', 'data']].forEach(([id, tab]) => {
+    const knop = document.getElementById(id);
+    if (!knop || knop._langGekoppeld) return;
+    knop._langGekoppeld = true;
+    bindLangIndrukken(knop, () => {
+      // Eerst NAAR die tab — de tik erna wordt onderdrukt, dus zonder dit gebeurt er
+      // niets. De tab is pas na deze doorloop zichtbaar, dus het dichtklappen wacht
+      // even; anders zouden de secties van de vorige tab worden gesloten.
+      window._langeTabDoel = tab;
+      switchSettingsTab(tab);
+      setTimeout(toggleAllSettingsSections, 0);
+    });
+  });
 }
-function settingsTabUp() {
-  clearTimeout(settingsTabHoldTimer);
-}
+
 
 // Putts bijhouden: standaard UIT, dus het '=== on'-patroon. Staat het uit, dan
 // verandert er niets aan het scorescherm en wordt er niets vastgelegd. Een lege
@@ -14612,47 +14644,26 @@ function toggleClubGroupByCategory() {
     return;
   }
   window._clubGrouped = true;
-  window._clubSectionCollapsed = { active: false, home: true, fav: true, other: true };
+  // De eerste keer: alleen de actieve club open. Daarna houdt deze weergave de indeling
+  // die jij hebt achtergelaten.
+  window._clubSectionCollapsed = window._clubSectionCollapsed
+    || { active: false, home: true, fav: true, other: true };
   if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = 'var(--green-deep)'; }
   buildClubList();
 }
 
 // Long-press op 'groepeer op categorie' bij Clubs: alle categorieën inklappen.
-// Bij "alles openklappen" is het niet genoeg om de hoofdgroepen open te zetten: de
-// groepen dáárin (jaren binnen een speler, jaren binnen een categorie) staan standaard
-// dicht en hebben elk een eigen sleutel. Die sleutels staan in de zojuist opgebouwde
-// lijst, dus ze worden daaruit gelezen en op 'open' gezet.
-function openAlleSubgroepen(scherm, ...stateNamen) {
-  stateNamen.forEach(naam => {
-    window[naam] = window[naam] || {};
-    document.querySelectorAll(`${scherm} [onclick*="${naam}"]`).forEach(kop => {
-      const oc = kop.getAttribute('onclick') || '';
-      const m = new RegExp(`${naam}'?\\]?\\['([^']+)'\\]`).exec(oc)
-             || new RegExp(`${naam}\\['([^']+)'\\]`).exec(oc);
-      if (m) window[naam][m[1]] = false;
-    });
-  });
-}
-
 // Lang indrukken op 'groepeer clubs op categorie': alle groepen in- of uitklappen.
 function collapseAllClubCategories() {
+  const wasActief = !!window._clubGrouped;
+  const openen = wasActief && allesDichtIn('_clubSectionCollapsed');
   window._groupByPlanned = false;
   window._clubGrouped = true;
-  const huidig = window._clubSectionCollapsed || {};
-  // De standaard is 'dicht'; alles staat dus dicht zolang geen enkele sleutel false is.
-  const allesDicht = !Object.keys(huidig).some(k => huidig[k] === false);
-  window._clubSectionCollapsed = {};
+  window._clubSectionCollapsed = {};   // een lange druk zet altijd alles dicht
   const btn = document.getElementById('clubGroupByCategoryBtn');
   if (btn) { btn.style.background = 'var(--gold)'; btn.style.color = 'var(--green-deep)'; }
   buildClubList();
-  if (allesDicht) {
-    // Openzetten kan alleen per sleutel; die staan in de zojuist gebouwde lijst.
-    document.querySelectorAll("#screen-club [onclick*='_clubSectionCollapsed']").forEach(kop => {
-      const m = /_clubSectionCollapsed\['([^']+)'\]/.exec(kop.getAttribute('onclick') || '');
-      if (m) window._clubSectionCollapsed[m[1]] = false;
-    });
-    buildClubList();
-  }
+  if (openen) klapAllesOpen('#screen-club', buildClubList, '_clubSectionCollapsed');
 }
 
 // Instellingen: 'Meer uitleg'-uitklapper (korte standaardtekst + volledige uitleg op aanvraag)
@@ -14878,6 +14889,7 @@ document.addEventListener('focusin', (e) => {
   // Long-press op 'groepeer op speler' (optioneel): alle spelers inklappen
   // Lang indrukken op de groepeerknoppen: alles in- of uitklappen (een toggle), met
   // trilling. Alle vijf via dezelfde hulpfunctie, zodat duur en gedrag gelijk zijn.
+  koppelSettingsTabs();
   bindLangIndrukken(document.getElementById('groupByPlayerBtn'), collapseAllPlayers);
   bindLangIndrukken(document.getElementById('groupByPlannedBtn'), collapseAllPlanned);
   bindLangIndrukken(document.getElementById('groupByCategoryBtn'), collapseAllCategories);
