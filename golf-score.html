@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-084</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-085</div>
 </div>
 
 <script>
@@ -3130,7 +3130,7 @@ function controleerNaamswijziging(el) {
   // Botsing gaat vóór: dat is het ernstigste geval, ook als er tegelijk rondes op de
   // oude naam staan.
   if (opNieuw) {
-    toonNaamWijzigModal(
+    toonKeuzeModal(
       'Naam bestaat al', 'orange',
       `Er ${opNieuw === 1 ? 'staat al 1 ronde' : `staan al ${opNieuw} rondes`} op "${nieuw}". `
       + 'Die gaan meetellen in je handicap en je statistieken.',
@@ -3140,7 +3140,7 @@ function controleerNaamswijziging(el) {
   }
 
   if (opOud) {
-    toonNaamWijzigModal(
+    toonKeuzeModal(
       'Naam gewijzigd', null,
       `Er ${opOud === 1 ? 'staat 1 ronde' : `staan ${opOud} rondes`} op "${oud}". `
       + `Wil je die meenemen naar "${nieuw}"?`,
@@ -3159,12 +3159,14 @@ function controleerNaamswijziging(el) {
   savePlayerProfile();
 }
 
-function toonNaamWijzigModal(titel, kleur, tekst, knoppen) {
-  const t = document.getElementById('naamWijzigTitel');
+// Venster met maximaal drie keuzes. De eerste knop is de aangeraden of veilige keuze en
+// valt op; de rest staat eronder in aflopende volgorde van waarschijnlijkheid.
+function toonKeuzeModal(titel, kleur, tekst, knoppen) {
+  const t = document.getElementById('keuzeModalTitel');
   if (t) { t.textContent = titel; t.style.color = kleur ? `var(--${kleur})` : 'var(--gold)'; }
-  const tx = document.getElementById('naamWijzigTekst');
+  const tx = document.getElementById('keuzeModalTekst');
   if (tx) tx.textContent = tekst;
-  ['naamWijzigKnop1', 'naamWijzigKnop2', 'naamWijzigKnop3'].forEach((id, i) => {
+  ['keuzeModalKnop1', 'keuzeModalKnop2', 'keuzeModalKnop3'].forEach((id, i) => {
     const b = document.getElementById(id);
     if (!b) return;
     const k = knoppen[i];
@@ -3177,11 +3179,11 @@ function toonNaamWijzigModal(titel, kleur, tekst, knoppen) {
       ? 'width:100%;padding:12px;font-size:20px;margin-top:0'
       : 'width:100%;padding:12px;font-size:17px';
     b.onclick = () => {
-      document.getElementById('naamWijzigModal').classList.add('hidden');
+      document.getElementById('keuzeModal').classList.add('hidden');
       k.actie();
     };
   });
-  document.getElementById('naamWijzigModal').classList.remove('hidden');
+  document.getElementById('keuzeModal').classList.remove('hidden');
 }
 
 function savePlayerProfile() {
@@ -8130,7 +8132,7 @@ function schiftRondes(lijst) {
 function overgeslagenTekst(over, totaal) {
   if (!over.length) return '';
   const redenen = [...new Set(over.map(x => x.reden))].slice(0, 3).join(', ');
-  return ` ${over.length} van de ${totaal} overgeslagen (${redenen}).`;
+  return ` ${over.length} ronde${over.length !== 1 ? 's' : ''} niet ingelezen (${redenen}).`;
 }
 
 function importRound(input) {
@@ -8171,23 +8173,28 @@ function importRound(input) {
           return;
         }
 
-        showConfirmModal(
-          'Meerdere rondes importeren',
-          `Dit bestand bevat ${n} ronde${n !== 1 ? 's' : ''}. Wil je ze toevoegen aan je bestaande rondes (${existingCount} ronde${existingCount !== 1 ? 's' : ''}), of al je rondes volledig vervangen door dit bestand?`,
-          () => doAdditiveImport(parsed, overslagTekst),
-          'Volledig herstellen…',
-          () => {
-            showDangerModal(
-              'Weet je het zeker?',
-              `Je huidige rondes (${existingCount} ronde${existingCount !== 1 ? 's' : ''}) worden volledig vervangen door de ${n} ronde${n !== 1 ? 's' : ''} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`,
-              'Vervangen',
-              () => {
-                doFullRestoreImport(parsed);
-                showStatus(`Rondes hersteld: ${n} ronde${n !== 1 ? 's' : ''}.${overslagTekst}`, false);
-              }
-            );
-          },
-          'Toevoegen'
+        // De knoppen staan in dezelfde volgorde als de tekst en lopen van veilig naar
+        // zwaar: toevoegen, vervangen, annuleren. Eén woord voor één handeling —
+        // 'herstellen' en 'vervangen' door elkaar gebruiken maakte onduidelijk wat er
+        // ging gebeuren.
+        const meervoud = (aantal) => `${aantal} ronde${aantal !== 1 ? 's' : ''}`;
+        toonKeuzeModal(
+          'Rondes importeren', null,
+          `Dit bestand bevat ${meervoud(n)}. Je hebt er nu ${existingCount}.`,
+          [{ tekst: 'Toevoegen', hoofd: true,
+             actie: () => doAdditiveImport(parsed, overslagTekst) },
+           { tekst: 'Vervangen…', actie: () => {
+               showDangerModal(
+                 'Alle rondes vervangen',
+                 `Je huidige ${meervoud(existingCount)} worden vervangen door de ${meervoud(n)} uit dit bestand. Dit kan niet ongedaan gemaakt worden.`,
+                 'Vervangen',
+                 () => {
+                   doFullRestoreImport(parsed);
+                   showStatus(`${meervoud(n)} geïmporteerd, je vorige rondes zijn vervangen.${overslagTekst}`, false);
+                 }
+               );
+             } },
+           { tekst: 'Annuleren', actie: () => {} }]
         );
         return;
       }
@@ -8357,9 +8364,12 @@ function doAdditiveImport(parsed, overslagTekst = '') {
   updateStorageSettingsUI();
   updateLastBackupDisplay();
   updateLowHiInput();
+  // 'Overgeslagen' betekende twee dingen tegelijk: een ronde die je al had (normaal) en
+  // een ronde met onmogelijke waarden (een signaal dat er iets mis is met het bestand).
+  // Die twee staan nu in aparte zinnen met eigen woorden.
   const parts = [`${imported} ronde${imported !== 1 ? 's' : ''} geïmporteerd.`];
-  if (exactDup) parts.push(`${exactDup} ronde${exactDup !== 1 ? 's' : ''} overgeslagen: bestond${exactDup !== 1 ? 'en' : ''} al (zelfde datum, tijd en speler).`);
-  if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} overgeslagen: er stonden al 2 rondes op die datum/tijd — importeer die apart als je alsnog wilt overschrijven.`);
+  if (exactDup) parts.push(`${exactDup} ${exactDup !== 1 ? 'rondes had je al' : 'ronde had je al'} (zelfde datum, tijd en speler).`);
+  if (slotFull) parts.push(`${slotFull} ronde${slotFull !== 1 ? 's' : ''} niet toegevoegd: er stonden al twee rondes op die datum en tijd — importeer die apart als je wilt overschrijven.`);
   if (coupledPartners.length) parts.push(`${coupledPartners.length} ronde${coupledPartners.length !== 1 ? 's kunnen' : ' kan'} gekoppeld worden aan een bestaande ronde op dezelfde datum/tijd (${coupledPartners.join(', ')}).`);
   showInfoModal('Import voltooid', parts.join(' ') + (overslagTekst || ''));
 }
@@ -15070,14 +15080,14 @@ document.addEventListener('focusin', (e) => {
   </div>
 </div>
 
-<div id="naamWijzigModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="keuzeModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:660;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:20px;width:100%;max-width:340px">
-    <div id="naamWijzigTitel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center"></div>
-    <div id="naamWijzigTekst" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
+    <div id="keuzeModalTitel" style="font-size:20px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;text-align:center"></div>
+    <div id="keuzeModalTekst" style="font-size:20px;color:var(--white);text-align:center;margin-bottom:16px;line-height:1.5"></div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button id="naamWijzigKnop1" class="btn-primary" style="width:100%;padding:12px;font-size:20px;margin-top:0"></button>
-      <button id="naamWijzigKnop2" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
-      <button id="naamWijzigKnop3" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
+      <button id="keuzeModalKnop1" class="btn-primary" style="width:100%;padding:12px;font-size:20px;margin-top:0"></button>
+      <button id="keuzeModalKnop2" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
+      <button id="keuzeModalKnop3" class="btn-secondary" style="width:100%;padding:12px;font-size:17px"></button>
     </div>
   </div>
 </div>
