@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-07C</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-07D</div>
 </div>
 
 <script>
@@ -8732,6 +8732,7 @@ function toggleGroupByTrack() {
 // een tweede lange druk niets te doen.
 function collapseAllClubs() {
   window._groupByPlanned = false;
+  window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   window._groupByTrack = true;
   window._groupByCategory = false;
@@ -8837,6 +8838,27 @@ function werkAgendaKnopBij(aantal) {
   }
 }
 
+// Lang indrukken op de agendaknop: de drie groepen (Deze week, Volgende week, Later)
+// tegelijk in- of uitklappen. Zoals bij de andere groepeerknoppen zet dit de weergave
+// ook zelf aan, zodat één lange druk je meteen bij het volledige overzicht brengt.
+function collapseAllPlanned() {
+  window._toonLegeCategorieen = false;
+  window._groupByPlanned = true;
+  window._groupByCategory = false;
+  window._groupByTrack = false;
+  window._groupByPlayer = false;
+  window._groupByWhs = false;
+  zetGroepeerKnop('groupByPlannedBtn');
+
+  const sleutels = ['plan_deze', 'plan_volgende', 'plan_later'];
+  const huidig = window._planCollapsed || {};
+  // Staat alles dicht, dan gaat alles open; anders gaat alles dicht.
+  const allesDicht = sleutels.every(k => huidig[k] !== false);
+  window._planCollapsed = {};
+  sleutels.forEach(k => { window._planCollapsed[k] = !allesDicht; });
+  loadSaved();
+}
+
 function toggleGroupByPlanned() {
   window._toonLegeCategorieen = false;
   if (window._groupByPlanned) {
@@ -8879,6 +8901,7 @@ function toggleGroupByCategory() {
 // Long-press op 'groepeer op categorie': alle categorieën inklappen.
 function collapseAllCategories() {
   window._groupByPlanned = false;
+  window._groupByPlanned = false;
   window._groupByCategory = true;
   window._groupByPlayer = false;
   window._groupByTrack = false;
@@ -8915,6 +8938,7 @@ function toggleGroupByPlayer() {
 
 // Long-press op 'groepeer op speler': alle spelers inklappen.
 function collapseAllPlayers() {
+  window._groupByPlanned = false;
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   window._groupByPlayer = true;
@@ -8995,6 +9019,7 @@ function toggleWhsShort() {
 // Long-press op 'groepeer op WHS': wisselt tussen verkorte en volledige kaarten. Stond
 // de WHS-groepering nog uit, dan gaat die eerst aan en begin je verkort.
 function setWhsShort() {
+  window._groupByPlanned = false;
   window._groupByPlanned = false;
   window._toonLegeCategorieen = false;
   const stondUit = !window._groupByWhs;
@@ -14611,6 +14636,7 @@ function openAlleSubgroepen(scherm, ...stateNamen) {
 
 // Lang indrukken op 'groepeer clubs op categorie': alle groepen in- of uitklappen.
 function collapseAllClubCategories() {
+  window._groupByPlanned = false;
   window._clubGrouped = true;
   const huidig = window._clubSectionCollapsed || {};
   // De standaard is 'dicht'; alles staat dus dicht zolang geen enkele sleutel false is.
@@ -14853,6 +14879,7 @@ document.addEventListener('focusin', (e) => {
   // Lang indrukken op de groepeerknoppen: alles in- of uitklappen (een toggle), met
   // trilling. Alle vijf via dezelfde hulpfunctie, zodat duur en gedrag gelijk zijn.
   bindLangIndrukken(document.getElementById('groupByPlayerBtn'), collapseAllPlayers);
+  bindLangIndrukken(document.getElementById('groupByPlannedBtn'), collapseAllPlanned);
   bindLangIndrukken(document.getElementById('groupByCategoryBtn'), collapseAllCategories);
   bindLangIndrukken(document.getElementById('clubGroupByCategoryBtn'), collapseAllClubCategories);
   bindLangIndrukken(document.getElementById('groupByTrackBtn'), collapseAllClubs);
