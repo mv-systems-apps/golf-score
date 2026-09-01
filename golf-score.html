@@ -866,12 +866,12 @@
     <input type="file" id="importClubFile" accept=".json" onchange="importCourseData(this)" style="display:none">
     <button class="btn-secondary" style="padding:8px 14px" onclick="createNewClub()" title="Nieuwe club"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
     <button id="clubGroupByCategoryBtn" class="btn-secondary" style="padding:8px 14px" onclick="toggleClubGroupByCategory()" title="Groepeer op categorie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
-    <button id="clubSearchBtn" class="btn-secondary" style="padding:8px 14px" onclick="var w=document.getElementById('clubSearchWrap');w.classList.toggle('hidden');this.style.background=w.classList.contains('hidden')?'':'var(--gold)';this.style.color=w.classList.contains('hidden')?'':'var(--green-deep)';if(!w.classList.contains('hidden'))document.getElementById('clubSearch').focus();else{document.getElementById('clubSearch').value='';buildClubList();}" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+    <button id="clubSearchBtn" class="btn-secondary" style="padding:8px 14px" onclick="toggleClubZoeken()" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="clubSearchWrap" style="margin-bottom:14px">
     <div style="position:relative">
-      <input id="clubSearch" aria-label="Zoeken in clubs" type="text" placeholder="Club" oninput="buildClubList()" style="padding-right:40px">
-      <button id="clubSearchClear" class="search-clear hidden" onclick="clearSearchField('clubSearch', buildClubList)" title="Wissen">&times;</button>
+      <input id="clubSearch" aria-label="Zoeken in clubs" type="text" placeholder="Club" oninput="zoekInClubs()" style="padding-right:40px">
+      <button id="clubSearchClear" class="search-clear hidden" onclick="clearSearchField('clubSearch', herstelNaClubZoeken)" title="Wissen">&times;</button>
     </div>
   </div>
   <div id="clubListEmptyMsg" class="hidden"></div>
@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-08B</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-08E</div>
 </div>
 
 <script>
@@ -7269,6 +7269,10 @@ function toggleAlleStatsGroepen() {
     return v == null ? k !== 'handicap' : v === 'closed';
   });
   keys.forEach(k => storage.setItem('golf_stats_grp_' + k, allesDicht ? 'open' : 'closed'));
+  // De clubs binnen de groep 'Clubs' blijven dicht, ook bij 'alles open': je kijkt
+  // vrijwel altijd maar naar één club, en alles openklappen zou een lijst van tientallen
+  // banen en tees geven waar je doorheen moet scrollen.
+  if (allesDicht) window._statClubCollapsed = {};
   renderPlayerStats();
 }
 
@@ -9803,11 +9807,36 @@ function loadSaved() {
   // ingeklapte sectie kost dit dus geen zware HTML-opbouw meer — belangrijk zodra het
   // archief over jaren heen groeit. Uitklappen triggert toch al een volledige
   // loadSaved()-herrender, dus er gaat niets aan functionaliteit verloren.
+  // Bij 'alles openklappen' kunnen er in één keer honderden kaarten worden opgebouwd:
+  // gemeten bij 1000 rondes bijna een seconde, en op een toestel een veelvoud daarvan.
+  // Daarom dezelfde grens als de vlakke lijst al kent: er worden hooguit zoveel KAARTEN
+  // gebouwd, met onderaan een knop om de rest te laden.
+  // KOPPEN tellen niet mee en worden altijd gebouwd — anders zou een hele groep uit
+  // beeld verdwijnen zonder dat je hem nog kunt openklappen.
+  let kaartBudget = window._flatListLimit || FLAT_LIST_PAGE_SIZE;
+  let kaartenIngekort = false;
   const cardsIfExpanded = (rounds, key, stateObj, mapper) => {
     const collapsed = window[stateObj]?.[key] !== false;
     if (collapsed) return '';
-    return rounds.map(mapper || (r => makeCard(r))).join('');
+    const bouwer = mapper || (r => makeCard(r));
+    if (rounds.length > kaartBudget) {
+      kaartenIngekort = true;
+      const deel = rounds.slice(0, Math.max(0, kaartBudget));
+      kaartBudget = 0;
+      return deel.map(bouwer).join('');
+    }
+    kaartBudget -= rounds.length;
+    return rounds.map(bouwer).join('');
   };
+
+  // Knop onder een ingekorte gegroepeerde lijst. Dezelfde teller als de vlakke lijst,
+  // zodat er één grens is in plaats van twee die elkaar tegenspreken.
+  const toonMeerKnop = () => kaartenIngekort
+    ? `<div style="text-align:center;margin:16px 0 8px">`
+      + `<button class="btn-secondary" style="padding:10px 20px" `
+      + `onclick="window._flatListLimit=(window._flatListLimit||${FLAT_LIST_PAGE_SIZE})+${FLAT_LIST_PAGE_SIZE};loadSaved()">`
+      + `Toon meer</button></div>`
+    : '';
   // Koptekst voor de WHS-groepering: de categorie zelf is nooit inklapbaar (maar één
   // vaste categorie), maar het pijltje schakelt wel tussen verkorte en uitgebreide
   // kaarten (long-press op de knop zelf gaat direct naar verkort, zie toggleWhsShort/
@@ -9856,8 +9885,19 @@ function loadSaved() {
 
     // Kaarten altijd verkort, behalve als er al holes zijn ingevuld: dan zouden die
     // drie regels echte gegevens verbergen.
-    const planKaarten = lijst => lijst
-      .map(r => makeCard(r, null, false, false, gespeeldeHoles(r) === 0)).join('');
+    // Ook hier de gedeelde grens: bij veel geplande rondes zouden er anders honderden
+    // kaarten in één keer worden opgebouwd.
+    const planKaarten = lijst => {
+      const bouw = r => makeCard(r, null, false, false, gespeeldeHoles(r) === 0);
+      if (lijst.length > kaartBudget) {
+        kaartenIngekort = true;
+        const deel = lijst.slice(0, Math.max(0, kaartBudget));
+        kaartBudget = 0;
+        return deel.map(bouw).join('');
+      }
+      kaartBudget -= lijst.length;
+      return lijst.map(bouw).join('');
+    };
 
     const planGroep = (titel, lijst, key, leegTekst) => {
       const dicht = window._planCollapsed?.[key] !== false;
@@ -10044,6 +10084,8 @@ function loadSaved() {
         + `</div>`;
     }
   }
+  // De 'Toon meer'-knop hoort onder de lijst, vóór de meldingen die erboven komen.
+  html += toonMeerKnop();
   if (query || hasDateCriteria) {
     html = `<div class="info-msg" style="font-size:17px;color:var(--muted);font-weight:700;margin-bottom:8px">${filtered.length} ronde${filtered.length !== 1 ? 's' : ''} gevonden</div>` + html;
   }
@@ -14728,6 +14770,50 @@ function toggleClubGroupByCategory() {
 
 // Long-press op 'groepeer op categorie' bij Clubs: alle categorieën inklappen.
 // Lang indrukken op 'groepeer clubs op categorie': alle groepen in- of uitklappen.
+// Zoeken en groeperen zijn twee verschillende dingen — net als bij de rondes. Zoek je,
+// dan gaat de groepering uit en zie je één doorlopende lijst met de treffers; wis je het
+// zoekveld, dan kom je terug in de weergave waar je vandaan kwam. Anders zou een treffer
+// in een dichtgeklapte groep onzichtbaar blijven.
+function zoekInClubs() {
+  const term = (document.getElementById('clubSearch')?.value || '').trim();
+  if (term && window._clubZoekVorige === undefined) {
+    window._clubZoekVorige = !!window._clubGrouped;
+    if (window._clubGrouped) {
+      window._clubGrouped = false;
+      const knop = document.getElementById('clubGroupByCategoryBtn');
+      if (knop) { knop.style.background = ''; knop.style.color = ''; }
+    }
+  }
+  buildClubList();
+}
+
+function herstelNaClubZoeken() {
+  const vorige = window._clubZoekVorige;
+  window._clubZoekVorige = undefined;
+  if (vorige) {
+    window._clubGrouped = true;
+    const knop = document.getElementById('clubGroupByCategoryBtn');
+    if (knop) { knop.style.background = 'var(--gold)'; knop.style.color = 'var(--green-deep)'; }
+  }
+  buildClubList();
+}
+
+function toggleClubZoeken() {
+  const wrap = document.getElementById('clubSearchWrap');
+  const knop = document.getElementById('clubSearchBtn');
+  const veld = document.getElementById('clubSearch');
+  if (!wrap) return;
+  wrap.classList.toggle('hidden');
+  const open = !wrap.classList.contains('hidden');
+  if (knop) {
+    knop.style.background = open ? 'var(--gold)' : '';
+    knop.style.color = open ? 'var(--green-deep)' : '';
+  }
+  if (open) { veld?.focus(); return; }
+  if (veld) veld.value = '';
+  herstelNaClubZoeken();
+}
+
 function collapseAllClubCategories() {
   const wasActief = !!window._clubGrouped;
   const openen = wasActief && allesDichtIn('_clubSectionCollapsed');
