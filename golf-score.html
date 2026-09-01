@@ -1286,7 +1286,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-08E</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-08F</div>
 </div>
 
 <script>
@@ -7268,11 +7268,13 @@ function toggleAlleStatsGroepen() {
     const v = storage.getItem('golf_stats_grp_' + k);
     return v == null ? k !== 'handicap' : v === 'closed';
   });
-  keys.forEach(k => storage.setItem('golf_stats_grp_' + k, allesDicht ? 'open' : 'closed'));
-  // De clubs binnen de groep 'Clubs' blijven dicht, ook bij 'alles open': je kijkt
-  // vrijwel altijd maar naar één club, en alles openklappen zou een lijst van tientallen
-  // banen en tees geven waar je doorheen moet scrollen.
-  if (allesDicht) window._statClubCollapsed = {};
+  // De groep 'Clubs' (sleutel 'banen') blijft DICHT bij 'alles open': je kijkt vrijwel
+  // altijd maar naar één club, en die lijst met clubs, banen en tees vult het hele
+  // scherm. Dichtklappen doet hij wel gewoon mee.
+  keys.forEach(k => storage.setItem('golf_stats_grp_' + k,
+    allesDicht ? (k === 'banen' ? 'closed' : 'open') : 'closed'));
+  // En ook de clubs bínnen die groep gaan niet vanzelf open.
+  if (allesDicht) { window._statClubCollapsed = {}; window._statTrackCollapsed = {}; }
   renderPlayerStats();
 }
 
