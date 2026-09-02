@@ -1295,7 +1295,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-091</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-092</div>
 </div>
 
 <script>
@@ -5284,9 +5284,15 @@ function renderPlayerStats() {
   // Spreiding (consistentie): standaarddeviatie van de dagresultaten (binnen de gekozen
   // periode). Steekproef-variant (n-1, Bessel): de rondes zijn een steekproef uit je spel
   // als proces, niet de volledige populatie — delen door n onderschat de spreiding dan
-  // systematisch. Zelfde formule als de σₙ₋₁ op de regelkaart, zodat beide vergelijkbaar
-  // zijn; een resterend verschil komt dan alleen nog door de aggregatie daar
-  // (maand-/kwartaalgemiddelden i.p.v. losse rondes).
+  // systematisch.
+  // LET OP: dit is bewust een ANDERE maat dan de regelkaart gebruikt. Die schat de
+  // spreiding uit de moving range (σ̂ = r̄/1,128), en dat is daar ook juist: de grenzen
+  // moeten de korte-termijnruis weergeven, zonder dat een stijgende of dalende lijn ze
+  // breder maakt — anders verbergt de kaart precies wat hij moet aantonen.
+  // Hier is het omgekeerde gewenst: 'hoe wisselvallig speel ik' hoort álle variatie te
+  // tellen, inclusief je ontwikkeling. De twee getallen mogen dus verschillen; ze
+  // beantwoorden een andere vraag. (Een eerdere versie van deze opmerking beweerde dat
+  // de regelkaart dezelfde formule gebruikt. Dat was onjuist.)
   const spread = (() => {
     if (periodValidSd.length < 3) return null;
     const m = periodValidSd.reduce((s, x) => s + x, 0) / periodValidSd.length;
