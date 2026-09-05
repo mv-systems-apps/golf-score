@@ -174,7 +174,13 @@
     .hdr-chcp    { font-size:24px; font-weight: 800; color: var(--cream); }
     .hdr-gender  { font-size:24px; font-weight: 800; color: var(--cream); }
     .tee-badge {
+      /* vertical-align en line-height zorgen dat het badge midden in de regel staat als
+         hij MIDDEN IN EEN ZIN wordt gebruikt (zoals in Wat als...?). Zonder deze twee
+         hangt hij op de tekstregel en steekt hij onder de regel uit, waardoor de
+         regelafstand ook nog verspringt. In een flexrij, waar hij verder staat, maken ze
+         geen verschil. */
       display: inline-block; padding: 3px 11px; border-radius: 6px;
+      vertical-align: middle; line-height: 1.2;
       font-size:13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
       background: repeating-linear-gradient(45deg, #c9a84c 0px, #c9a84c 3px, #a8863c 3px, #a8863c 6px); color: #1a1a1a;
     }
@@ -1310,7 +1316,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Versie 13527DA-098</div>
+    <div id="appVersionStamp" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Versie 13527DA-09E</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -3503,15 +3509,20 @@ function openRoundEditChoice(idx) {
 
   const herplanBtn = document.getElementById('roundEditChoiceHerplan');
   if (herplanBtn) {
-    // Herplannen kan alleen bij een ronde zonder ENKELE score: bij een gespeelde ronde
-    // zou dit de omstandigheden achteraf herschrijven en klopt het dagresultaat niet
-    // meer met wat je speelde.
-    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>Herplannen</span>`;
-    herplanBtn.disabled = !nogNietGespeeld;
-    herplanBtn.style.opacity = nogNietGespeeld ? '' : '.4';
-    herplanBtn.title = nogNietGespeeld ? '' : 'Er zijn al scores ingevuld';
-    herplanBtn.onclick = nogNietGespeeld
-      ? () => { sluitRoundEditChoice(); herplanRonde(String(r.id)); } : null;
+    // Eén knop, twee namen. Zonder scores: HERPLANNEN — de ronde opnieuw opzetten.
+    // Met scores: CORRIGEREN — hetzelfde, maar de scores gaan mee. Dat laatste is voor
+    // de ronde die je goed speelde maar verkeerd opzette (verkeerde tee, baan of datum);
+    // zonder die knop moest je alle scores opnieuw intikken.
+    const corrigeren = !nogNietGespeeld;
+    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>${corrigeren ? 'Corrigeren' : 'Herplannen'}</span>`;
+    herplanBtn.disabled = false;
+    herplanBtn.style.opacity = '';
+    herplanBtn.title = '';
+    herplanBtn.onclick = () => {
+      sluitRoundEditChoice();
+      if (corrigeren) corrigeerRonde(String(r.id));
+      else herplanRonde(String(r.id));
+    };
   }
 
   const resBtn = document.getElementById('roundEditChoiceResult');
@@ -3544,19 +3555,50 @@ const HERPLAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none
 // oude planning verdwijnt pas als de nieuwe wordt vastgelegd — breek je af, dan blijft
 // alles staan.
 let _herplanIds = null;
+// Bij CORRIGEREN worden ook de ingevulde scores meegenomen: je hebt de ronde gespeeld,
+// alleen met de verkeerde tee, baan of datum. Alles wat van de omstandigheden afhangt —
+// baanhandicap, persoonlijke par, stableford, dagresultaat — wordt opnieuw berekend,
+// precies zoals bij het starten van een gewone ronde.
+let _corrigeerScores = null;
 
-function herplanRonde(id) {
+// Corrigeren = herplannen mét behoud van de scores. Bedoeld voor het geval dat je de
+// ronde goed hebt gespeeld maar verkeerd hebt opgezet (verkeerde tee, baan of datum).
+// De oude ronde verdwijnt pas als de nieuwe is vastgelegd, net als bij herplannen.
+function corrigeerRonde(id) {
+  const saved = loadSavedRounds();
+  const r = saved.find(x => String(x.id) === String(id));
+  if (!r || gespeeldeHoles(r) === 0) return;
+
+  const aantal = gespeeldeHoles(r);
+  const vast = r.sdFinal != null;
+  toonKeuzeModal(
+    'Ronde corrigeren', 'orange',
+    `Je ${aantal} ingevulde score${aantal === 1 ? '' : 's'} `
+    + `${aantal === 1 ? 'gaat' : 'gaan'} mee. `
+    + 'Baanhandicap, stableford en dagresultaat worden opnieuw berekend'
+    + (vast ? ', en het vastgestelde dagresultaat vervalt' : '')
+    + '. De oude ronde verdwijnt zodra je de nieuwe start; dit kan niet ongedaan gemaakt worden.',
+    [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
+     { tekst: 'Corrigeren', actie: () => herplanRonde(id, true) }]
+  );
+}
+
+function herplanRonde(id, metScores = false) {
   const saved = loadSavedRounds();
   let r = saved.find(x => String(x.id) === String(id));
   if (!r) return;
-  if (gespeeldeHoles(r) > 0) return;
+  // Herplannen kan alleen bij een lege ronde; corrigeren juist alleen bij een gespeelde.
+  if (!metScores && gespeeldeHoles(r) > 0) return;
+  if (!metScores) _corrigeerScores = null;
 
   // Gekoppelde ronde op dezelfde datum en tijd (speler 2) gaat mee. Wel van een ÁNDERE
   // speler: staat er om wat voor reden dan ook een tweede ronde van dezelfde persoon op
   // dat tijdstip, dan zou die als "speler 2" worden ingevuld en ontstaan er bij het
   // starten twee rondes van dezelfde speler — een echt duplicaat.
   let hoofd = r;
-  let maat = saved.find(x => String(x.id) !== String(r.id) && gespeeldeHoles(x) === 0 &&
+  // Bij corrigeren heeft de medespeler juist WEL scores, dus die eis geldt daar niet.
+  let maat = saved.find(x => String(x.id) !== String(r.id) &&
+    (metScores || gespeeldeHoles(x) === 0) &&
     (x.date || '') === (r.date || '') && (x.time || '') === (r.time || '') &&
     (x.player || '') !== (r.player || ''));
   // Tik je op de kaart van de medespeler, dan zou die als speler 1 worden ingevuld en
@@ -3568,6 +3610,19 @@ function herplanRonde(id) {
   }
   r = hoofd;
   _herplanIds = [String(hoofd.id)].concat(maat ? [String(maat.id)] : []);
+
+  // Corrigeren: de scores van BEIDE rondes bewaren, en ze koppelen aan de SPELER — niet
+  // aan de kaart waarop je tikte. Eerder werd alleen de aangetikte ronde bewaard, en die
+  // ging daarna niet mee in de omwisseling hierboven. Gevolg: tikte je op je eigen kaart,
+  // dan kwam de medespeler leeg terug; tikte je op de zijne, dan kregen JOUW holes ZIJN
+  // scores. Beide gemeten en beide fout.
+  if (metScores) {
+    const pak = ronde => (ronde?.holes || []).map(h => ({
+      score: h.score ?? null,
+      putts: h.putts ?? null,
+    }));
+    _corrigeerScores = { p1: pak(hoofd), p2: maat ? pak(maat) : null };
+  }
 
   // Startscherm vullen met de bestaande keuzes. Bestaat de baan of de tee niet meer
   // (verwijderd, of hernoemd zonder de historie mee te nemen), dan blijft de huidige
@@ -3662,13 +3717,18 @@ function toonHerplanBanner(r, maat, kwijt) {
   const wanneer = `${formatFullDate(r.date)}${r.time ? ' om ' + r.time : ''}`;
   const kwijtTekst = (kwijt && kwijt.length)
     ? `<div style="font-weight:400;margin-top:4px">${escapeHtml(kwijt.join(' en '))} bestaat niet meer \u2014 kies opnieuw</div>` : '';
-  el.innerHTML = `<span style="flex:1">Opnieuw plannen: de ronde van ${wanneer}${maat ? ` (met ${escapeHtml(maat.player || 'speler 2')})` : ''} wordt vervangen${kwijtTekst}</span>`
+  // De banner noemt de handeling waar je vandaan komt, zodat je op het startscherm weet
+  // waarom je gegevens al ingevuld staan.
+  const wat = _corrigeerScores ? 'Corrigeren' : 'Opnieuw plannen';
+  const scoreTekst = _corrigeerScores ? ' — je scores gaan mee' : '';
+  el.innerHTML = `<span style="flex:1">${wat}: de ronde van ${wanneer}${maat ? ` (met ${escapeHtml(maat.player || 'speler 2')})` : ''} wordt vervangen${scoreTekst}${kwijtTekst}</span>`
     + `<button class="btn-secondary" style="padding:4px 12px;font-size:17px" onclick="annuleerHerplan()">\u00d7</button>`;
   el.classList.remove('hidden');
 }
 
 function annuleerHerplan() {
   _herplanIds = null;
+  _corrigeerScores = null;
   const el = document.getElementById('herplanBanner');
   if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
   // Ook de notitievelden leegmaken: anders lekt de notitie van de geannuleerde
@@ -3746,6 +3806,22 @@ function startRoundConfirmed() {
     note: leesStartNote(1) || undefined,
     holes: buildRoundHoles(course, teeData, phcps),
   };
+  // Corrigeren: de scores van de oude ronde overnemen. Hebben de banen niet evenveel
+  // holes, dan gaat over wat past (van 18 naar 9 dus de eerste negen); de rest vervalt.
+  // Alles wat van de omstandigheden afhangt is hierboven al opnieuw opgebouwd, en het
+  // dagresultaat wordt zo meteen opnieuw berekend — een eerder vastgestelde waarde gaat
+  // dus niet mee, want die hoorde bij de oude tee.
+  if (_corrigeerScores?.p1) {
+    game.holes.forEach((h, i) => {
+      const oud = _corrigeerScores.p1[i];
+      if (!oud) return;
+      if (oud.score != null) h.score = oud.score;
+      if (oud.putts != null) h.putts = oud.putts;
+    });
+    // Totalen en dagresultaat worden bij het opslaan berekend uit game.holes; hier hoeft
+    // niets extra's te gebeuren. Een eerder vastgesteld dagresultaat gaat NIET mee: het
+    // nieuwe game-object begint zonder sdFinal.
+  }
   currentHole = 0;
   game.holes[0]._initScore = game.holes[0].score;
 
@@ -3783,6 +3859,19 @@ function startRoundConfirmed() {
         currentHole: 0, started: true,
         holes: buildRoundHoles(course, teeData2, phcps2),
       };
+      // Corrigeren: de scores van de MEDESPELER terug op zijn eigen ronde. Zet je speler
+      // 2 uit tijdens het corrigeren, dan komt dit blok niet langs en verdwijnt zijn oude
+      // ronde met de rest — je gooit dan bewust beide rondes weg en voert er één terug.
+      if (_corrigeerScores?.p2) {
+        round2.holes.forEach((h, i) => {
+          const oud = _corrigeerScores.p2[i];
+          if (!oud) return;
+          if (oud.score != null) h.score = oud.score;
+          if (oud.putts != null) h.putts = oud.putts;
+        });
+        round2.playedCount = round2.holes.filter(h => h.score != null).length;
+        round2.total = round2.holes.reduce((s, h) => s + (h.score || 0), 0);
+      }
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
       saved2.unshift(round2);
