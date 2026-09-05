@@ -1295,7 +1295,7 @@
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-092</div>
+  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-096</div>
 </div>
 
 <script>
@@ -1358,10 +1358,11 @@ function saveClubsToStorage() {
     // er is bewust geen dagen- of aantallendrempel: de melding komt alleen als er iets
     // te beschermen valt, en zwijgt zolang je niets wijzigt.
     try {
+      // Alleen de vingerafdruk: de melding noemt geen tijdstip meer, dus een aparte
+      // wijzigingsstempel heeft geen lezer.
       const nu = clubsVingerafdruk();
       if (nu !== storage.getItem('golf_clubs_fingerprint')) {
         storage.setItem('golf_clubs_fingerprint', nu);
-        storage.setItem('golf_clubs_changed', new Date().toISOString());
       }
     } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
     return gelukt;
@@ -2943,8 +2944,14 @@ function updateChcp() {
     badge.className = 'tee-badge tee-' + (sel.tee || '');
   }
 
-  // Alleen recalcPpar als sel.track overeenkomt met de actieve ronde
-  if (game.started && sel.track && sel.track === game.track) recalcPpar();
+  // Het startscherm raakt een LOPENDE ronde niet. Eerder werd hier recalcPpar()
+  // aangeroepen zodra de baan op dit scherm dezelfde was als die van de actieve ronde —
+  // en dat is bijna altijd zo, want het scherm blijft staan op de ronde die je startte.
+  // Wilde je even opzoeken hoeveel slagen je met een andere handicap zou krijgen, dan
+  // veranderde midden in je ronde je baanhandicap, en daarmee je slagen per hole. De
+  // eerste holes waren dan met andere slagen geteld dan de rest, zonder dat je het zag.
+  // De handicap van een ronde ligt vast zodra je begint, net als in het echt. Wil je hem
+  // toch wijzigen, dan doe je dat bewust via Bewerken op die ronde.
   updateTeeAdvice();
 }
 
@@ -6285,7 +6292,9 @@ function refreshTabDot(rondes) {
   // voor Rondes onverhoopt struikelt, blijft deze stip toch correct (Marks melding dat
   // de stip na een backup bleef staan).
   // De stip gaat aan bij een te oude RONDE-backup óf gewijzigde clubs.
-  const stipNodig = isBackupOverdue(rondes) || isClubsBackupOverdue();
+  // De stip gaat aan zodra er iets niet veilig staat, ook als de dagendrempel nog niet
+  // is bereikt: een ronde die je vanmiddag toevoegt aan een backup van vanochtend telt.
+  const stipNodig = isBackupOverdue(rondes) || isErIetsOnveiligs() || isClubsBackupOverdue();
   const tabSet0 = document.getElementById('tab-settings');
   if (tabSet0) tabSet0.classList.toggle('has-dot', stipNodig);
   const tab = document.getElementById('tab-archive');
@@ -12349,17 +12358,6 @@ function openRoundInfoModal(idx) {
 // Zelfde invoerfilter en klem/afrond-validatie als het hcp-veld bij Start (iHcp/iHcp2),
 // maar puur voor dit veld — geen WHS-herberekeningen, dit is enkel voor het rechtzetten
 // van administratiefoutjes achteraf.
-function onEditHcpInput(input) {
-  handleRangeInput(input, 'editHcpRangeMsg');
-}
-function onEditHcpBlur(input) {
-  if (input.value === '' || input.value === '-') return;
-  let num = parseFloat(input.value);
-  if (isNaN(num)) { input.value = ''; return; }
-  num = Math.min(54, Math.max(-10, num));
-  num = Math.round(num * 10) / 10;
-  input.value = String(num);
-}
 
 function doOpenRoundInfoModal(idx) {
   const saved = loadSavedRounds();
@@ -12370,7 +12368,6 @@ function doOpenRoundInfoModal(idx) {
   document.getElementById('editDateInput').value = round.date || '';
   document.getElementById('editTimeInput').value = round.time || '';
   document.getElementById('editPlayerInput').value = round.player || '';
-  setValidatedInput(document.getElementById('editHcpInput'), round.hcp != null && round.hcp !== '' ? String(round.hcp) : '');
   const activeId = storage.getItem('golf_active_id');
   const isActive = activeId && String(round.id) === activeId;
   const qSrc = isActive ? (game.qualifying ?? round.qualifying) : round.qualifying;
@@ -12637,15 +12634,12 @@ function applyRoundInfo(saved, round, date, time) {
     updatePlayerSwitchBar();
   }
   const player = document.getElementById('editPlayerInput').value.trim() || _roundInfoOrig.player || round.player;
-  const hcpRaw = document.getElementById('editHcpInput').value.trim().replace(',', '.');
-  const hcpVal = hcpRaw === '' ? null : parseFloat(hcpRaw);
   round.date = date;
   round.time = time;
   round.player = player;
   round.qualifying = document.getElementById('editQualifyToggle').checked;
   const noteVal = document.getElementById('editNoteInput').value.trim();
   if (noteVal) round.note = noteVal; else delete round.note;
-  if (hcpVal !== null && !isNaN(hcpVal)) round.hcp = hcpVal;
   const activeId = storage.getItem('golf_active_id');
   setRoundsAndMark( JSON.stringify(saved));
   if (activeId && String(round.id) === activeId) {
@@ -12654,7 +12648,6 @@ function applyRoundInfo(saved, round, date, time) {
     game.player = player;
     game.qualifying = round.qualifying;
     game.note = round.note;
-    if (hcpVal !== null && !isNaN(hcpVal)) game.hcp = hcpVal;
     setRoundsAndMark( JSON.stringify(saved));
     setHeaderInfo(game.track, game.tee, game.chcp);
     recalcPpar();
@@ -13487,6 +13480,18 @@ function isBackupOverdue(lijst) {
 // Toont 'Laatste backup: X dagen geleden' bovenaan Instellingen → Gegevens → Backup,
 // op basis van golf_last_backup_date/-count; de losse herinneringsbalk bovenaan Rondes
 // is vervallen, de signalering loopt nu via het oranje stipje op de Instellingen-tab.
+// Staat er werk dat nog niet in een backup zit? Dat is: rondes erbij sinds de laatste
+// backup, of een wijziging ná het tijdstip van die backup. Die tweede vangt ook een
+// bewerkte ronde, die in geen van de drempels meetelt.
+function isErIetsOnveiligs() {
+  const total = afgerondeRondesCount();
+  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
+  const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  const changedTs = storage.getItem('golf_rounds_changed');
+  const backupTs = storage.getItem('golf_last_backup_ts');
+  return nieuw > 0 || (!!changedTs && (!backupTs || changedTs > backupTs));
+}
+
 function updateLastBackupDisplay() {
   refreshTabDot();
   const el = document.getElementById('lastBackupInfo');
@@ -13500,6 +13505,7 @@ function updateLastBackupDisplay() {
   const label = 'Backup rondes';
   const lastDate = storage.getItem('golf_last_backup_date');
   if (!lastDate) {
+    // Nog nooit een backup: dat IS de reden, dus hier wel oranje.
     el.innerHTML = overdue ? `<span style="color:var(--orange);font-weight:700">${label}: geen</span>` : `${label}: geen`;
     toonNieuweRondesRegel(overdue);
     return;
@@ -13510,7 +13516,10 @@ function updateLastBackupDisplay() {
   // het onlogisch als bv. '4 dagen geleden' oranje is terwijl de dagen-limiet op 7 staat:
   // de rondes-drempel kan dan de eigenlijke reden zijn (het is een OF-voorwaarde), en dat
   // moet dan ook zichtbaar zijn i.p.v. alleen het dagen-getal.
-  el.innerHTML = overdue
+  // De datum is een feit en blijft neutraal; de reden staat in de regel eronder. Alleen
+  // als de backup te oud is ZONDER dat er iets gewijzigd is, is de datum zelf de reden.
+  const alleenTeOud = overdue && !isErIetsOnveiligs();
+  el.innerHTML = alleenTeOud
     ? `<span style="color:var(--orange);font-weight:700">${label}: ${daysText}</span>`
     : `${label}: ${daysText}`;
   toonNieuweRondesRegel(overdue);
@@ -13527,9 +13536,8 @@ function toonNieuweRondesRegel(overdue) {
     const doel = document.getElementById('lastBackupInfoTop');
     if (bron && doel) doel.innerHTML = bron.innerHTML;
   }
-  toonClubBackupRegel();
   const el = document.getElementById('newRoundsInfo');
-  if (!el) return;
+  if (!el) { toonClubBackupRegel(); return; }
   const total = afgerondeRondesCount();
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
@@ -13544,15 +13552,29 @@ function toonNieuweRondesRegel(overdue) {
   if (!nieuw && !gewijzigdNaBackup) {
     el.classList.add('hidden'); el.innerHTML = '';
     if (elTop) { elTop.classList.add('hidden'); elTop.innerHTML = ''; }
+    toonClubBackupRegel();
     return;
   }
-  const kleur = overdue ? 'var(--orange)' : 'var(--white)';
-  const delen = [];
-  if (nieuw) delen.push(`<span style="color:${kleur};font-weight:700">${nieuw}</span> nieuw`);
-  if (gewijzigdNaBackup) delen.push(`${delen.length ? 'g' : 'G'}ewijzigd: ${formatWijzigMoment(changedTs)}`);
-  el.innerHTML = delen.join(' \u00b7 ');
+  // Deze regel is de REDEN dat je een backup zou moeten maken, en krijgt daarom de
+  // oranje kleur — niet de datumregel erboven, want 'gisteren' is op zichzelf geen
+  // probleem. De kleur hing eerder aan de dagendrempel, en dat liet twee gevallen door:
+  // een backup van vanochtend met een ronde van vanmiddag, en een bewerkte ronde (die
+  // telt in geen van beide drempels mee). In beide gevallen stond er werk niet veilig
+  // zonder dat iets opviel.
+  // Eén tekst voor alle gevallen, zonder aantal en zonder tijdstip. De handeling is
+  // hetzelfde of er nu één ronde bij is of drie plus een paar bewerkingen: je maakt een
+  // backup. Het aantal is informatie waar je niets mee doet.
+  // Eerdere varianten noemden het aantal nieuwe rondes en het moment van de laatste
+  // wijziging. Dat las geforceerd (twee fragmenten met een punt ertussen in plaats van
+  // een zin), het gaf drie verschillende teksten voor één situatie, en het deed een
+  // belofte die de app niet kan waarmaken: of er NAAST een nieuwe ronde ook nog iets
+  // bewerkt is, is niet te zien — er is één stempel voor de hele lijst.
+  el.innerHTML = `<span style="color:var(--orange);font-weight:700">`
+    + `Wijzigingen sinds laatste backup</span>`;
   el.classList.remove('hidden');
   if (elTop) { elTop.innerHTML = el.innerHTML; elTop.classList.remove('hidden'); }
+  // NA de ronderegel: die bepaalt of de clubregel zijn korte vorm krijgt.
+  toonClubBackupRegel();
 }
 
 // Eigen regel voor de clubs, naast die voor de rondes. Verschijnt alleen als er iets
@@ -13567,35 +13589,20 @@ function toonClubBackupRegel() {
   if (!el && !elTop) return;
   if (!isClubsBackupOverdue()) return verbergen();
 
+  // Zelfde vorm als de regel voor de rondes: één zin, geen aantal en geen tijdstip.
+  // Staat die regel er ook, dan volstaat hier 'Clubs ook gewijzigd' — twee keer bijna
+  // dezelfde zin onder elkaar leest als een herhaling in plaats van als twee meldingen.
   const datum = storage.getItem('golf_clubs_backup_date');
-  const gewijzigd = storage.getItem('golf_clubs_changed');
-  let tekst;
-  if (!datum) {
-    tekst = 'Backup clubs: nog nooit';
-  } else {
-    const dagen = Math.floor((new Date(todayISO()) - new Date(datum)) / 86400000);
-    const wanneer = dagen <= 0 ? 'vandaag' : dagen === 1 ? 'gisteren' : `${dagen} dagen geleden`;
-    tekst = `Backup clubs: ${wanneer}`
-          + (gewijzigd ? ` \u00b7 gewijzigd: ${formatWijzigMoment(gewijzigd)}` : ' \u00b7 sindsdien gewijzigd');
-  }
+  const rondesOok = !!document.getElementById('newRoundsInfo')
+    && !document.getElementById('newRoundsInfo').classList.contains('hidden');
+  const tekst = !datum
+    ? 'Backup clubs: nog nooit'
+    : (rondesOok ? 'Clubs ook gewijzigd' : 'Clubs: wijzigingen sinds laatste backup');
   const html = `<span style="color:var(--orange);font-weight:700">${tekst}</span>`;
   if (el) { el.innerHTML = html; el.classList.remove('hidden'); }
   if (elTop) { elTop.innerHTML = html; elTop.classList.remove('hidden'); }
 }
 
-// "vandaag 14:12", "gisteren 09:05" of "12 aug 14:12" — kort genoeg voor één regel.
-function formatWijzigMoment(iso) {
-  const d = new Date(iso);
-  if (isNaN(d)) return '\u2014';
-  const dag = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const vandaag = new Date();
-  const vandaagDag = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate());
-  const verschil = Math.round((vandaagDag - dag) / 86400000);
-  if (verschil === 0) return 'vandaag';
-  if (verschil === 1) return 'gisteren';
-  const maanden = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-  return `${d.getDate()} ${maanden[d.getMonth()]}`;
-}
 
 // Minimum aantal rondes waarop een statistiek mag rusten (Instellingen > Weergave).
 // Bereik 1-10, standaard 3: onder de 3 zegt een gemiddelde vooral iets over toeval,
@@ -15396,11 +15403,15 @@ document.addEventListener('focusin', (e) => {
         </div>
       </div>
     </div>
-    <div class="fg" style="margin-bottom:14px">
-      <label for="editHcpInput">Hcp</label>
-      <div id="editHcpRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
-      <input id="editHcpInput" class="field-input" type="text" inputmode="decimal" placeholder="—" style="text-align:left" oninput="onEditHcpInput(this)" onblur="onEditHcpBlur(this)">
-    </div>
+    <!-- De handicap staat hier BEWUST niet meer bij. Hij hoort in dezelfde groep als de
+         baan, de tee en de CR/SR: gegevens die bepalen hoe de ronde gerekend wordt en die
+         vastliggen zodra je begint. Die zijn geen van alle achteraf te wijzigen, en de
+         handicap als enige wel maakte de uitzondering.
+         Achteraf aanpassen herschrijft bovendien stil de geschiedenis: bij negen holes
+         verandert het dagresultaat mee, en dus je handicapverloop.
+         Verkeerde handicap gekozen? Dan opnieuw beginnen, net als bij een verkeerde tee.
+         Wat hier blijft, zijn de dingen die je mag corrigeren zonder de berekening te
+         raken: speler, datum en tijd, qualifying en de notitie. -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
       <label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="editQualifyToggle"><span class="slider"></span></label>
