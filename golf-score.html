@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+  Golf Score — persoonlijke golf-app
+  (c) 2026 m.j.vandervelden@gmail.com. Alle rechten voorbehouden.
+
+  Gemaakt voor eigen gebruik. Niet verspreiden of publiceren zonder toestemming.
+
+  Aangeboden zonder enige garantie. De handicapberekening is een eigen implementatie
+  volgens de WHS-regels en GEEN officiele registratie; je officiele handicap loopt via
+  je club en de NGF. Gebruik op eigen risico.
+-->
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
@@ -1289,13 +1299,39 @@
         <div id="resetAllMsg" class="hidden error-msg" style="font-size:15px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px">Tik nogmaals om te bevestigen</div>
         <button class="btn-secondary btn-op-rood" style="width:100%;padding:10px 14px;font-size:17px;background:var(--red);border-color:var(--red);color:#fff" onclick="confirmResetAll(this)">Wis clubs, rondes en instellingen</button>
       </div>
+
+      </div>
+    </div>
+
+      <!-- Alles over de app zelf op één plek, in plaats van als voettekst onder ELK
+       tabblad. Standaard dicht: je leest het één keer. -->
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Over Golf Score</div>
+  <div class="card">
+    <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
+     uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
+     of weghalen zonder die functie aan te passen. -->
+    <div id="appVersionStamp" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Versie 13527DA-098</div>
+    <div style="font-size:17px;color:var(--muted);line-height:1.6">
+      &copy; 2026 m.j.vandervelden@gmail.com<br>
+      Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
+    </div>
+    <div style="font-size:17px;color:var(--muted);line-height:1.6;margin-top:10px">
+      Aangeboden zonder garantie. De handicapberekening is een eigen implementatie
+      volgens de WHS-regels en geen officiële registratie — je officiële handicap
+      loopt via je club en de NGF.
+    </div>
+    <div style="font-size:17px;color:var(--muted);line-height:1.6;margin-top:10px">
+      Vragen, of werkt iets niet zoals je verwacht? Stuur een bericht naar het adres
+      hierboven en noem het versienummer.
     </div>
   </div>
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
   <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
-  <div id="appVersionStamp" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 4px">Versie 13527DA-096</div>
+  <!-- Het versienummer en de herkomst staan in 'Over Golf Score' op het tabblad
+       Gegevens. Hier blijven alleen de opslagregels: die heb je nodig bij het uitwisselen
+       van backups, en ze horen bij de import- en exportknoppen. -->
 </div>
 
 <script>
