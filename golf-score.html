@@ -179,8 +179,19 @@
          hangt hij op de tekstregel en steekt hij onder de regel uit, waardoor de
          regelafstand ook nog verspringt. In een flexrij, waar hij verder staat, maken ze
          geen verschil. */
-      display: inline-block; padding: 3px 11px; border-radius: 6px;
-      vertical-align: middle; line-height: 1.2;
+      /* Het teken wordt OPTISCH gecentreerd, niet rekenkundig. Een regelbox reserveert
+         ruimte voor stokken en staarten die een hoofdletter of cijfer niet heeft, en
+         hoeveel dat scheelt verschilt per lettertype — vandaar dat het op de ene telefoon
+         goed staat en op de andere niet.
+         text-box knipt de regelbox af tot precies de letterhoogte; browsers die dat nog
+         niet toepassen krijgen een correctie die bij het opstarten wordt BEREKEND uit de
+         lettertype-gegevens van dat toestel (zie stelBadgeCorrectieIn). */
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 22px; border-radius: 6px;
+      padding: calc(2px + var(--badge-shift, 0px)) 11px calc(2px - var(--badge-shift, 0px));
+      vertical-align: middle; line-height: 1;
+      text-box-trim: trim-both; text-box-edge: cap alphabetic;
+      text-box: trim-both cap alphabetic;
       font-size:13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
       background: repeating-linear-gradient(45deg, #c9a84c 0px, #c9a84c 3px, #a8863c 3px, #a8863c 6px); color: #1a1a1a;
     }
@@ -1316,7 +1327,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px">Versie 13527DA-09E</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0A4</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -2290,6 +2301,13 @@ function updateFavPlayer2Star() {
   if (icon) icon.setAttribute('fill', (favName && favName === currName) ? 'currentColor' : 'none');
 }
 
+// TIJDEN VOOR MELDINGEN, in de hele app hetzelfde:
+//   * een bevestiging (groen) staat 2000 ms;
+//   * een foutmelding (rood/oranje) staat 3000 ms — die moet je kunnen lezen voordat hij
+//     weg is, en je hebt er meestal iets mee te doen;
+//   * bij KOPIËREN verandert de tekst van de knop zelf, ook 2000 ms: die knoppen staan
+//     vaak in een venster waar geen ruimte is voor een regel eronder.
+// Wijkt er ooit iets af, dan hoort daar een reden bij te staan.
 function showPlayer2Msg(txt, type) {
   // type: 'success' (groen), 'error' (oranje)
   const el = document.getElementById('player2FavMsg');
@@ -2300,7 +2318,7 @@ function showPlayer2Msg(txt, type) {
   clearTimeout(el._timer);
   el._timer = setTimeout(() => {
     el.classList.add('hidden');
-  }, 2500);
+  }, 2000);   // 2000 ms is in de hele app de duur van een bevestiging
 }
 
 // Model A: de speler bovenaan Start is de handicaphouder; speler 2 is altijd een gast.
@@ -3514,7 +3532,8 @@ function openRoundEditChoice(idx) {
     // de ronde die je goed speelde maar verkeerd opzette (verkeerde tee, baan of datum);
     // zonder die knop moest je alle scores opnieuw intikken.
     const corrigeren = !nogNietGespeeld;
-    herplanBtn.innerHTML = `${HERPLAN_ICON}<span>${corrigeren ? 'Corrigeren' : 'Herplannen'}</span>`;
+    herplanBtn.innerHTML = `${corrigeren ? CORRIGEER_ICON : HERPLAN_ICON}`
+      + `<span>${corrigeren ? 'Corrigeren' : 'Herplannen'}</span>`;
     herplanBtn.disabled = false;
     herplanBtn.style.opacity = '';
     herplanBtn.title = '';
@@ -3544,6 +3563,12 @@ function sluitRoundEditChoice() {
 }
 const EDIT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
 const RESULT_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+
+// Corrigeren krijgt een EIGEN icoon: de kringloop van twee pijlen, het teken voor
+// vervangen. De kalender-met-pijl van herplannen slaat op het verzetten van een datum,
+// en juist die blijft bij corrigeren meestal gelijk. De twee knoppen staan nooit samen,
+// dus het icoon en de tekst zijn het enige waaraan je ziet in welke situatie je zit.
+const CORRIGEER_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 
 const HERPLAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 12 13 15 16"/><line x1="12" y1="13" x2="12" y2="19"/></svg>';
 
@@ -7099,7 +7124,7 @@ async function copyAnalysisForAi() {
   const btn = document.getElementById('analysisCopyBtn');
   try {
     await navigator.clipboard.writeText(tekst);
-    if (btn) { btn.textContent = 'Gekopieerd \u2713'; setTimeout(() => { btn.textContent = 'Prompt voor AI'; }, 2000); }
+    if (btn) { btn.textContent = 'Gekopieerd'; setTimeout(() => { btn.textContent = 'Prompt voor AI'; }, 2000); }
     return;
   } catch (e) { /* klembord geweigerd: deelmenu proberen */ }
   try {
@@ -7325,7 +7350,7 @@ async function kopieerOpslagLink() {
   if (msg) {
     msg.classList.remove('hidden');
     clearTimeout(msg._timer);
-    msg._timer = setTimeout(() => msg.classList.add('hidden'), 2500);
+    msg._timer = setTimeout(() => msg.classList.add('hidden'), 2000);
   }
 }
 
@@ -14949,6 +14974,61 @@ function herstelNaClubZoeken() {
   buildClubList();
 }
 
+// Het versienummer op het klembord: handig bij het melden van iets dat niet werkt, want
+// een hexadecimaal nummer overtikken gaat makkelijk mis. Buiten een beveiligde verbinding
+// is het klembord niet beschikbaar; dan het deelvenster van de telefoon, net als bij de
+// export.
+function kopieerVersie() {
+  const el = document.getElementById('appVersionStamp');
+  const tekst = (el?.textContent || '').replace(/^Versie\s+/, '').trim();
+  if (!tekst || tekst === 'Gekopieerd') return;
+  const gelukt = () => {
+    const oud = el.textContent;
+    el.textContent = 'Gekopieerd';
+    setTimeout(() => { el.textContent = oud; }, 2000);   // gelijk aan de rest
+  };
+  const delen = () => {
+    if (navigator.share) navigator.share({ text: tekst, title: 'Versie Golf Score' });
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(tekst).then(gelukt).catch(delen);
+  } else {
+    delen();
+  }
+}
+
+// Hoeveel moet het teken in een badge omhoog of omlaag om OPTISCH gecentreerd te staan?
+// Dat hangt af van de lettertype-gegevens van dit toestel, dus het wordt gemeten in
+// plaats van geschat: een vaste correctie hielp op het ene toestel en schaadde op het
+// andere.
+//   regelbox (line-height:1) = de lettergrootte
+//   basislijn t.o.v. de bovenkant = halve leading + ascent
+//   de inkt van een hoofdletter loopt van de basislijn tot de kaphoogte erboven
+// De correctie is het verschil tussen het midden van het vakje en het midden van die
+// inkt. Past de browser text-box wél toe, dan is de regelbox al bijgeknipt en komt er
+// vanzelf ongeveer nul uit.
+function stelBadgeCorrectieIn() {
+  try {
+    const proef = document.querySelector('.tee-badge');
+    const stijl = proef ? getComputedStyle(proef) : getComputedStyle(document.body);
+    const grootte = parseFloat(stijl.fontSize) || 13;
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `${stijl.fontWeight || 800} ${grootte}px ${stijl.fontFamily}`;
+    const m = ctx.measureText('H');          // hoofdletter zonder staart
+    const ascent = m.fontBoundingBoxAscent;
+    const descent = m.fontBoundingBoxDescent;
+    const kap = m.actualBoundingBoxAscent;
+    if (![ascent, descent, kap].every(v => typeof v === 'number' && isFinite(v))) return;
+    const halveLeading = (grootte - (ascent + descent)) / 2;
+    const basislijn = halveLeading + ascent;
+    const inktMidden = basislijn - kap / 2;
+    const verschuiving = grootte / 2 - inktMidden;   // positief: tekst omlaag
+    // Op een halve pixel afronden: fijner ziet niemand, en het houdt de rand scherp.
+    const afgerond = Math.round(verschuiving * 2) / 2;
+    document.documentElement.style.setProperty('--badge-shift', afgerond + 'px');
+  } catch (e) { /* lukt het niet, dan blijft de beginstand staan */ }
+}
+
 function toggleClubZoeken() {
   const wrap = document.getElementById('clubSearchWrap');
   const knop = document.getElementById('clubSearchBtn');
@@ -15200,6 +15280,7 @@ document.addEventListener('focusin', (e) => {
   // Long-press op 'groepeer op speler' (optioneel): alle spelers inklappen
   // Lang indrukken op de groepeerknoppen: alles in- of uitklappen (een toggle), met
   // trilling. Alle vijf via dezelfde hulpfunctie, zodat duur en gedrag gelijk zijn.
+  stelBadgeCorrectieIn();
   koppelSettingsTabs();
   bindLangIndrukken(document.getElementById('groupByPlayerBtn'), collapseAllPlayers);
   bindLangIndrukken(document.getElementById('groupByPlannedBtn'), collapseAllPlanned);
