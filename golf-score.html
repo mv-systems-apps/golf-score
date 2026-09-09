@@ -1350,7 +1350,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AD</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B0</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4008,7 +4008,6 @@ function confirmScoreTap(i) {
   if (scoreTapHole === i) clearScoreTap(false);
 }
 
-let scoreValHoldTimer = null, scoreValHoldFired = false;
 let scoreButtonsRow = null; // index van de rij waarvan in Kaart de -/+ knoppen zichtbaar zijn
 let currentNine = 0; // 0 = voorkant (1-9), 1 = achterkant (10-18)
 
@@ -4060,15 +4059,8 @@ function toggleScoreButtons(i) {
   renderScore();
 }
 
-// Selecteer een andere hole door op zijn score te tikken, en toon meteen -/+
-function selectScoreRow(i) {
-  selectHole(i);
-  scoreButtonsRow = i;
-  beginInvoer(i);
-  markeerNetGetoggled();
-  renderScore();
-}
-
+// Tikken NAAST de rijen sluit het invoerpaneel. Zonder deze afhandelaar bleef het open
+// zolang je niet precies op een rij of op het scorevak tikte.
 document.addEventListener('click', (e) => {
   if (scoreButtonsJustToggled) { scoreButtonsJustToggled = false; return; }
   if (scoreButtonsRow === null) return;
@@ -4081,38 +4073,29 @@ document.addEventListener('click', (e) => {
   renderScore();
 });
 
-function decreaseScore(i) {
-  scoreValHoldFired = false;
-  clearTimeout(scoreValHoldTimer);
-  // Op een LEGE hole valt er niets te wissen, dus daar geldt een lange druk als een
-  // gewone tik. Eerder werd de tik dan opgebruikt zonder dat er iets gebeurde: het
-  // paneel ging niet open en je moest opnieuw tikken, korter. Vanaf een halve seconde
-  // ingedrukt was dat al zo — merkbaar zodra je wat bewuster mikt, bijvoorbeeld met
-  // putts aan.
-  if (!game.holes[i] || game.holes[i].score === null) return;
-  scoreValHoldTimer = setTimeout(() => {
-    scoreValHoldFired = true;
-    if (navigator.vibrate) navigator.vibrate(20);
-    armScoreChange(i, null);
-  }, PLUS_HOLD_MS);
+// Tikken op een rij die nog niet actief is: die hole wordt actief en het invoerpaneel
+// gaat meteen open.
+function selectScoreRow(i) {
+  selectHole(i);
+  scoreButtonsRow = i;
+  beginInvoer(i);
+  markeerNetGetoggled();
+  renderScore();
 }
-function increaseScore(i) {
-  clearTimeout(scoreValHoldTimer);
-  if (!scoreValHoldFired) {
-    if (navigator.vibrate) navigator.vibrate(20);
-    // Eén tik doet ALLEBEI: staat de zojuist ingevoerde score nog 'gewapend' (het
-    // venster van twee seconden waarin je hem kunt corrigeren), dan wordt hij bevestigd
-    // én gaat het invoerpaneel dicht. Eerder kostte dat twee tikken: de eerste ging naar
-    // het bevestigen, de tweede pas naar het sluiten. Je bevestigt juist omdat je klaar
-    // bent met die hole, dus die twee horen bij elkaar.
-    if (scoreTapHole === i) confirmScoreTap(i);
-    toggleScoreButtons(i);
-  }
-  scoreValHoldFired = false;
-}
-function cancelScore() {
-  clearTimeout(scoreValHoldTimer);
-  scoreValHoldFired = false;
+
+// Aantikken van het scorevak opent of sluit het invoerpaneel. Meer niet.
+// Er zat hier ook een LANGE DRUK op (score wissen), met een venster van twee seconden
+// waarin je die kon terugnemen. Dat mechanisme was de bron van vier fouten: een tik die
+// bevestigde in plaats van te sluiten, een wissing die terugdraaide als je doortikte,
+// een lange druk op een lege hole die de tik opsnoepte, en een losdruk die op een
+// telefoon werd afgebroken. Het scorevak is het onderdeel dat je tijdens een ronde het
+// vaakst aanraakt; daar hoort geen tijdgevoelig gedrag.
+// Wissen kan nog steeds met de min-knop (op nul wordt de score leeg), en de lange druk
+// op die knop blijft ongedaan maken — die zit op een knop die je bewust indrukt.
+function tikOpScore(i) {
+  if (navigator.vibrate) navigator.vibrate(20);
+  if (scoreTapHole === i) confirmScoreTap(i);   // nog een gewapende undo van de min-knop
+  toggleScoreButtons(i);
 }
 
 // Lang indrukken van − = undo (zelfde als de ↺-knop)
@@ -4569,7 +4552,7 @@ function renderScoreTable() {
     // (--sym-color) — staat los van de tekstkleur van het cijfer zelf.
     const symColorStyle = symColorVar ? `--sym-color:${symColorVar};` : '';
     const scoreVal = `<div class="sum-tr-btn-cell score-cell"><span class="score-val${armed ? ' tap-armed' : ''}${anyDoubleDigit ? ' wide-score' : ''}${symCls}" style="font-size:24px;font-weight:900;${symColorStyle}"${i === currentHole
-        ? ` onpointerdown="decreaseScore(${i})" onpointerup="increaseScore(${i})" onpointerleave="cancelScore()" onpointercancel="cancelScore()" oncontextmenu="return false" onclick="event.stopPropagation()"`
+        ? ` oncontextmenu="return false" onclick="event.stopPropagation(); tikOpScore(${i})"`
         : ` onclick="event.stopPropagation(); selectScoreRow(${i})"`}>${s == null ? '—' : s}</span></div>`;
     const showBtns = i === currentHole && scoreButtonsRow === i;
     const isHiddenPparDouble = s !== null && d !== 2 && (s - h.ppar) === 2;
