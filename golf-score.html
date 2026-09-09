@@ -1350,7 +1350,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AA</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AC</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4094,8 +4094,13 @@ function increaseScore(i) {
   clearTimeout(scoreValHoldTimer);
   if (!scoreValHoldFired) {
     if (navigator.vibrate) navigator.vibrate(20);
+    // Eén tik doet ALLEBEI: staat de zojuist ingevoerde score nog 'gewapend' (het
+    // venster van twee seconden waarin je hem kunt corrigeren), dan wordt hij bevestigd
+    // én gaat het invoerpaneel dicht. Eerder kostte dat twee tikken: de eerste ging naar
+    // het bevestigen, de tweede pas naar het sluiten. Je bevestigt juist omdat je klaar
+    // bent met die hole, dus die twee horen bij elkaar.
     if (scoreTapHole === i) confirmScoreTap(i);
-    else toggleScoreButtons(i);
+    toggleScoreButtons(i);
   }
   scoreValHoldFired = false;
 }
@@ -4164,7 +4169,14 @@ function clearScoreTap(revert) {
 // Maakt hole i de actieve hole en onthoudt de score op dat moment als referentie.
 function setCurrentHole(i) {
   if (i < 0 || i >= game.holes.length) return;
-  if (scoreTapHole !== null && scoreTapHole !== i) clearScoreTap(true);
+  // Naar een andere hole gaan BEVESTIGT een gewapende wijziging; het draait hem niet
+  // terug. Wissen of ongedaan maken met een lange druk staat twee seconden 'gewapend',
+  // en wie in die twee seconden doortikt naar de volgende hole zag zijn wissing
+  // ongedaan gemaakt worden — terwijl tikken op de score wél bevestigde. Twee
+  // verschillende uitkomsten voor hetzelfde weglopen.
+  // Terugdraaien blijft wat het was: dat gebeurt als de twee seconden verlopen zonder
+  // dat je iets doet.
+  if (scoreTapHole !== null && scoreTapHole !== i) clearScoreTap(false);
   currentHole = i;
   game.holes[i]._initScore = game.holes[i].score;
 }
