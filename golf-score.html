@@ -1350,7 +1350,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AC</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AD</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4084,6 +4084,12 @@ document.addEventListener('click', (e) => {
 function decreaseScore(i) {
   scoreValHoldFired = false;
   clearTimeout(scoreValHoldTimer);
+  // Op een LEGE hole valt er niets te wissen, dus daar geldt een lange druk als een
+  // gewone tik. Eerder werd de tik dan opgebruikt zonder dat er iets gebeurde: het
+  // paneel ging niet open en je moest opnieuw tikken, korter. Vanaf een halve seconde
+  // ingedrukt was dat al zo — merkbaar zodra je wat bewuster mikt, bijvoorbeeld met
+  // putts aan.
+  if (!game.holes[i] || game.holes[i].score === null) return;
   scoreValHoldTimer = setTimeout(() => {
     scoreValHoldFired = true;
     if (navigator.vibrate) navigator.vibrate(20);
