@@ -601,6 +601,16 @@
     .club-actions.actions-hidden.actions-revealed { display: flex; }
 
     .hidden { display: none !important; }
+
+    /* Alles wat bij de handicapberekening hoort krijgt class="whs-only". Staat de
+       schakelaar 'Handicap bijhouden' uit, dan zet de app één klasse op de pagina en
+       verdwijnt het geheel.
+       Waarom zo en niet met een voorwaarde per plek: die voorwaarden stonden op 23
+       plaatsen door de app heen, en bij drie ronden bouwen bleek telkens dat er eentje
+       vergeten was. Een klasse kun je niet vergeten te controleren — je zet hem erop of
+       niet. En hij werkt ook voor elementen die later in het bestand staan, wat met een
+       aanroep bij het opstarten juist misging. */
+    html.geen-whs .whs-only { display: none !important; }
     header h1 { font-size:20px; font-weight: 800; color: var(--white); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
     .hdr-top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
     #hdrTrack { font-size:20px; font-weight: 700; color: var(--white); letter-spacing: .3px; text-align: right; line-height: 1; flex: 0 0 auto; white-space: nowrap; }
@@ -688,12 +698,12 @@
     </div>
     <div class="fg">
       <label>Handicap</label>
-      <div style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
+      <div id="computedHcpRow" class="whs-only" style="font-size:17px;color:var(--muted);margin-bottom:6px"><span id="computedHcpLabel">WHS-hcp</span>: <span id="computedHcpVal" style="color:var(--green-light);font-weight:700">—</span></div>
       <div id="hcpRangeMsg1" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>
       <input id="iHcp" type="text" aria-label="Handicap" inputmode="decimal" enterkeyhint="done" placeholder="hcp"
         oninput="onHcpInput(this)" onblur="onHcpBlur(this); savePlayerProfile()" onchange="onHcpBlur(this)"
         onkeydown="if(event.key==='Enter'){onHcpBlur(this); savePlayerProfile(); this.blur();}" />
-      <div class="chcp-override-row hidden" id="hcpOverrideRow">
+      <div class="chcp-override-row hidden whs-only" id="hcpOverrideRow">
         <span id="hcpOverrideNote" class="info-msg" style="color:var(--muted)">Hcp wijkt af van verwachte handicap</span>
         <button class="btn-secondary" style="padding:8px 14px;opacity:.6" onclick="resetHcpToComputed()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
       </div>
@@ -776,7 +786,7 @@
     <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Tee</label>
     <div class="tee-btns" id="teeBtns"></div>
     <div id="teeAdvice" style="display:none;font-size:20px;color:var(--info-grey);font-weight:700"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px">
+    <div id="qualRow1" class="whs-only" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px">
       <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="qualifyToggle1" onchange="toggleQualifying(1)"><span class="slider"></span></label>
     </div>
@@ -814,7 +824,7 @@
     <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;display:block;margin-bottom:6px">Tee</label>
     <div class="tee-btns" id="teeBtns2"></div>
     <div id="teeAdvice2" style="display:none;font-size:20px;color:var(--info-grey);font-weight:700"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px">
+    <div id="qualRow2" class="whs-only" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px">
       <label style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="qualifyToggle2" onchange="toggleQualifying(2)"><span class="slider"></span></label>
     </div>
@@ -866,7 +876,7 @@
     <button class="btn-secondary" id="groupByPlayerBtn" style="padding:10px 14px" 
       onclick="toggleGroupByPlayer()"
       title="Groepeer op speler"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="7" r="2"/><path d="M23 21v-1a3 3 0 0 0-3-3h-1"/></svg></button>
-    <button id="groupByWhsBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleGroupByWhs()" title="Groepeer op WHS (laatste 20 qualifying)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></button>
+    <button id="groupByWhsBtn" class="btn-secondary whs-only" style="padding:10px 14px" onclick="toggleGroupByWhs()" title="Groepeer op WHS (laatste 20 qualifying)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></button>
     <button id="archiveSearchBtn" class="btn-secondary" style="padding:10px 14px" onclick="toggleArchiefZoeken()" title="Zoeken"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
   </div>
   <div class="fg hidden" id="archiveSearchWrap" style="margin-bottom:8px">
@@ -925,7 +935,7 @@
 <div id="screen-settings" class="screen">
   <div style="display:flex;gap:8px;margin-bottom:16px">
     <button id="settingsTabBtnMain" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700;background:var(--gold);color:var(--green-deep);border-color:var(--gold)" onclick="switchSettingsTab('main')">Algemeen</button>
-    <button id="settingsTabBtnWhs" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">WHS</button>
+    <button id="settingsTabBtnWhs" class="btn-secondary whs-only" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('whs')">WHS</button>
     <button id="settingsTabBtnData" class="btn-secondary" style="flex:1;padding:10px 14px;font-size:17px;font-weight:700" onclick="switchSettingsTab('data')">Gegevens</button>
   </div>
   <!-- Backupstand: koploos blokje onder de tabknoppen, BUITEN de drie tabbladen zodat
@@ -939,6 +949,19 @@
 
   <div id="settingsTabMain">
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:0 0 8px;margin-bottom:4px">Weergave</div>
+  <!-- Bewust hier en niet onder WHS: zet je hem uit, dan verdwijnt dat tabblad en zou je
+       de schakelaar niet meer terug kunnen vinden. -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--white)">Handicap bijhouden</div>
+        <div style="font-size:17px;color:var(--muted)">Aan: de app berekent je handicap volgens de WHS-regels en toont je verloop.</div>
+            <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="more-full">Uit: de app rekent alleen je baanhandicap en je stableford uit, zoals een scorekaart. Het tabblad WHS, het handicapverloop en het dagresultaat verdwijnen dan. Je rondes en scores blijven volledig bewaard, dus je kunt dit later weer aanzetten en verder gaan waar je was. Ook je scoreverdeling, putts en de vergelijking per par en per stroke index blijven werken; alles wat het dagresultaat nodig heeft verdwijnt.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="whsToggle" onchange="toggleWhsVolgen()"><span class="slider"></span></label>
+    </div>
+  </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
@@ -1327,7 +1350,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0A4</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0AA</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -1591,6 +1614,10 @@ function agsFor(h) {
 // kunnen gebruiken om ook bij ingeklapte lijsten al te laten zien dat er iets binnenin
 // aandacht nodig heeft.
 function roundHasWarning(r) {
+  // Zonder 'Handicap bijhouden' bestaat het dagresultaat niet en is 'Vaststellen' weg:
+  // dan waarschuwen voor een ontbrekend dagresultaat gaat over iets wat je niet kunt
+  // zien en niet kunt oplossen.
+  if (!whsVolgen()) return false;
   const activeId = storage.getItem('golf_active_id');
   const isActiveR = (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id);
   const isPlayer2ActiveR = game2Id && r.id === game2Id;
@@ -3545,7 +3572,10 @@ function openRoundEditChoice(idx) {
   }
 
   const resBtn = document.getElementById('roundEditChoiceResult');
-  if (resBtn) {
+  // 'Vaststellen' gaat over het dagresultaat; zonder 'Handicap bijhouden' bestaat dat
+  // niet, dus de keuze verdwijnt in plaats van dat hij uitstaat.
+  resBtn?.classList.toggle('hidden', !whsVolgen());
+  if (resBtn && whsVolgen()) {
     // Vaststellen heeft geen betekenis zonder scores — erger nog: je zou een
     // dagresultaat kunnen invullen voor een ronde die niet gespeeld is, en dat telt
     // mee in de handicapberekening.
@@ -5523,10 +5553,12 @@ function renderPlayerStats() {
   }
   const kpiRow = `<div class="card"><h2>${escapeHtml(player)}</h2>`
     + `<div style="display:flex;flex-wrap:wrap;gap:12px 8px">`
-    + kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle })
-    + (() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle }); })()
+    // De eerste drie gaan over de handicapberekening en vervallen zonder 'Handicap
+    // bijhouden'. Rondes, stableford en putts blijven: die rusten op kale scores.
+    + `<span class="whs-only">${kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle })}</span>`
+    + `<span class="whs-only">${(() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle }); })()}</span>`
     + kpi('Rondes', rounds.length)
-    + kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle })
+    + `<span class="whs-only">${kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle })}</span>`
     + kpi('Gem. Stb', avgStb != null ? fmt1(avgStb) : '—')
     + kpi('Gem. putts', avgPutts != null ? fmt1(avgPutts) : '—')
     + `</div>`
@@ -5662,8 +5694,11 @@ function renderPlayerStats() {
       + `<span style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:right;padding-right:8px">Gem. Sd</span>`
       + `<span></span>`
     : '';
+  // Deze kaart toont gemiddelde DAGRESULTATEN; zonder 'Handicap bijhouden' bestaat die
+  // maat niet. Zonder correctie voor de zwaarte van de baan is een vergelijking tussen
+  // tees ook niet eerlijk, dus hier valt niets zinnigs voor in de plaats.
   const teeCard = teeCardBody
-    ? `<div class="card"><h2>Gemiddelde per tee</h2>${teeChartSvg}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px">${teeHeader}${teeCardBody}</div></div>`
+    ? `<div class="card whs-only"><h2>Gemiddelde per tee</h2>${teeChartSvg}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;column-gap:0;row-gap:0;margin-top:4px">${teeHeader}${teeCardBody}</div></div>`
     : '';
 
   // Gemiddelde score t.o.v. par per par-type (3 t/m 6)
@@ -5708,8 +5743,13 @@ function renderPlayerStats() {
   // Gemiddelde Sd per dag van de week (Ma t/m Zo), zelfde soort streepjes-grafiek als
   // 'Gemiddelde per par' — nu op de Sd-as i.p.v. afwijking-t.o.v.-par. Wisselbaar tussen
   // 7 losse dagen en een tweedeling doordeweeks/weekend (window._weekdayViewMode).
+  // Ook deze kaart rekent met DAGRESULTATEN (de Sd-as), dus zonder 'Handicap bijhouden'
+  // valt hij weg. Jammer, want het verschil tussen doordeweeks en weekend is een van de
+  // aardigste uitkomsten — maar zonder correctie voor de zwaarte van de baan is het geen
+  // eerlijke vergelijking.
   let weekdayDotsCard = '';
-    weekdayDotsCard = bouwDagKaart({ periodRounds });
+  weekdayDotsCard = bouwDagKaart({ periodRounds });
+  if (weekdayDotsCard) weekdayDotsCard = weekdayDotsCard.replace('class="card"', 'class="card whs-only"');
 
   // Verdeling rond je handicap: dagresultaat per ronde t.o.v. de index die vóór die ronde gold
   const distBuckets = { onder: [], gelijk: [], boven1_3: [], boven3_5: [], boven5: [] };
@@ -5922,7 +5962,12 @@ function renderPlayerStats() {
   const typeLine = (label, t, zebra) => t.n < getMinRoundsStat() ? '' :
     `<div style="${zebra ? 'background:rgba(0,0,0,.04);' : ''}display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px"><span style="flex:1;font-size:17px;color:var(--muted)">${label}</span><span style="font-size:17px;font-weight:700;display:flex;align-items:center;gap:5px">${t.warn ? warningIconSmall : ''}${fmt1(t.avg)} <span style="font-size:15px;color:var(--muted);font-weight:400">${t.n}×</span></span></div>`;
   const typeRow = typeLine('Gem. dagresultaat 9 holes', t9, false) + typeLine('Gem. dagresultaat 18 holes', t18, true);
-  const formBody = trendRow + spreadRow + typeRow + hdSubHead + hdBody + threeRow + nineRow;
+  // Trend, spreiding, het gemiddelde per rondetype en de verdeling 't.o.v. je handicap'
+  // rekenen allemaal met DAGRESULTATEN; zonder 'Handicap bijhouden' bestaat die maat
+  // niet. Het verloop binnen de ronde blijft wel: dat telt slagen t.o.v. de par.
+  const formBody = whsVolgen()
+    ? trendRow + spreadRow + typeRow + hdSubHead + hdBody + threeRow + nineRow
+    : threeRow + nineRow;
   // ── Kaart "Putten en greens" ─────────────────────────────────────────────
   // Volgt de periodeknop (net als de kaarten eromheen; de analysemodal rekent juist
   // altijd over het hele archief). Alleen rondes waarin ÉLKE gespeelde hole een
@@ -5991,18 +6036,29 @@ function renderPlayerStats() {
     // zonder dagresultaat meetelt. Eerder had alleen Clubs dat, waardoor je bij een
     // dichtgeklapte groep niet kon zien dat er iets onzeker was.
     // Handicap rekent met de laatste 20; Prestaties met de rondes van de gekozen periode.
-    + grpHeader('handicap', `Handicap${hcpUncertain ? warningIconSmall : ''}`)
-    + (grpOpen('handicap') ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}><div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdChart"></div></div><div id="sdDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>${lowHiDateLine}<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
+    // Zonder 'Handicap bijhouden' vervalt deze hele groep: er is geen dagresultaat, dus
+    // geen verloop, geen caps en geen 'Wat als'. De rest van het scherm werkt op kale
+    // scores en blijft gewoon staan.
+    + (whsVolgen() ? grpHeader('handicap', `Handicap${hcpUncertain ? warningIconSmall : ''}`) : '')
+    + ((whsVolgen() && grpOpen('handicap')) ? `<div class="card" id="sdChartCard"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;flex:1" id="sdChartTitle">${window._sdChartView === 'controle' ? 'Regelkaart dagresultaat' : 'Dagresultaat en hcp'}</h2><span id="sdLowHiBtnWrap"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}>${lowHiToggleBtn}</span></div><div id="sdSwipeWrap" style="position:relative"><div id="sdViewVerloop"${window._sdChartView === 'controle' ? ' class="hidden"' : ''}><div class="sd-chart-zone"><span class="sd-swipe-hint" style="left:-16px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="6,0 6,24 0,12" fill="var(--muted)"/></svg></span><span class="sd-swipe-hint" style="right:-15px" onclick="ccSwapView()"><svg width="6" height="24" viewBox="0 0 6 24"><polygon points="0,0 0,24 6,12" fill="var(--muted)"/></svg></span><div id="sdChart"></div></div><div id="sdDetail" style="font-size:15px;line-height:20px;color:var(--muted);margin-top:4px;min-height:20px">Tik op een punt voor details.</div>${lowHiDateLine}<div class="more-toggle" onclick="toggleMoreInfo(this)">Legenda<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full"><div style="display:flex;gap:16px;margin-top:8px;font-size:15px;color:var(--muted);flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--green-light);display:inline-block;border-radius:2px"></span>Dagresultaat</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Handicap (officieel)</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:0;border-top:2px dashed var(--gold);display:inline-block"></span>Zonder cap</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="var(--green-light)" stroke-width="1.5"/></svg>Beste ${whs ? whs.usedIds.size : 8}</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:2px;background:var(--muted);display:inline-block;border-radius:2px"></span>Laatste ${last20.length}</span>${lowHiGraphEnabled() && lowHiDetailForGraph.value != null ? (() => {
         const badgeHtml = (label, color) => `<span style="background:${color};color:#fff;font-size:13px;font-weight:700;padding:1px 5px;border-radius:3px">${label}</span>`;
         return `<span style="display:flex;align-items:center;gap:5px">${badgeHtml('Low HI', 'var(--purple, #9b7fd4)')}${badgeHtml('Softcap', 'var(--orange)')}${badgeHtml('Hardcap', 'var(--red)')}</span><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2.5,11 11.5,11 7,4" fill="var(--purple, #9b7fd4)"/></svg>Low HI-ronde</span>`;
       })() : ''}</div></div></div><div id="sdViewControle"${window._sdChartView === 'controle' ? '' : ' class="hidden"'}>${controlChartInner}</div></div></div>` + watIfCard : '')
     + grpHeader('prestaties', `Prestaties${periodRounds.some(roundHasWarning) ? warningIconSmall : ''}`)
     + (grpOpen('prestaties') ? distCard + puttCard + teeCard + parDotsCard + siDotsCard + weekdayDotsCard + formCard : '')
+    // De groep Clubs zet gemiddelde dagresultaten per baan en tee af tegen je handicap;
+    // beide bestaan niet zonder 'Handicap bijhouden'. De duurste holes per baan blijven
+    // wel: die staan op het clubtabblad en rekenen met slagen t.o.v. de par.
+    + `<span class="whs-only">`
     + grpHeader('banen', `Clubs${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
     + (grpOpen('banen') ? trackCard : '')
+    + `</span>`
     // Analyseknop helemaal onderaan (Marks plaatsing): opent een modal met een
     // doorrekening van het hele archief plus concrete aanbevelingen.
-    + `<button class="btn-secondary" style="width:100%;padding:12px;font-size:17px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openGameAnalysis()">`
+    // De analyse leunt zwaar op dagresultaten (vorm, stabiliteit, banen en tees, de
+    // vergelijking met je handicap). Zonder 'Handicap bijhouden' zou er een halve analyse
+    // overblijven, en dat maakt het juist ingewikkelder in plaats van eenvoudiger.
+    + `<button class="btn-secondary whs-only" style="width:100%;padding:12px;font-size:17px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openGameAnalysis()">`
     + `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`
     + `<b>Analyseer mijn spel</b></button>`;
 
@@ -9818,9 +9874,9 @@ function loadSaved() {
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
-          ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi">L</span>' : ''}
-          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
-          ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q">Q</span>' : ''}
+          ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi whs-only">L</span>' : ''}
+          ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs whs-only">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
+          ${(isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) ? '<span class="tee-badge badge-q whs-only">Q</span>' : ''}
         </span>
       </div>`;
     // Bij een kaart die tot het WHS-short-systeem behoort (verkort óf individueel
@@ -9832,9 +9888,12 @@ function loadSaved() {
     // oranje driehoekje (qualifying ronde zonder vastgesteld dagresultaat) en het
     // paarse rondje (putts op sommige holes, maar niet op alle). Alleen zichtbaar als
     // er iets te melden is — dit is een signaalregel, geen vaste regel.
+    // Het oranje driehoekje gaat over een ontbrekend dagresultaat; zonder 'Handicap
+    // bijhouden' bestaat dat niet en is 'Vaststellen' weg. Het paarse puttrondje blijft:
+    // dat gaat over de ronde zelf.
     const warnIcons = [
       roundHasPuttWarning(r) ? puttWarnIcon : '',
-      (done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })())
+      (whsVolgen() && done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })())
         ? '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
         : '',
     ].filter(Boolean);
@@ -9851,7 +9910,9 @@ function loadSaved() {
     // laatste regel, vóór de handicap. In de volledige kaart staan Pcc/Sd er altijd,
     // desnoods met streepjes, zodat het regelaantal constant blijft; in de verkorte
     // kaart vallen ze weg als er niets te tonen is.
-    const sdDeel = sdFrag || (short ? '' : 'Pcc — · Sd —');
+    // Zonder 'Handicap bijhouden' vervallen Pcc en Sd: dat zijn WHS-uitkomsten. Str en
+    // Stb blijven, want dat zijn scoretotalen.
+    const sdDeel = whsVolgen() ? (sdFrag || (short ? '' : 'Pcc — · Sd —')) : '';
     // Putts achter het laatste scoregetal (Ags als die er is, anders Str), gescheiden
     // door een schuine streep. Altijd zichtbaar — dit is rondeninformatie en staat dus
     // los van de instellingen (Marks keuze). Een streepje als er geen putts zijn.
@@ -9862,6 +9923,11 @@ function loadSaved() {
     const sdLine = '';
     const stbHcpLine = (() => {
       // Stb + Hcp samen als aparte, laatste regel, direct boven de par-grafiek.
+      // Zonder 'Handicap bijhouden' blijft alleen Stb over: het handicapverloop, de caps
+      // en het ESR-teken zijn WHS-uitkomsten.
+      if (!whsVolgen()) {
+        return totalStb != null ? `<div class="saved-meta">Stb ${totalStb}</div>` : '';
+      }
       const t = hcpTrendMap[r.id];
       let hcpPart = '';
       // Geen eigen verloop (niet-qualifying, of nog lopend): dan alleen de handicap
@@ -14618,6 +14684,50 @@ function updatePuttsStatsToggle() {
   const cb = document.getElementById('puttsStatsToggle');
   if (cb) cb.checked = storage.getItem('golf_putts_stats') !== 'off';
 }
+// 'Handicap bijhouden' is een WEERGAVE-schakelaar: hij raakt je gegevens niet aan. De
+// qualifying-vlag blijft per ronde staan zoals hij is opgeslagen, dus uit → aan → uit
+// brengt je precies terug waar je was.
+// Nieuwe rondes worden bij UIT niet qualifying: wat je niet ziet, moet de app ook niet
+// stilletjes voor je invullen. Zet je hem later aan, dan vink je zelf aan welke rondes
+// meetellen — dat weet je uit de officiële app, die je voor de handicap toch nodig hebt.
+function whsVolgen() {
+  return storage.getItem('golf_whs_volgen') !== 'off';   // afwezig = aan
+}
+
+function toggleWhsVolgen() {
+  const cb = document.getElementById('whsToggle');
+  const aan = cb ? cb.checked : !whsVolgen();
+  storage.setItem('golf_whs_volgen', aan ? 'on' : 'off');
+  pasWhsWeergaveToe();
+  renderPlayerStats();
+  loadSaved();
+}
+
+// Alles met class="whs-only" verdwijnt via één regel in de opmaak (zie .whs-only daar).
+// Hier blijft alleen wat GEDRAG verandert in plaats van alleen zichtbaarheid.
+function pasWhsWeergaveToe() {
+  const aan = whsVolgen();
+  const cb = document.getElementById('whsToggle');
+  if (cb) cb.checked = aan;
+  document.documentElement.classList.toggle('geen-whs', !aan);
+
+  // Sta je op het tabblad WHS terwijl het verdwijnt, dan zou je naar een leeg scherm
+  // kijken.
+  if (!aan) {
+    const whsBlok = document.getElementById('settingsTabWhs');
+    if (whsBlok && !whsBlok.classList.contains('hidden')) switchSettingsTab('main');
+    // De WHS-groepering in het archief: die knop is weg, dus de weergave ook.
+    if (window._groupByWhs) { window._groupByWhs = false; zetGroepeerKnop(null); }
+    // Nieuwe rondes zijn niet qualifying: wat je niet ziet, vult de app niet in.
+    sel.qualifying = false;
+    if (typeof sel2 === 'object' && sel2) sel2.qualifying = false;
+    const t1 = document.getElementById('qualifyToggle1');
+    const t2 = document.getElementById('qualifyToggle2');
+    if (t1) t1.checked = false;
+    if (t2) t2.checked = false;
+  }
+}
+
 function togglePuttsStats() {
   const cb = document.getElementById('puttsStatsToggle');
   const on = cb ? cb.checked : storage.getItem('golf_putts_stats') === 'off';
@@ -15281,6 +15391,13 @@ document.addEventListener('focusin', (e) => {
   // Lang indrukken op de groepeerknoppen: alles in- of uitklappen (een toggle), met
   // trilling. Alle vijf via dezelfde hulpfunctie, zodat duur en gedrag gelijk zijn.
   stelBadgeCorrectieIn();
+  pasWhsWeergaveToe();
+  // Nog een keer zodra de hele pagina er staat: dit script draait vóór de vensters
+  // onderaan het bestand, dus elementen daarin (zoals de qualifying-rij in het
+  // bewerkvenster) bestaan bij de eerste aanroep nog niet.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pasWhsWeergaveToe, { once: true });
+  }
   koppelSettingsTabs();
   bindLangIndrukken(document.getElementById('groupByPlayerBtn'), collapseAllPlayers);
   bindLangIndrukken(document.getElementById('groupByPlannedBtn'), collapseAllPlanned);
@@ -15618,7 +15735,7 @@ document.addEventListener('focusin', (e) => {
          Verkeerde handicap gekozen? Dan opnieuw beginnen, net als bij een verkeerde tee.
          Wat hier blijft, zijn de dingen die je mag corrigeren zonder de berekening te
          raken: speler, datum en tijd, qualifying en de notitie. -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
+    <div id="editQualRow" class="whs-only" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
       <label style="font-size:17px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Qualifying</label>
       <label class="switch"><input type="checkbox" id="editQualifyToggle"><span class="slider"></span></label>
     </div>
