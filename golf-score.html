@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B4</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B6</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4707,6 +4707,12 @@ function bouwVooruitblik({ last20, whs, lowHiEff, esrMapStats }) {
         const remaining = last20.slice(0, last20.length - 1);
         const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
         const scenario = whsHandicap([dummy, ...remaining], lowHiEff, esrMapStats);
+        // De grens hoort bij de zin eronder: 'speel je geen dagresultaat onder X, dan
+        // gaat je hcp naar Y'. X is het achtste beste resultaat van de overgebleven
+        // negentien — kom je daar niet onder, dan neem je de vrijgekomen plek in je
+        // beste acht niet over en is Y precies de uitkomst.
+        // (Niet te verwarren met de waarde die je handicap gelíjk houdt; die is
+        // strenger. Deze zin gaat over het scenario waarin je handicap wél stijgt.)
         const remSds = remaining
           .map(r => { const e = effectiveSD(r); return e == null ? null : e.value + (esrMapStats ? (esrMapStats.get(r.id) || 0) : 0); })
           .filter(v => v != null)
@@ -12793,10 +12799,17 @@ function onWatIfInput(input) {
 function computeWhatIf(player, sdValue) {
   const all = loadSavedRounds();
   const current = whsHandicap(last20Qualifying(player, all, null, null), effectiveLowHi(player, all), esrMapFor(player, all));
+  // De holes moeten er echt zijn: een ronde telt pas mee in je laatste twintig als hij
+  // AF is, en dat is 'alle holes ingevuld'. Met een lege holeslijst viel deze ronde
+  // buiten het venster en veranderde er niets — welk dagresultaat je ook invulde.
+  // Alleen sdFinal wordt gebruikt voor de berekening; de scores zelf doen er niet toe.
   const tempRound = {
     id: '__WATIF__', player, qualifying: true,
     date: todayISO(), time: '12:00',
-    sdFinal: sdValue, holesCount: 18, holes: [],
+    sdFinal: sdValue, holesCount: 18,
+    holes: Array.from({ length: 18 }, (_, i) => ({
+      id: 'W' + (i + 1), par: 4, si: i + 1, phcp: 1, ppar: 5, score: 5,
+    })),
   };
   const allWithTemp = [...all, tempRound];
   const hypo = whsHandicap(last20Qualifying(player, allWithTemp, null, null), effectiveLowHi(player, allWithTemp), esrMapFor(player, allWithTemp));
