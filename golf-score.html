@@ -611,6 +611,23 @@
        niet. En hij werkt ook voor elementen die later in het bestand staan, wat met een
        aanroep bij het opstarten juist misging. */
     html.geen-whs .whs-only { display: none !important; }
+
+    /* De kerncijfers bovenaan Statistieken. Drie vaste kolommen, zodat de twee rijen
+       even breed zijn en netjes onder elkaar staan. Een flexrij deed dat niet: daar
+       bepaalt de vrije ruimte hoeveel er op een regel passen, en bij 600 px stonden er
+       vijf naast elkaar met een zesde die over de volle breedte uitrekte.
+       Onder de 340 px passen drie kolommen niet meer zonder dat labels als 'WHS-HCP'
+       over twee regels breken; daar twee kolommen. Als opmaakregel en niet in de code,
+       zodat het ook bij het draaien van het toestel meteen klopt. */
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
+    /* Het langste label ('GEM. PUTTS') brak op een 360 px-scherm naar een tweede regel,
+       waardoor de rijen ongelijk hoog werden. Meeschalen met de schermbreedte houdt elk
+       label op één regel, met 15px als bovengrens zodat het op ruime schermen niet
+       groter wordt dan het altijd was. */
+    .kpi-grid .kpi-label { font-size: clamp(11.5px, 3.6vw, 15px); white-space: nowrap; }
+    @media (max-width: 339px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     header h1 { font-size:20px; font-weight: 800; color: var(--white); line-height: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
     .hdr-top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
     #hdrTrack { font-size:20px; font-weight: 700; color: var(--white); letter-spacing: .3px; text-align: right; line-height: 1; flex: 0 0 auto; white-space: nowrap; }
@@ -1350,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B1</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B4</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -5514,7 +5531,10 @@ function renderPlayerStats() {
   };
   const t1Avg = three(0), t2Avg = three(1), t3Avg = three(2);
 
-  const kpi = (label, val, opts = {}) => `<div style="flex:1;min-width:90px;text-align:center"><div style="font-size:24px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${opts.prefix || ''}${val}${opts.suffix || ''}</div><div style="font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
+  // opts.cls komt op HET BLOK zelf en niet op een omhulsel eromheen: een extra span zou
+// het flex-element worden, en die krijgt de gelijke-breedte-regel niet — dan bepaalt
+// elke kolom zijn eigen breedte en lopen de kolommen niet meer door.
+const kpi = (label, val, opts = {}) => `<div class="${opts.cls || ''}" style="text-align:center"><div style="font-size:24px;font-weight:800;color:${opts.color || 'var(--green-light)'}">${opts.prefix || ''}${val}${opts.suffix || ''}</div><div class="kpi-label" style="color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</div></div>`;
   // Verwachte hcp: oranje driehoekje bij onbevestigde meetellende SD
   const hcpColor = 'var(--green-light)';
   const hcpUncertain = last20.some(roundHasWarning);
@@ -5553,13 +5573,17 @@ function renderPlayerStats() {
     if (prev == null || loDerived !== prev) storage.setItem(seenKey, String(loDerived));
   }
   const kpiRow = `<div class="card"><h2>${escapeHtml(player)}</h2>`
-    + `<div style="display:flex;flex-wrap:wrap;gap:12px 8px">`
+    // Een RASTER en geen flexrij: bij een flexrij bepaalt de vrije ruimte hoeveel er op
+    // een regel passen, en de overblijvers rekken over de volle breedte — bij 600 px
+    // stonden er vijf naast elkaar en werd de zesde 542 px breed. Een raster houdt de
+    // kolombreedte vast, ook op de laatste regel.
+    + `<div class="kpi-grid">`
     // De eerste drie gaan over de handicapberekening en vervallen zonder 'Handicap
     // bijhouden'. Rondes, stableford en putts blijven: die rusten op kale scores.
-    + `<span class="whs-only">${kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle })}</span>`
-    + `<span class="whs-only">${(() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle }); })()}</span>`
+    + kpi('WHS-hcp', whs ? fmt1(whs.value) : '—', { color: hcpColor, prefix: hcpTriangle, cls: 'whs-only' })
+    + (() => { const lo = loManual != null ? loManual : loDerived; return kpi('Low HI', lo != null ? fmt1(lo) : '—', { prefix: loTriangle, cls: 'whs-only' }); })()
     + kpi('Rondes', rounds.length)
-    + `<span class="whs-only">${kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle })}</span>`
+    + kpi('Gem. Sd', avgSd != null ? fmt1(avgSd) : '—', { prefix: sdKpiTriangle, cls: 'whs-only' })
     + kpi('Gem. Stb', avgStb != null ? fmt1(avgStb) : '—')
     + kpi('Gem. putts', avgPutts != null ? fmt1(avgPutts) : '—')
     + `</div>`
@@ -6054,10 +6078,12 @@ function renderPlayerStats() {
     // De groep Clubs zet gemiddelde dagresultaten per baan en tee af tegen je handicap;
     // beide bestaan niet zonder 'Handicap bijhouden'. De duurste holes per baan blijven
     // wel: die staan op het clubtabblad en rekenen met slagen t.o.v. de par.
-    + `<span class="whs-only">`
+    // Een DIV en geen span: dit omhulsel bevat blokken (de groepskop en de kaart), en
+    // een inline-element eromheen is fragiel — bij de kerncijfers ging het daar al mis.
+    + `<div class="whs-only">`
     + grpHeader('banen', `Clubs${anyClubWarning ? warningIconSmall : ''}`, `<span style="font-size:15px;color:var(--green-light)">${clubCount}</span>`)
     + (grpOpen('banen') ? trackCard : '')
-    + `</span>`
+    + `</div>`
     // Analyseknop helemaal onderaan (Marks plaatsing): opent een modal met een
     // doorrekening van het hele archief plus concrete aanbevelingen.
     // De analyse leunt zwaar op dagresultaten (vorm, stabiliteit, banen en tees, de
