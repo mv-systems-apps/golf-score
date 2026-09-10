@@ -1350,7 +1350,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B0</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B1</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -5995,7 +5995,11 @@ function renderPlayerStats() {
     ? all.find(r => r.id === lowHiDetailForGraph.roundId)
     : null;
   const lowHiDateLine = lowHiDateRound
-    ? `<div style="font-size:15px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px">Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}</div>`
+    // Aanklikbaar naar die ronde in het archief, met het chevron dat de app overal
+    // gebruikt om 'hier kun je doorklikken' aan te geven — net als bij de regel van het
+    // aangewezen punt hierboven. Alleen als er een ronde bij hoort: een handmatig
+    // ingevulde Low HI wijst geen ronde aan.
+    ? `<div style="font-size:15px;color:var(--purple, #9b7fd4);font-weight:700;margin-top:4px${lowHiDetailForGraph.roundId != null ? ';cursor:pointer' : ''}"${lowHiDetailForGraph.roundId != null ? ` onclick="jumpToArchiveRound(${JSON.stringify(lowHiDetailForGraph.roundId)})"` : ''}>Low HI <span style="color:var(--green-light)">${fmt1(lowHiDetailForGraph.value)}</span> op ${formatFullDate(lowHiDateRound.date)}${lowHiDetailForGraph.roundId != null ? ' <span style="color:var(--muted)">\u203a</span>' : ''}</div>`
     : '';
   // ── Drie inklapbare hoofdgroepen (stand in storage, blijft dus staan tussen
   // sessies; standaard: Handicap open, Prestaties en Banen & tees dicht). De
