@@ -1288,10 +1288,13 @@
         </div>
       </div>
       <div class="subpanel" style="margin-top:12px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Herinnering rondes</div>
-        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Herinner me als het langer geleden is dan:</div>
+        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Backupherinnering</div>
+        <!-- 'in je rondes' staat er bewust bij: clubs hebben hun eigen melding, zonder
+             drempels. En juist hier, vlak onder de knoppen Rondes en Clubs, is die
+             verwarring het makkelijkst gemaakt. -->
+        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Grijs bij wijzigingen in je rondes, oranje zodra:</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <span style="font-size:17px;color:var(--muted);flex:1">Dagen</span>
+          <span style="font-size:17px;color:var(--muted);flex:1">Dagen sinds backup</span>
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(-1)">−</button>
           <span id="backupReminderDaysVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">7</span>
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(1)">+</button>
@@ -1367,7 +1370,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B9</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0BC</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -6563,9 +6566,10 @@ function refreshTabDot(rondes) {
   // voor Rondes onverhoopt struikelt, blijft deze stip toch correct (Marks melding dat
   // de stip na een backup bleef staan).
   // De stip gaat aan bij een te oude RONDE-backup óf gewijzigde clubs.
-  // De stip gaat aan zodra er iets niet veilig staat, ook als de dagendrempel nog niet
-  // is bereikt: een ronde die je vanmiddag toevoegt aan een backup van vanochtend telt.
-  const stipNodig = isBackupOverdue(rondes) || isErIetsOnveiligs() || isClubsBackupOverdue();
+  // De stip hoort bij de DRINGENDE stand: je drempel in dagen of nieuwe rondes is
+  // gehaald. Een wijziging alleen geeft een grijze regel en geen stip — anders zou de
+  // app bij elke ingevulde hole om aandacht vragen.
+  const stipNodig = isBackupOverdue(rondes) || isClubsBackupOverdue();
   const tabSet0 = document.getElementById('tab-settings');
   if (tabSet0) tabSet0.classList.toggle('has-dot', stipNodig);
   const tab = document.getElementById('tab-archive');
@@ -13866,8 +13870,17 @@ function toonNieuweRondesRegel(overdue) {
   // een zin), het gaf drie verschillende teksten voor één situatie, en het deed een
   // belofte die de app niet kan waarmaken: of er NAAST een nieuwe ronde ook nog iets
   // bewerkt is, is niet te zien — er is één stempel voor de hele lijst.
-  el.innerHTML = `<span style="color:var(--orange);font-weight:700">`
-    + `Wijzigingen sinds laatste backup</span>`;
+  // TWEE NIVEAUS. Er is altijd een regel zodra er iets niet veilig staat, maar de
+  // TOON hangt af van je drempels (Instellingen -> Exporteren -> Backupherinnering):
+  //   * grijs  — er is iets gewijzigd; handig om te weten, verder geen haast;
+  //   * oranje — je drempel in dagen of nieuwe rondes is gehaald: tijd om te backuppen.
+  // De stip op het tandwiel volgt de oranje stand, niet de grijze.
+  // Eerder was alles oranje zodra er iets veranderde, en daarmee deden de drempels
+  // niets meer: de melding kwam toch wel.
+  const dringend = isBackupOverdue();
+  el.innerHTML = dringend
+    ? `<span style="color:var(--orange);font-weight:700">Wijzigingen sinds laatste backup</span>`
+    : `<span style="color:var(--muted)">Wijzigingen sinds laatste backup</span>`;
   el.classList.remove('hidden');
   if (elTop) { elTop.innerHTML = el.innerHTML; elTop.classList.remove('hidden'); }
   // NA de ronderegel: die bepaalt of de clubregel zijn korte vorm krijgt.
