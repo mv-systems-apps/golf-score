@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B6</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B8</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4707,22 +4707,47 @@ function bouwVooruitblik({ last20, whs, lowHiEff, esrMapStats }) {
         const remaining = last20.slice(0, last20.length - 1);
         const dummy = { id: '__vooruitblik__', date: '9999-12-31', time: '23:59', sdFinal: 199 };
         const scenario = whsHandicap([dummy, ...remaining], lowHiEff, esrMapStats);
-        // De grens hoort bij de zin eronder: 'speel je geen dagresultaat onder X, dan
-        // gaat je hcp naar Y'. X is het achtste beste resultaat van de overgebleven
-        // negentien — kom je daar niet onder, dan neem je de vrijgekomen plek in je
-        // beste acht niet over en is Y precies de uitkomst.
-        // (Niet te verwarren met de waarde die je handicap gelíjk houdt; die is
-        // strenger. Deze zin gaat over het scenario waarin je handicap wél stijgt.)
-        const remSds = remaining
-          .map(r => { const e = effectiveSD(r); return e == null ? null : e.value + (esrMapStats ? (esrMapStats.get(r.id) || 0) : 0); })
-          .filter(v => v != null)
-          .sort((a, b) => a - b);
-        const threshold = remSds.length >= 8 ? remSds[7] : null;
+        // De grens die je handicap GELIJK HOUDT, niet de grens waarmee je in je beste
+        // acht komt. Die twee werden verward: de zin luidde 'speel je geen dagresultaat
+        // onder 32,0, dan gaat je hcp naar 30,8', maar met 31,9 — netjes onder die grens
+        // — kwam er alsnog 30,8 uit. Je komt dan wel in je beste acht, maar je verdringt
+        // een 32,0 en dat scheelt te weinig om de afronding te veranderen.
+        // Niet met een omgekeerde formule: zodra softcap, hardcap of ESR meespelen is de
+        // handicap geen kaal gemiddelde meer en levert die formule een veel te strenge
+        // grens op. In plaats daarvan wordt de ECHTE berekening gebruikt en wordt er
+        // binair gezocht naar het hoogste dagresultaat dat je handicap nog vasthoudt.
+        // Dat kost een stuk of tien doorrekeningen van twintig rondes: verwaarloosbaar.
+        let threshold = null;
+        if (whs) {
+          const hcpBij = sd => {
+            const proef = { id: '__grens__', date: '9999-12-31', time: '23:59', sdFinal: sd };
+            const u = whsHandicap([proef, ...remaining], lowHiEff, esrMapStats);
+            return u ? Math.round(u.value * 10) / 10 : null;
+          };
+          const doel = Math.round(whs.value * 10) / 10;
+          // Een lager dagresultaat geeft nooit een hogere handicap, dus binair zoeken mag.
+          if (hcpBij(-10) !== null && hcpBij(-10) <= doel) {
+            let laag = -100, hoog = 541;   // tienden, zodat we op 0.1 nauwkeurig zoeken
+            while (hoog - laag > 1) {
+              const mid = Math.floor((laag + hoog) / 2);
+              const h = hcpBij(mid / 10);
+              if (h !== null && h <= doel) laag = mid; else hoog = mid;
+            }
+            const kandidaat = laag / 10;
+            // Alleen tonen als hij haalbaar is én je er echt iets mee opschiet.
+            if (kandidaat >= -10 && kandidaat <= 54 && hcpBij(kandidaat) === doel) {
+              threshold = kandidaat;
+            }
+          }
+        }
         let scenarioLine = '';
         if (scenario && whs) {
           const delta = Math.round((scenario.value - whs.value) * 10) / 10;
           if (delta > 0) {
-            scenarioLine = ` Speel je ${threshold != null ? `geen dagresultaat onder <b>${fmt1(threshold)}</b>` : 'geen voldoende goed dagresultaat'}, dan gaat je hcp naar <span style="color:var(--orange);font-weight:700">${fmt1(scenario.value)} (+${fmt1(delta)})</span>.`;
+            scenarioLine = ` Je hcp gaat dan naar <span style="color:var(--orange);font-weight:700">${fmt1(scenario.value)} (+${fmt1(delta)})</span>`
+              + (threshold != null
+                  ? `, tenzij je een dagresultaat van <b>${fmt1(threshold)}</b> of beter speelt.`
+                  : `, tenzij je nieuwe ronde beter is.`);
           } else {
             scenarioLine = ` Je hcp blijft dan <b>${fmt1(scenario.value)}</b>.`;
           }
