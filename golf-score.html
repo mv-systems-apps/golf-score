@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B8</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0B9</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -5650,8 +5650,13 @@ const kpi = (label, val, opts = {}) => `<div class="${opts.cls || ''}" style="te
     + `<h2 style="margin:0;flex:1">Wat als...?</h2>`
     + `${arrowSvg(14, !watIfCollapsed, 'var(--gold)')}`
     + `</div>`
+    // Vooruitblik EERST: die beschrijft de stand zoals hij nu is — welke ronde eruit
+    // valt en wat dat betekent. Het invoerveld is wat je daarna doet om een scenario
+    // door te rekenen. Andersom las je de vraag vóór de aanleiding.
     + (watIfCollapsed ? '' :
-      watIfSubHead('Volgend dagresultaat')
+      watIfSubHead('Vooruitblik')
+      + vooruitblikBody
+      + watIfSubHead('Volgend dagresultaat')
       + `<div class="fg" style="margin-bottom:0">`
       + `<div id="watIfRangeMsg" class="hidden" style="font-size:20px;font-weight:700;color:var(--orange);margin-bottom:4px">-10.0 t/m 54.0</div>`
       + `<div style="position:relative">`
@@ -5659,9 +5664,7 @@ const kpi = (label, val, opts = {}) => `<div class="${opts.cls || ''}" style="te
       + `<button id="watIfClear" class="search-clear hidden" onclick="clearSearchField('watIfInput', watIfClearRefresh)" title="Wissen">&times;</button>`
       + `</div>`
       + `</div>`
-      + `<div id="watIfResult" style="margin-top:10px"></div>`
-      + watIfSubHead('Vooruitblik')
-      + vooruitblikBody)
+      + `<div id="watIfResult" style="margin-top:10px"></div>`)
     + `</div>`;
 
   // Scoreverdeling over alle qualifying holes
@@ -12814,8 +12817,17 @@ function onWatIfInput(input) {
   if (hypo.capped) signals.push(hypo.capType === 'hard' ? 'hardcap' : 'softcap');
   if (hypo.esrApplied) signals.push('ESR');
   const signalText = signals.length ? ` <span style="color:var(--muted);font-weight:400">(${signals.join(' + ')})</span>` : '';
-  resultEl.innerHTML = `<div style="font-size:20px">Hcp wordt: <b>${fmt1(hypo.value)}</b>${signalText}</div>`
-    + (diff != null ? `<div style="font-size:15px;color:${col};font-weight:700;display:flex;align-items:center;margin:4px 0 0 -2px">${arrow}${fmtSignedLocal(diff)} t.o.v. nu (${fmt1(current.value)})</div>` : '');
+  // Eén regel, in dezelfde vorm als op de rondekaart: 'Whs 30.7 → 30.8 (+0.1)'.
+  // Alleen de nieuwe waarde staat hier vet, want dat is waar je naar kijkt.
+  const diffFrag = (diff != null && !gelijk)
+    ? ` <span style="color:${col}">(${fmtSignedLocal(diff)})</span>`
+    : '';
+  // Gewone tekstregel en geen flexrij: in een flexrij verdwijnen de spaties tussen de
+  // onderdelen, en dan plakt '(+0.3)' tegen het getal aan. De pijl is een SVG met
+  // vertical-align, dus die staat ook in een tekstregel netjes op zijn plek.
+  resultEl.innerHTML = `<div style="font-size:20px;line-height:1.5">`
+    + `Whs ${current != null ? fmt1(current.value) : '—'}`
+    + `${arrow}<b>${fmt1(hypo.value)}</b>${diffFrag}${signalText}</div>`;
 }
 
 // Rekent de handicap uit met één tijdelijke, alleen-in-het-geheugen ronde toegevoegd —
