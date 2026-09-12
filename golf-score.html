@@ -1370,7 +1370,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0BE</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C0</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -10315,14 +10315,31 @@ function loadSaved() {
       const key = player.replace(/\W/g,'_');
       html += playerGroupHeader(player, rounds.length, rounds.some(roundHasWarning));
       {
-        const cutoff12 = Date.now() - 365 * 24 * 60 * 60 * 1000;
+        // Drie groepen, geen twee. De indeling keek alleen naar de ONDERGRENS, dus een
+        // ronde van volgende maand viel in 'Laatste 12 maanden' — een ronde die nog
+        // gespeeld moet worden tussen je gespeelde rondes.
+        // GEPLAND = alles met een datum na nu, ongeacht de status: nog niet begonnen,
+        // gepauzeerd, actief of zelfs afgerond. Eén regel, geen uitzonderingen — een
+        // afgeronde ronde met een datum in de toekomst is vrijwel altijd een typefout,
+        // en zo zie je hem meteen.
+        // De volgorde is die van de vlakke lijst: nieuw naar oud.
+        const nu = Date.now();
+        const cutoff12 = nu - 365 * 24 * 60 * 60 * 1000;
+        const gepland = [];
         const last12 = [];
         const rest = [];
         rounds.forEach(r => {
           const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
+          if (isFinite(t) && t > nu) { gepland.push(r); return; }
           (isFinite(t) && t >= cutoff12 ? last12 : rest).push(r);
         });
+        gepland.sort(sortDesc);
         last12.sort(sortDesc);
+        if (gepland.length) {
+          html += `<div style="padding-left:12px">`
+            + collapsibleHeader('Gepland', gepland.length, 'pgy_' + key + '_gepland', '_pgYearCollapsed', gepland.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
+            + cardsIfExpanded(gepland, 'pgy_' + key + '_gepland', '_pgYearCollapsed') + '</div></div>';
+        }
         if (last12.length) {
           html += `<div style="padding-left:12px">`
             + collapsibleHeader('Laatste 12 maanden', last12.length, 'pgy_' + key + '_last12', '_pgYearCollapsed', last12.some(roundHasWarning)).replace('color:var(--gold)', 'color:var(--green-light)')
