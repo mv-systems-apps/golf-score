@@ -1319,20 +1319,17 @@
     </div>
   </div>
 
-  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opslaglocatie</div>
+  <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Deze installatie</div>
   <div class="card" id="opslagCard">
-    <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px">Startadres van de app</div>
+    <!-- Geen adres met een ?opslag=-parameter meer, en geen waarschuwingen bij het
+         opstarten. Het adres bepaalt namelijk NIET welke gegevens je ziet: dat volgt uit
+         het browserprofiel waarin de app draait. De naam is puur een etiket zodat je op
+         het scherm ziet waar je bent. -->
     <div id="opslagKenmerkUitleg" style="font-size:17px;color:var(--muted);margin-bottom:8px"></div>
-    <!-- Het adres wordt PAS getoond als deze locatie een naam heeft. Anders zou hier een
-         adres staan dat de app zelf verzon, niet te onderscheiden van het adres waarmee
-         je binnenkwam — terwijl er tegelijk "nog geen naam" stond. -->
-    <div id="opslagLinkRegel" style="font-size:15px;color:var(--white);word-break:break-all;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px">—</div>
-    <div id="opslagKopieerMsg" class="hidden" style="font-size:15px;font-weight:700;color:var(--green-light);text-align:center;margin-bottom:8px">Gekopieerd</div>
-    <button id="opslagKopieerBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:6px" onclick="kopieerOpslagLink()">Adres kopiëren</button>
     <button id="opslagKenmerkBtn" class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-bottom:8px" onclick="opslagKenmerkKnop()">Naam geven</button>
     <div style="font-size:15px;color:var(--muted);text-align:center">Opslagcode <span id="opslagCodeTekst" style="color:var(--white);font-weight:700">—</span></div>
-    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg></div>
-    <div class="more-full">Clubs en rondes worden opgeslagen per browserprofiel. Deze opslaglocaties hebben daarom een unieke code. Die code staat in de naam van je backupbestanden, zodat de app kan melden als een bestand uit een andere locatie komt. Door de naam van de opslaglocatie in het adres van de app op te nemen weet je zeker welke opslaglocatie gebruikt wordt. Zo kun je bewust meerdere locaties gebruiken: je gewone locatie <b>hoofd</b>, en bijvoorbeeld een locatie <b>test</b> om iets uit te proberen.</div>
+    <div class="more-toggle" onclick="toggleMoreInfo(this)">Meer uitleg<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="more-full">Elke installatie heeft zijn eigen gegevens: een andere browser of een ander browserprofiel ziet andere rondes. Dat kun je niet omzetten met een adres — wil je rondes overzetten, maak dan een backup en lees die in bij de andere installatie. De naam die je hier geeft is een etiket voor jezelf; de opslagcode staat in je backupbestandsnamen, zodat je later ziet waar een bestand vandaan komt.</div>
   </div>
 
   <div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px">Opruimen &amp; resetten</div>
@@ -1370,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C0</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C3</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -7330,80 +7327,41 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) setT
 //      → melden: je bent waarschijnlijk ergens anders
 //   4. deze opslag kent geen kenmerk en er staan al gegevens → vragen of dit je vaste
 //      plek is; anders zou juist de opslag waar je per ongeluk in belandde zwijgen
-function kenmerkUitAdres() {
-  try {
-    const v = new URLSearchParams(location.search).get('opslag');
-    return v ? v.trim().slice(0, 24) : '';
-  } catch (e) { return ''; }
-}
-
-function bekendKenmerk() {
-  return (storage.getItem('golf_opslag_kenmerk') || '').trim();
-}
-
-function zetKenmerk(waarde) {
-  const schoon = String(waarde || '').trim().slice(0, 24);
-  if (schoon) storage.setItem('golf_opslag_kenmerk', schoon);
-  else storage.removeItem('golf_opslag_kenmerk');
-  toonOpslagRegel();
-}
-
+// Draait de app als geïnstalleerde app (van het beginscherm) of in een browsertabblad?
+// De eerste twee dekken Android en de desktop; de derde is iOS, dat display-mode pas
+// Waarschuwt alleen als het ERGENS OP LIJKT dat je in de verkeerde opslag zit: de app is
+// leeg terwijl je hier al eens gegevens had. Meer is niet nodig.
+//
+// Hier stond een heel stelsel: een naam die je zelf gaf, een code die de app verzon, en
+// een parameter ?opslag= in het adres, met waarschuwingen bij elke afwijking. Dat dekte
+// één gevaar af — je opent de app in een ander browserprofiel en denkt dat je rondes
+// weg zijn — maar het suggereerde iets wat niet waar is: dat je een opslag KIEST.
+// Dat doe je niet. Welke gegevens je ziet volgt uit het browserprofiel waarin de app
+// draait; het adres heeft daar niets mee te maken. Een geïnstalleerde app start boven-
+// dien op het start_url uit het manifest, zonder parameter — dus de waarschuwing sloeg
+// juist aan als alles goed was.
+// Wat blijft: de naam als ETIKET dat je één keer instelt, de code in je backupbestands-
+// namen, en de regel onderaan Instellingen die zegt waar je bent.
 function controleerOpslagKenmerk() {
-  // Zijn de gegevens onleesbaar, dan staat daar een rode melding over — en die is
-  // belangrijker dan de vraag via welk adres je binnenkwam. Niet overheen schrijven:
-  // wachten tot dat venster vrij is, anders zie je de ernstigste melding nooit.
-  if (rondesOnleesbaar || clubsOnleesbaar) {
+  // Zijn de gegevens onleesbaar, dan staat daar al een rode melding voor; niet erover
+  // heen praten.
+  if (storage.getItem('golf_leesfout')) return;
+  {
     const venster = document.getElementById('confirmModal');
     if (!venster || !venster.classList.contains('hidden')) {
       setTimeout(controleerOpslagKenmerk, 500);
       return;
     }
   }
-  const uitAdres = kenmerkUitAdres();
-  const bekend = bekendKenmerk();
-
-  // Geval 1 en 2: je komt binnen mét kenmerk.
-  if (uitAdres) {
-    if (!bekend) { zetKenmerk(uitAdres); return; }
-    // Hoofdletters negeren: "Hoofd" en "hoofd" zijn dezelfde locatie. Anders zou een
-    // adres met een hoofdletter een valse waarschuwing geven terwijl er niets aan de
-    // hand is.
-    if (uitAdres.toLowerCase() === bekend.toLowerCase()) return;
-    // Zelfde opslag, ander kenmerk in de koppeling: dat is een bewuste wijziging van
-    // jouw kant (of een tikfout). Vragen wat de bedoeling is.
-    showConfirmModal('Andere naam in het adres',
-      `Deze opslaglocatie heet "${bekend}", maar je opende de app als "${uitAdres}". `
-      + `Wil je deze locatie voortaan "${uitAdres}" noemen?`,
-      () => zetKenmerk(uitAdres), 'Laten staan', null, 'Wijzigen');
-    return;
-  }
-
-  // Geval 3: deze opslag kent een kenmerk, maar je komt zonder binnen.
-  if (bekend) {
-    showInfoModal('Niet via je vaste startadres',
-      `Deze opslaglocatie heet "${bekend}", maar je opende de app zonder die naam in het `
-      + `adres. Waarschijnlijk gebruik je een ander browserprofiel of typte je het adres. `
-      + `Controleer of je rondes hier compleet zijn voordat je verder gaat. `
-      + `Opslaglocatie: ${opslagLabel()}.`, 'orange');
-    return;
-  }
-
-  // Geval 4: nog geen kenmerk bekend.
-  const leeg = loadSavedRounds().length === 0 && Object.keys(CLUBS || {}).length === 0;
   if (storage.getItem('golf_kenmerk_gevraagd')) return;
+  const leeg = loadSavedRounds().length === 0 && Object.keys(CLUBS || {}).length === 0;
+  if (!leeg) return;                      // gegevens aanwezig: niets aan de hand
   storage.setItem('golf_kenmerk_gevraagd', '1');
-  if (leeg) {
-    showInfoModal('Geen gegevens gevonden',
-      `Er staan hier nog geen rondes en clubs. Is dit je eerste keer, dan klopt dat. `
-      + `Gebruikte je de app al wel, kijk dan of je in een ander browserprofiel zit — `
-      + `elk profiel heeft zijn eigen opslaglocatie. Deze locatie: ${opslagLabel()}.`);
-    return;
-  }
-  showInfoModal('Deze opslaglocatie heeft nog geen naam',
-    `Geef deze locatie een naam bij Instellingen \u2192 Gegevens \u2192 Opslag. Je krijgt `
-    + `daar een adres met die naam erin; zet dat op je beginscherm en start de app er `
-    + `voortaan mee. De app waarschuwt dan zodra je ergens anders binnenkomt — `
-    + `bijvoorbeeld in een ander browserprofiel. Opslagcode: ${opslagCode()}.`);
+  showInfoModal('Geen gegevens gevonden',
+    'Er staan hier nog geen rondes en clubs. Is dit je eerste keer, dan klopt dat. '
+    + 'Gebruikte je de app al wel, dan zit je waarschijnlijk in een andere browser of een '
+    + 'ander browserprofiel \u2014 elke installatie heeft zijn eigen gegevens. Je kunt ze '
+    + 'overzetten met een backup. Deze installatie: ' + opslagLabel() + '.');
 }
 
 // Kijkt of een backupbestand uit dezelfde opslag komt. De code staat achteraan in de
@@ -7431,6 +7389,19 @@ function andereOpslagCode(bestandsnaam) {
 //
 // De CODE is waar de app op vergelijkt (die verandert nooit); de NAAM is alleen wat jij
 // leest. Zo kun je later hernoemen zonder dat oude backups ineens "van elders" lijken.
+// De naam die jij aan deze installatie geeft. Puur een etiket: hij bepaalt niet welke
+// gegevens je ziet — dat volgt uit het browserprofiel waarin de app draait.
+function bekendKenmerk() {
+  return (storage.getItem('golf_opslag_kenmerk') || '').trim();
+}
+
+function zetKenmerk(waarde) {
+  const schoon = String(waarde || '').trim().slice(0, 24);
+  if (schoon) storage.setItem('golf_opslag_kenmerk', schoon);
+  else storage.removeItem('golf_opslag_kenmerk');
+  toonOpslagRegel();
+}
+
 let _opslagCode = null;
 function opslagCode() {
   if (_opslagCode) return _opslagCode;
@@ -7448,45 +7419,23 @@ function opslagCode() {
   return code;
 }
 
-// Wat je leest in meldingen: de opslagcode, met het kenmerk erbij als dat er is.
-// Een eigen NAAM per opslag is er bewust niet meer: het kenmerk uit de koppeling doet
-// dat werk al, en beter — dat gaat vanzelf af zodra je ergens anders binnenkomt.
+// Wat je leest in meldingen. De CODE staat er ALTIJD bij, ook als er een naam is: de
+// naam typ je zelf en kan in twee installaties gelijk zijn of vergeten worden, de code
+// is uniek en verandert nooit. Hij staat ook in je backupbestandsnamen, dus met de code
+// erbij kun je een melding altijd koppelen aan een bestand.
 function opslagLabel() {
   const naam = bekendKenmerk();
   return naam ? `${naam} (code ${opslagCode()})` : `zonder naam (code ${opslagCode()})`;
 }
 
-// Het volledige adres met kenmerk: dat zet je op je beginscherm.
-function opslagLink(kenmerk) {
-  const merk = kenmerk || bekendKenmerk() || 'hoofd';
-  return location.origin + location.pathname + '?opslag=' + encodeURIComponent(merk);
-}
 
-async function kopieerOpslagLink() {
-  const msg = document.getElementById('opslagKopieerMsg');
-  try {
-    await navigator.clipboard.writeText(opslagLink());
-    if (msg) { msg.textContent = 'Gekopieerd'; msg.style.color = 'var(--green-light)'; }
-  } catch (e) {
-    // Kopiëren kan geweigerd worden (geen https, of geen toestemming). Dan blijft het
-    // adres gewoon leesbaar op het scherm staan om over te tikken.
-    if (msg) { msg.textContent = 'Kopiëren lukt niet — neem het adres hierboven over'; msg.style.color = 'var(--orange)'; }
-  }
-  if (msg) {
-    msg.classList.remove('hidden');
-    clearTimeout(msg._timer);
-    msg._timer = setTimeout(() => msg.classList.add('hidden'), 2000);
-  }
-}
-
-// Naam geven of wijzigen. Pas als deze locatie een naam HEEFT verschijnt het adres:
-// zonder naam zou daar een adres staan dat de app zelf verzon, en dat is voor jou niet
-// te onderscheiden van het adres waarmee je binnenkwam.
+// Naam geven of wijzigen. Puur een etiket voor jezelf: het verplaatst niets en het
+// bepaalt niet welke gegevens je ziet.
 function opslagKenmerkKnop() {
   const veld = document.getElementById('opslagKenmerkInput');
   if (!veld) return;
   veld.value = bekendKenmerk() || 'hoofd';
-  openValueEditModal(veld, 'Naam van deze opslaglocatie');
+  openValueEditModal(veld, 'Naam van deze installatie');
 }
 
 function bewaarOpslagKenmerk() {
@@ -7500,31 +7449,30 @@ function toonOpslagRegel() {
   // Compacte regel onderaan Instellingen: in één oogopslag zien waar je zit.
   const regel = document.getElementById('opslagRegel');
   if (regel) regel.textContent = kenmerk
-    ? `Opslaglocatie ${kenmerk} \u00b7 code ${opslagCode()}`
-    : `Opslaglocatie zonder naam \u00b7 code ${opslagCode()}`;
+    ? `Deze installatie: ${kenmerk} \u00b7 code ${opslagCode()}`
+    : `Deze installatie \u00b7 code ${opslagCode()}`;
 
   const codeEl = document.getElementById('opslagCodeTekst');
   if (codeEl) codeEl.textContent = opslagCode();
-  const linkEl = document.getElementById('opslagLinkRegel');
-  if (linkEl) linkEl.textContent = kenmerk ? opslagLink() : '';
   const uitleg = document.getElementById('opslagKenmerkUitleg');
   if (uitleg) {
     if (kenmerk) {
       // De naam vet, en via een eigen element zodat hij niet als HTML wordt uitgevoerd.
-      uitleg.textContent = 'Gebruik onderstaand adres om de app te starten met de opslaglocatie ';
+      uitleg.textContent = 'Deze installatie heet ';
       const naam = document.createElement('b');
       naam.textContent = kenmerk;
       uitleg.appendChild(naam);
-      uitleg.appendChild(document.createTextNode('.'));
+      uitleg.appendChild(document.createTextNode(
+        ` (code ${opslagCode()}). Elke installatie heeft zijn eigen rondes en clubs.`));
     } else {
-      uitleg.textContent = 'Deze opslaglocatie heeft nog geen naam. Geef er een, dan verschijnt hier het adres om op je beginscherm te zetten.';
+      uitleg.textContent = `Deze installatie heeft nog geen naam (code ${opslagCode()}). `
+        + 'Geef er een, dan zie je onderaan altijd waar je bent \u2014 handig als je de app '
+        + 'ook ergens anders gebruikt.';
     }
   }
   const kBtn = document.getElementById('opslagKenmerkBtn');
   if (kBtn) kBtn.textContent = kenmerk ? 'Naam wijzigen' : 'Naam geven';
-  // Adres en kopieerknop pas tonen zodra er een naam is.
-  document.getElementById('opslagLinkRegel')?.classList.toggle('hidden', !kenmerk);
-  document.getElementById('opslagKopieerBtn')?.classList.toggle('hidden', !kenmerk);
+
 }
 
 // ── Opslagbescherming: vraag de browser de site-opslag als blijvend te markeren,
