@@ -23,7 +23,12 @@ import sys
 from pathlib import Path
 
 DIR = Path(__file__).parent
-APP_FILES = ['index.html', 'golf-score.html', 'manifest.json', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png']
+# Deze lijst hoort gelijk te lopen met APP_FILES in sw-golf-score.js: dat zijn de
+# bestanden die offline beschikbaar zijn, en dus precies de bestanden waarvan een
+# wijziging een nieuwe cacheversie hoort op te leveren.
+APP_FILES = ['index.html', 'golf-score.html', 'manifest.json', 'icon.svg',
+             'icon-180.png', 'icon-192.png', 'icon-512.png',
+             'icon-maskable-192.png', 'icon-maskable-512.png']
 SW_FILE = DIR / 'sw-golf-score.js'
 
 def compute_hash():
