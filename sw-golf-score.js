@@ -13,7 +13,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-70aa49548bd9';
+const CACHE_VERSION = 'golf-score-08ada9d80b3f';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
@@ -25,6 +25,11 @@ const APP_FILES = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
+  // Maskeerbare varianten: randvullend, zonder eigen afronding. Android legt daar zijn
+  // eigen vorm overheen. Zonder deze twee toonde het opstartscherm het gewone pictogram
+  // ongemaskeerd, met witte hoekjes eromheen.
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
 ];
 
 self.addEventListener('install', e => {
