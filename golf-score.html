@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C3</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C6</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -1385,7 +1385,7 @@
   </div>
   <div id="storageStatusLine" style="font-size:13px;color:var(--muted);text-align:center;margin:14px 0 2px"></div>
   <div id="opslagRegel" style="font-size:13px;color:var(--muted);text-align:center;margin:0 0 2px"></div>
-  <input type="text" id="opslagKenmerkInput" class="hidden" oninput="bewaarOpslagKenmerk()" aria-label="Kenmerk van deze opslag">
+  <input type="text" id="opslagKenmerkInput" class="hidden" maxlength="16" oninput="bewaarOpslagKenmerk()" aria-label="Naam van deze installatie">
   <!-- Het versienummer en de herkomst staan in 'Over Golf Score' op het tabblad
        Gegevens. Hier blijven alleen de opslagregels: die heb je nodig bij het uitwisselen
        van backups, en ze horen bij de import- en exportknoppen. -->
@@ -7372,7 +7372,13 @@ function controleerOpslagKenmerk() {
 // De naam is de ENIGE bron: in het bestand zelf staat geen herkomst. Daarom is dit een
 // extra aanwijzing bovenop de waarschuwing bij vervangen, nooit de enige drempel.
 function andereOpslagCode(bestandsnaam) {
-  const m = /^(?:rondes|clubs)_backup_\d{8}_([A-Z0-9]{4})(?: \(\d+\))?\.json$/i
+  // De vorm die de app zelf maakt:
+  //   rondes_backup_20260913_EdgeMark(QQNX).json   — de naam is optioneel
+  // De haakjes bakenen de code af; daarom zijn ze in de naam zelf niet toegestaan.
+  // De staart ' (1)' komt van een browser die een bestaand bestand niet overschrijft.
+  // Backups van vóór deze vorm worden niet herkend: importeren werkt gewoon, maar zonder
+  // de melding dat het bestand uit een andere installatie komt.
+  const m = /^(?:rondes|clubs)_backup_\d{8}_(?:[\p{L}\p{N}_-]*)\(([A-Z0-9]{4})\)(?: \(\d+\))?\.json$/iu
     .exec((bestandsnaam || '').trim());
   if (!m) return null;
   const code = m[1].toUpperCase();
@@ -7395,8 +7401,30 @@ function bekendKenmerk() {
   return (storage.getItem('golf_opslag_kenmerk') || '').trim();
 }
 
+// Naam opschonen: letters, cijfers, spatie, koppelteken en liggend streepje. De rest
+// weigeren we, want deze naam komt in je backupBESTANDSNAAM terecht en tekens als / \ :
+// * ? " < > | breken die op Windows, Android of in een clouddienst.
+// Zestien tekens: dat past op één regel in Instellingen naast 'Deze installatie:' en de
+// opslagcode, ook op een smal scherm, en het houdt de bestandsnaam kort.
+// HAAKJES zijn niet toegestaan in de naam — die zijn in de bestandsnaam gereserveerd om
+// de opslagcode af te bakenen: rondes_backup_20260913_Edge-Mark(QQNX).json
+const KENMERK_MAX = 16;
+function schoonKenmerk(waarde) {
+  return String(waarde || '')
+    .replace(/[^\p{L}\p{N} _-]/gu, '')   // alles wat een bestandsnaam kan breken eruit
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, KENMERK_MAX);
+}
+
+// De naam zoals hij in een bestandsnaam mag staan: spaties worden koppeltekens, en
+// korter, want daar staat al een datum en een opslagcode omheen.
+function kenmerkVoorBestandsnaam() {
+  return schoonKenmerk(bekendKenmerk()).replace(/ /g, '-');
+}
+
 function zetKenmerk(waarde) {
-  const schoon = String(waarde || '').trim().slice(0, 24);
+  const schoon = schoonKenmerk(waarde);
   if (schoon) storage.setItem('golf_opslag_kenmerk', schoon);
   else storage.removeItem('golf_opslag_kenmerk');
   toonOpslagRegel();
@@ -7440,7 +7468,16 @@ function opslagKenmerkKnop() {
 
 function bewaarOpslagKenmerk() {
   const veld = document.getElementById('opslagKenmerkInput');
-  zetKenmerk((veld?.value || '').trim());
+  if (!veld) return;
+  // Al tijdens het typen opschonen: geweigerde tekens verschijnen niet, in plaats van
+  // stilletjes te verdwijnen bij het opslaan. De cursor blijft staan waar hij stond.
+  const schoon = schoonKenmerk(veld.value);
+  if (schoon !== veld.value) {
+    const pos = Math.max(0, (veld.selectionStart || 0) - (veld.value.length - schoon.length));
+    veld.value = schoon;
+    try { veld.setSelectionRange(pos, pos); } catch (e) { /* niet elk veld kan dit */ }
+  }
+  zetKenmerk(schoon);
 }
 
 function toonOpslagRegel() {
@@ -13561,7 +13598,7 @@ async function exportAllRounds() {
     };
   });
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filename = `rondes_backup_${ts}_${opslagCode()}.json`;
+  const filename = `rondes_backup_${ts}_${kenmerkVoorBestandsnaam()}(${opslagCode()}).json`;
   const json = JSON.stringify(data, null, 2);
   try {
     if (!(await tryWriteToExportFolder(filename, json))) {
@@ -13925,7 +13962,7 @@ async function exportAllClubs() {
     return;
   }
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filename = `clubs_backup_${ts}_${opslagCode()}.json`;
+  const filename = `clubs_backup_${ts}_${kenmerkVoorBestandsnaam()}(${opslagCode()}).json`;
   // Vastleggen dat de clubs nu veilig staan; de melding verdwijnt daarmee vanzelf.
   // Alleen de datum (voor de tekst) en de vingerafdruk (voor de vergelijking) — een
   // tijdstempel is hier niet nodig, want er is geen dagen- of aantallendrempel.
