@@ -1300,7 +1300,7 @@
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(1)">+</button>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:17px;color:var(--muted);flex:1">Nieuwe rondes</span>
+          <span style="font-size:17px;color:var(--muted);flex:1">Wijzigingen en/of nieuwe rondes</span>
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(-1)">−</button>
           <span id="backupReminderRoundsVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">2</span>
           <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(1)">+</button>
@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0C6</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CA</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -13005,6 +13005,10 @@ function confirmRoundResult() {
   }
   closeRoundResultModal();
   loadSaved();
+  // De backupmelding en de stip meteen bijwerken: een vastgesteld dagresultaat is een
+  // wijziging, en je blijft na het opslaan in het archief staan — dan komt de gewone
+  // verversing bij een tabwissel niet langs.
+  naBackupBijwerken();
 }
 
 function getFavClubs() {
@@ -13774,9 +13778,20 @@ function isBackupOverdue(lijst) {
   const changedTs = storage.getItem('golf_rounds_changed');
   const backupTs = storage.getItem('golf_last_backup_ts');
   if (changedTs && backupTs && changedTs <= backupTs) return false;
-  const newRounds = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  // Ook zwijgen als er NOOIT een wijziging is vastgelegd: dan is er per definitie niets
+  // te bewaren. Zonder deze regel telde de bewerking hieronder er toch één, en stond de
+  // stip meteen na een verse backup alweer aan.
+  if (!changedTs) return false;
+  // De tweede drempel telt WIJZIGINGEN, niet alleen nieuwe rondes. Een dagresultaat
+  // vaststellen of een score corrigeren is net zo goed werk dat je kwijt kunt raken,
+  // maar telde eerder nergens mee: met de drempels op 1 dag en 1 ronde bleef zo'n
+  // bewerking grijs tot de volgende dag. Een bewerking telt daarom als één wijziging,
+  // bovenop de rondes die erbij zijn gekomen.
+  const nieuweRondes = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  const bewerkt = nieuweRondes === 0 ? 1 : 0;   // wel iets gewijzigd, geen ronde erbij
+  const wijzigingen = nieuweRondes + bewerkt;
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  return newRounds >= roundsThreshold || daysSince >= getBackupReminderDays();
+  return wijzigingen >= roundsThreshold || daysSince >= getBackupReminderDays();
 }
 
 
@@ -13963,11 +13978,6 @@ async function exportAllClubs() {
   }
   const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const filename = `clubs_backup_${ts}_${kenmerkVoorBestandsnaam()}(${opslagCode()}).json`;
-  // Vastleggen dat de clubs nu veilig staan; de melding verdwijnt daarmee vanzelf.
-  // Alleen de datum (voor de tekst) en de vingerafdruk (voor de vergelijking) — een
-  // tijdstempel is hier niet nodig, want er is geen dagen- of aantallendrempel.
-  storage.setItem('golf_clubs_backup_date', todayISO());
-  storage.setItem('golf_clubs_backup_fingerprint', clubsVingerafdruk());
   const json = JSON.stringify(clubs, null, 2);
   try {
     if (!(await tryWriteToExportFolder(filename, json))) {
@@ -13976,6 +13986,17 @@ async function exportAllClubs() {
       a.download = filename;
       a.click();
     }
+    // Pas NA het wegschrijven vastleggen dat de clubs veilig staan. Stond dit ervóór,
+    // dan meldde de app "veilig" ook als het downloaden mislukte — geen ruimte, geen
+    // toestemming voor de map, of je annuleerde. De rondebackup doet het al zo.
+    // Alleen de datum (voor de tekst) en de vingerafdruk (voor de vergelijking) — een
+    // tijdstempel is hier niet nodig, want er is geen dagen- of aantallendrempel.
+    storage.setItem('golf_clubs_backup_date', todayISO());
+    storage.setItem('golf_clubs_backup_fingerprint', clubsVingerafdruk());
+    // En de melding meteen verversen: anders bleef "Backup clubs: nog nooit" staan tot
+    // je van scherm wisselde.
+    naBackupBijwerken();
+    toonClubBackupRegel();
     document.querySelectorAll('.export-clubs-success').forEach(successMsg => {
       successMsg.textContent = `${clubs.length} club${clubs.length !== 1 ? 's' : ''} geëxporteerd`;
       successMsg.classList.remove('hidden');
