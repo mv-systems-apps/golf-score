@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CA</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CB</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -10385,7 +10385,7 @@ function loadSaved() {
           + ` onpointercancel="jaarKopUp()" oncontextmenu="return false"`
           + ` style="cursor:pointer;display:flex;align-items:center;gap:8px">`
           + `<span style="flex:1;display:flex;align-items:center;gap:6px">${jaar}${jaarWaarschuwing[jaar] ? warningIconSmall : ''}</span>`
-          + `<span style="font-size:15px;font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
+          + `<span style="font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
           + `${arrowSvg(15, !dicht)}`
           + `</div>`;
         vorigJaar = jaar;
