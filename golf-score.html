@@ -814,13 +814,20 @@
     <div class="chcp-box">
       <span class="chcp-lab"><span id="chcpTeeBadge" class="tee-badge"></span></span>
       <div class="chcp-adjust">
+        <!-- Wedstrijdpercentage, links van de − en +. Die twee horen bij elkaar rond het
+             getal; het percentage is een aparte handeling en staat daarom ernaast.
+             Het rekent op de BAANHANDICAP, zoals de regels voorschrijven — niet op je
+             handicapindex. Het resultaat is een handmatig aangepaste baanhandicap, dus de
+             bestaande herstelknop brengt je met één tik terug naar 100%. -->
+        <button class="score-btn" id="chcpPctBtn" onclick="openChcpPercentage()"
+                title="Wedstrijdpercentage" style="font-size:24px;font-weight:800">%</button>
         <button class="score-btn minus" onclick="adjustChcp(-1)">−</button>
         <span class="chcp-val" id="chcpPreview">—</span>
         <button class="score-btn plus" onclick="adjustChcp(1)">+</button>
       </div>
     </div>
     <div class="chcp-override-row hidden" id="chcpOverrideRow">
-      <span class="info-msg" style="color:var(--info-grey)">Handmatig aangepast</span>
+      <span class="info-msg" id="chcpOverrideNote" style="color:var(--info-grey)">Handmatig aangepast</span>
       <button class="btn-secondary" style="padding:8px 14px;opacity:.6" onclick="resetChcpOverride()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
     </div>
   </div>
@@ -1367,7 +1374,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CE</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D2</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -2024,6 +2031,7 @@ let sel = {
   track:  null,
   tee:    'Geel',
   chcpOverride: null,
+  chcpPct: null,            // wedstrijdpercentage, alleen voor de uitleg onder het getal
   date: null,
   time: null,
   dateTimeEdited: false,
@@ -3040,6 +3048,14 @@ function updateChcp() {
 
   const overridden = sel.chcpOverride !== null;
   document.getElementById('chcpOverrideRow').classList.toggle('hidden', !overridden);
+  // Bij een percentage erbij zetten waar het getal vandaan komt; anders zie je bij het
+  // starten alleen een afwijkend getal zonder reden.
+  const uitleg = document.getElementById('chcpOverrideNote');
+  if (uitleg) {
+    uitleg.textContent = (sel.chcpPct != null && auto !== null)
+      ? `Handmatig aangepast \u00b7 ${sel.chcpPct}% van ${auto}`
+      : 'Handmatig aangepast';
+  }
 
   // Teebadge bijwerken
   const badge = document.getElementById('chcpTeeBadge');
@@ -3065,6 +3081,8 @@ function adjustChcp(d) {
   const base = sel.chcpOverride !== null ? sel.chcpOverride : auto;
   if (base === null) return;
   sel.chcpOverride = Math.max(-10, Math.min(54, base + d));
+  // Handmatig bijstellen maakt het percentage onwaar: 85% van 11 is niet meer 10.
+  sel.chcpPct = null;
   updateChcp();
   // Bijwerken header
   if (game.started) {
@@ -3076,7 +3094,44 @@ function adjustChcp(d) {
 
 function resetChcpOverride() {
   sel.chcpOverride = null;
+  sel.chcpPct = null;
   updateChcp();
+}
+
+// Wedstrijden spelen vaak met een percentage van de baanhandicap: 95% bij individueel
+// strokeplay, 85% bij sommige stablefordwedstrijden. De officiële regels rekenen dat
+// percentage over de BAANHANDICAP — niet over je handicapindex, want dan kom je soms een
+// slag anders uit.
+// De uitkomst is niets bijzonders: een handmatig aangepaste baanhandicap. Daardoor werkt
+// de bestaande herstelknop meteen, en hoeft het percentage nergens bewaard te worden.
+function openChcpPercentage() {
+  const auto = calcChcpAuto();
+  // Zonder baan en tee is er geen baanhandicap om een percentage van te nemen.
+  if (auto === null) return;
+  // De gangbare wedstrijdpercentages. 100 staat erbij om terug te kunnen: dat is
+  // hetzelfde als de herstelknop, maar je zoekt het hier.
+  const opties = ['100', '95', '90', '85', '80', '75', '60', '50'];
+  // Rekenen doet de app altijd over de BEREKENDE baanhandicap, niet over een waarde die
+  // je zelf al had bijgesteld — anders krijg je bij twee keer kiezen 85% van 85%.
+  // Daarom staat dat er ook zo: 'van berekende chcp 15', niet 'van baanhandicap 15'.
+  // Kort houden: 'Wedstrijdpercentage' breekt op een smal scherm midden in het woord af.
+  const label = 'Percentage'
+    + `<span style="display:block;font-size:15px;color:var(--muted);font-weight:400;margin-top:2px">`
+    + `van berekende chcp ${auto}</span>`;
+  openChoiceEditModal(label, opties, sel.chcpPct != null ? String(sel.chcpPct) : null, val => {
+    const pct = parseFloat(String(val).replace(',', '.'));
+    if (!isFinite(pct) || pct <= 0 || pct > 100) return;
+    // 100% is geen aanpassing maar het opheffen ervan: de melding 'Handmatig aangepast'
+    // zou dan over een getal gaan dat gelijk is aan de berekende waarde.
+    if (pct === 100) {
+      resetChcpOverride();
+      return;
+    }
+    // Rekenkundig afronden, zoals de WHS-regels voorschrijven: 9,35 wordt 9.
+    sel.chcpPct = pct;
+    sel.chcpOverride = Math.max(-10, Math.min(54, Math.round(auto * pct / 100)));
+    updateChcp();
+  });
 }
 
 // ══ HEADER INFO ══════════════════════════════════════════════════════════
@@ -9360,9 +9415,17 @@ function updateComputedHcp() {
   if (overrideRow) {
     const hcpInput = document.getElementById('iHcp');
     const typed = hcpInput ? parseFloat(hcpInput.value) : NaN;
+    const leeg = !hcpInput || String(hcpInput.value).trim() === '';
     const deviates = whs && isFinite(typed) && fmt1(typed) !== fmt1(whs.value);
-    if (noteEl) noteEl.textContent = 'Hcp wijkt af van de berekende WHS-hcp';
-    overrideRow.classList.toggle('hidden', !deviates);
+    // Ook bij een LEEG veld: dan is 'vul de berekende waarde in' juist het nuttigst. De
+    // tekst moet dan wel kloppen — 'wijkt af' zegt niets als er niets staat.
+    const toon = !!whs && (deviates || leeg);
+    if (noteEl) {
+      noteEl.textContent = leeg
+        ? 'Nog geen handicap ingevuld'
+        : 'Hcp wijkt af van de berekende WHS-hcp';
+    }
+    overrideRow.classList.toggle('hidden', !toon);
   }
 }
 
