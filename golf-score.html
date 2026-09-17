@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CB</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CD</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -10073,13 +10073,13 @@ function loadSaved() {
   const groupHeader = (title, count = null) =>
     `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px">`
     + `<span style="flex:1">${title}</span>`
-    + (count === null ? '' : `<span style="font-weight:400">${count}</span>`)
+    + (count === null ? '' : `<span style="font-size:15px;font-weight:400">${count}</span>`)
     + `</div>`;
 
   const playerGroupHeader = (player, count, hasWarning = false) => {
     const key = 'pg_' + player.replace(/\W/g, '_');
     const collapsed = window._pgCollapsed && window._pgCollapsed[key];
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=window._pgCollapsed['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._pgCollapsed=window._pgCollapsed||{};window._pgCollapsed['${key}']=window._pgCollapsed['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(player)}${hasWarning ? warningIconSmall : ''}</span><span style="font-size:15px;font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
 
   const actives    = filtered.filter(r => (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id));
@@ -10098,7 +10098,7 @@ function loadSaved() {
 
   const collapsibleHeader = (title, count, key, stateObj, hasWarning = false) => {
     const collapsed = window[stateObj]?.[key] !== false;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window['${stateObj}']=window['${stateObj}']||{};window['${stateObj}']['${key}']=window['${stateObj}']['${key}']===false?true:false;loadSaved()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-size:15px;font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
   // Bouwt de kaarten van een sectie alleen op als die sectie daadwerkelijk is
   // uitgeklapt (zelfde key/stateObj als de bijbehorende collapsibleHeader). Bij een
@@ -10141,7 +10141,7 @@ function loadSaved() {
   // setWhsShort).
   const staticHeader = (title, count, hasWarning = false) => {
     const short = !!window._whsShort;
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !short)}</div><div>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="toggleWhsShort()"><span style="flex:1;display:flex;align-items:center;gap:8px">${escapeHtml(title)}${hasWarning ? warningIconSmall : ''}</span><span style="font-size:15px;font-weight:400">${count}</span>${arrowSvg(16, !short)}</div><div>`;
   };
 
   let html = '';
@@ -10385,7 +10385,7 @@ function loadSaved() {
           + ` onpointercancel="jaarKopUp()" oncontextmenu="return false"`
           + ` style="cursor:pointer;display:flex;align-items:center;gap:8px">`
           + `<span style="flex:1;display:flex;align-items:center;gap:6px">${jaar}${jaarWaarschuwing[jaar] ? warningIconSmall : ''}</span>`
-          + `<span style="font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
+          + `<span style="font-size:15px;font-weight:400;letter-spacing:0">${jaarTotaal[jaar] || 0}</span>`
           + `${arrowSvg(15, !dicht)}`
           + `</div>`;
         vorigJaar = jaar;
@@ -13380,7 +13380,10 @@ function buildClubList() {
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:var(--white);margin-top:4px;cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">Kort: ${escapeHtml(shortName || '—')}${isHome ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:8px;opacity:.8" title="Thuisclub"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H4a1 1 0 0 1-1-1Z"/></svg>' : ''}</div>
       <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:4px" onclick="toggleCourseList(this)">
         <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Banen</span>
-        <span style="font-size:20px;font-weight:400;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length}</span>
+        <!-- Zelfde verhouding als bij de inklapkoppen elders: titel 20px vet, aantal
+             15px niet vet. Alleen hier op niveau 2, want deze regel is de kop van een
+             eigen lijst; de aantallen in de banenlijst zelf blijven op maat. -->
+        <span style="font-size:15px;font-weight:400;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length}</span>
         <span class="course-arrow" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
       </div>
       <div class="course-list-toggle" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;display:none;cursor:pointer" onclick="toggleCourseList(this)">${courseList}</div>
@@ -14655,7 +14658,9 @@ function initSettingsSections() {
       kop.style.gap = '8px';
       kop.style.cursor = 'pointer';
       kop.innerHTML = `<span style="flex:1">${titel}</span>`
-        + (aantal ? `<span style="font-size:15px;color:var(--gold)">${aantal}</span>` : '')
+        // Niet vet: het aantal is bijzaak naast de titel. Zelfde verhouding als in de
+        // koppen op het statistieken- en archiefscherm.
+        + (aantal ? `<span style="font-size:15px;font-weight:400;color:var(--gold)">${aantal}</span>` : '')
         + `<span class="settings-section-arrow"></span>`;
       kop.onclick = () => toggleSettingsSection(key);
     });
