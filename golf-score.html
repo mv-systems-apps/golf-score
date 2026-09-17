@@ -1367,7 +1367,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CD</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0CE</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -10207,7 +10207,7 @@ function loadSaved() {
         // wisselen van weergave.
         + ` style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;line-height:1;padding:16px 0 8px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer">`
         + `<span style="flex:1">${titel}</span>`
-        + `<span style="font-weight:400">${lijst.length}</span>`
+        + `<span style="font-size:15px;font-weight:400">${lijst.length}</span>`
         + `${arrowSvg(15, !dicht)}</div>`
         + (dicht ? ''
            : (lijst.length ? planKaarten(lijst)
@@ -13397,7 +13397,7 @@ function buildClubList() {
 
   const clubCollapsibleHeader = (title, count, key) => {
     const collapsed = window._clubSectionCollapsed?.[key] !== false; // standaard ingeklapt
-    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._clubSectionCollapsed=window._clubSectionCollapsed||{};window._clubSectionCollapsed['${key}']=window._clubSectionCollapsed['${key}']===false?true:false;buildClubList()"><span style="flex:1">${title}</span><span style="font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
+    return `<div style="font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;padding:16px 0 8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:10px;line-height:1" onclick="window._clubSectionCollapsed=window._clubSectionCollapsed||{};window._clubSectionCollapsed['${key}']=window._clubSectionCollapsed['${key}']===false?true:false;buildClubList()"><span style="flex:1">${title}</span><span style="font-size:15px;font-weight:400">${count}</span>${arrowSvg(16, !collapsed)}</div><div${collapsed?' class="hidden"':''}>`;
   };
 
   let html = '';
