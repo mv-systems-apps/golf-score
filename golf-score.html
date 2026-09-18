@@ -1377,7 +1377,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D4</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D6</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -3516,8 +3516,17 @@ function startRound() {
     return;
   }
 
-  // Check of er al een actieve ronde is
-  if (game.started) {
+  // Check of er al een actieve ronde is.
+  // NIET als die ronde degene is die je aan het herplannen of corrigeren bent: die wordt
+  // niet náást de nieuwe opgeslagen maar erdoor vervángen. De melding beloofde dan iets
+  // wat niet gebeurt, en vroeg om een keuze die er niet is.
+  // Bij twee spelers telt hetzelfde: is de andere ronde óók een die vervangen wordt, dan
+  // valt er niets te melden; loopt er een ronde die er los van staat, dan wel.
+  const actieveWordtVervangen = (id) => id != null && herplanSet.has(String(id));
+  const actieveId = storage.getItem('golf_active_id');
+  const eigenActieveVervangen = actieveWordtVervangen(actieveId);
+  const maatActieveVervangen = !game2Id || actieveWordtVervangen(game2Id);
+  if (game.started && !(eigenActieveVervangen && maatActieveVervangen)) {
     const isDone1 = game.holes.length > 0 && game.holes.every(h => h.score !== null);
     const status1 = isDone1 ? 'afgerond maar nog niet opgeslagen' : 'nog bezig';
     const naam1 = game.player || 'onbekend';
@@ -7420,8 +7429,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) setT
 // namen, en de regel onderaan Instellingen die zegt waar je bent.
 function controleerOpslagKenmerk() {
   // Zijn de gegevens onleesbaar, dan staat daar al een rode melding voor; niet erover
-  // heen praten.
-  if (storage.getItem('golf_leesfout')) return;
+  // heen praten. Hier stond een opslagsleutel 'golf_leesfout' die nergens wordt
+  // geschreven, dus deze rem deed niets: bij corrupte gegevens kwam 'Geen gegevens
+  // gevonden' er alsnog overheen — en dat klinkt als 'dit is je eerste keer', terwijl je
+  // rondes er nog wél staan en een backup je redding is.
+  if (rondesOnleesbaar) return;
   {
     const venster = document.getElementById('confirmModal');
     if (!venster || !venster.classList.contains('hidden')) {
