@@ -1374,7 +1374,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D2</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D3</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -14462,6 +14462,22 @@ function toggleTheme() {
   const dark = cb ? cb.checked : document.documentElement.classList.contains('light-mode');
   document.documentElement.classList.toggle('light-mode', !dark);
   storage.setItem('golf_theme', dark ? 'dark' : 'light');
+  zetSysteembalkKleur();
+}
+
+// De kleur die Android en iOS gebruiken voor de status- en navigatiebalk. Die stond vast
+// op het donkergroen van de app: in donkere modus klopte dat, in lichte modus niet — en
+// dan kiest Android zelf maar iets. Vandaar dat de balk onderaan soms zwart en soms groen
+// was, zonder dat er iets aan de app veranderde.
+// Het kan niet met een opmaakregel: de browser kan alleen zien wat het SYSTEEM wil, niet
+// wat jij in de app hebt ingesteld. De app heeft zijn eigen schakelaar, dus de kleur moet
+// hier mee bijgewerkt worden.
+// De waarde is de achtergrondkleur van de tabbalk; die grenst aan de navigatiebalk.
+function zetSysteembalkKleur() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const licht = document.documentElement.classList.contains('light-mode');
+  meta.setAttribute('content', licht ? '#f4f1ea' : '#1a3a2a');
 }
 
 // Scorekaart-symbolen (cirkel/vierkant om het cijfer op het Score-tabblad): standaard
@@ -15568,6 +15584,7 @@ document.addEventListener('focusin', (e) => {
   if (storage.getItem('golf_theme') !== 'dark') {
     document.documentElement.classList.add('light-mode');
   }
+  zetSysteembalkKleur();
   updateThemeIcon();
   updateProgressToggleBtn();
   applyBadWeather();
