@@ -859,13 +859,16 @@
     <div class="chcp-box">
       <span class="chcp-lab"><span id="chcpTeeBadge2" class="tee-badge"></span></span>
       <div class="chcp-adjust">
+        <!-- Zelfde opzet als bij speler 1: percentage links, − en + rond het getal. -->
+        <button class="score-btn" id="chcp2PctBtn" onclick="openChcpPercentage(2)"
+                title="Wedstrijdpercentage" style="font-size:24px;font-weight:800">%</button>
         <button class="score-btn minus" onclick="adjustChcp2(-1)">−</button>
         <span class="chcp-val" id="chcp2Preview">—</span>
         <button class="score-btn plus" onclick="adjustChcp2(1)">+</button>
       </div>
     </div>
     <div class="chcp-override-row hidden" id="chcp2OverrideRow">
-      <span class="info-msg" style="color:var(--info-grey)">Handmatig aangepast</span>
+      <span class="info-msg" id="chcp2OverrideNote" style="color:var(--info-grey)">Handmatig aangepast</span>
       <button class="btn-secondary" style="padding:8px 14px;opacity:.6" onclick="resetChcp2Override()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
     </div>
   </div>
@@ -1374,7 +1377,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D3</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D4</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -2037,7 +2040,7 @@ let sel = {
   dateTimeEdited: false,
   qualifying: false,
 };
-let sel2 = { chcpOverride: null, gender: 'Heren', tee: 'Geel', qualifying: false };
+let sel2 = { chcpOverride: null, chcpPct: null, gender: 'Heren', tee: 'Geel', qualifying: false };
 let currentHole = 0;
 let game = { started: false, holes: [] };
 let game2Id = null;       // id van ronde speler 2
@@ -2562,11 +2565,14 @@ function adjustChcp2(d) {
   const auto = isNaN(hcp2) ? 0 : calcChcpAuto2(hcp2);
   const base = sel2.chcpOverride !== null ? sel2.chcpOverride : (auto ?? 0);
   sel2.chcpOverride = Math.max(-10, Math.min(54, base + d));
+  // Handmatig bijstellen maakt het percentage onwaar: 85% van 11 is niet meer 10.
+  sel2.chcpPct = null;
   updateChcp2();
 }
 
 function resetChcp2Override() {
   sel2.chcpOverride = null;
+  sel2.chcpPct = null;
   updateChcp2();
 }
 
@@ -2587,6 +2593,12 @@ function updateChcp2() {
   if (el) el.textContent = (display === null) ? '—' : display;
   const overridden = sel2.chcpOverride !== null;
   document.getElementById('chcp2OverrideRow')?.classList.toggle('hidden', !overridden);
+  const uitleg2 = document.getElementById('chcp2OverrideNote');
+  if (uitleg2) {
+    uitleg2.textContent = (sel2.chcpPct != null && auto !== null)
+      ? `Handmatig aangepast \u00b7 ${sel2.chcpPct}% van ${auto}`
+      : 'Handmatig aangepast';
+  }
   const badge2 = document.getElementById('chcpTeeBadge2');
   if (badge2) { badge2.textContent = sel2.tee || ''; badge2.className = 'tee-badge tee-' + (sel2.tee || ''); }
   buildTeeButtons2();
@@ -3104,8 +3116,14 @@ function resetChcpOverride() {
 // slag anders uit.
 // De uitkomst is niets bijzonders: een handmatig aangepaste baanhandicap. Daardoor werkt
 // de bestaande herstelknop meteen, en hoeft het percentage nergens bewaard te worden.
-function openChcpPercentage() {
-  const auto = calcChcpAuto();
+function openChcpPercentage(speler = 1) {
+  const tweede = speler === 2;
+  const hcp2 = tweede
+    ? parseFloat((document.getElementById('iHcp2')?.value || '').replace(',', '.'))
+    : NaN;
+  const auto = tweede
+    ? (isNaN(hcp2) ? null : calcChcpAuto2(hcp2))
+    : calcChcpAuto();
   // Zonder baan en tee is er geen baanhandicap om een percentage van te nemen.
   if (auto === null) return;
   // De gangbare wedstrijdpercentages. 100 staat erbij om terug te kunnen: dat is
@@ -3115,22 +3133,25 @@ function openChcpPercentage() {
   // je zelf al had bijgesteld — anders krijg je bij twee keer kiezen 85% van 85%.
   // Daarom staat dat er ook zo: 'van berekende chcp 15', niet 'van baanhandicap 15'.
   // Kort houden: 'Wedstrijdpercentage' breekt op een smal scherm midden in het woord af.
-  const label = 'Percentage'
+  // Bij twee spelers staan er twee baanhandicapkaarten; de titel zegt om welke het gaat.
+  const label = (tweede ? 'Percentage speler 2' : 'Percentage')
     + `<span style="display:block;font-size:15px;color:var(--muted);font-weight:400;margin-top:2px">`
     + `van berekende chcp ${auto}</span>`;
-  openChoiceEditModal(label, opties, sel.chcpPct != null ? String(sel.chcpPct) : null, val => {
+  const doel = tweede ? sel2 : sel;
+  const huidig = doel.chcpPct != null ? String(doel.chcpPct) : null;
+  openChoiceEditModal(label, opties, huidig, val => {
     const pct = parseFloat(String(val).replace(',', '.'));
     if (!isFinite(pct) || pct <= 0 || pct > 100) return;
     // 100% is geen aanpassing maar het opheffen ervan: de melding 'Handmatig aangepast'
     // zou dan over een getal gaan dat gelijk is aan de berekende waarde.
     if (pct === 100) {
-      resetChcpOverride();
+      if (tweede) resetChcp2Override(); else resetChcpOverride();
       return;
     }
     // Rekenkundig afronden, zoals de WHS-regels voorschrijven: 9,35 wordt 9.
-    sel.chcpPct = pct;
-    sel.chcpOverride = Math.max(-10, Math.min(54, Math.round(auto * pct / 100)));
-    updateChcp();
+    doel.chcpPct = pct;
+    doel.chcpOverride = Math.max(-10, Math.min(54, Math.round(auto * pct / 100)));
+    if (tweede) updateChcp2(); else updateChcp();
   });
 }
 
