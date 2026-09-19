@@ -227,8 +227,13 @@
     .more-toggle { font-size: 15px; color: var(--gold); font-weight: 700; margin-top: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; user-select: none; }
     .more-toggle svg { transition: transform .15s; flex-shrink: 0; }
     .more-toggle.open svg { transform: rotate(90deg); }
+    /* Een lijn links met wat inspringing: zo zie je tot waar het uitgeklapte deel loopt.
+       Zonder die lijn liep de tekst gewoon door en was niet te zien wat bij het kopje
+       hoorde en wat er onder stond. */
     .more-full { font-size: 17px; color: var(--muted); margin-top: 0; max-height: 0; overflow: hidden; transition: max-height .2s ease; }
-    .more-full.open { max-height: 2000px; margin-top: 8px; }
+    .more-full.open { max-height: 2000px; margin-top: 8px; padding-left: 10px; border-left: 2px solid var(--gold); opacity: .999; }
+    /* Alle uitklapjes in Instellingen dragen dezelfde gouden lijn: 'Toon opties' hoort
+       daar bij 'Meer uitleg', niet bij het groene Exporteer/deel-venster. */
     .switch input { opacity: 0; width: 0; height: 0; }
     .switch .slider { position: absolute; inset: 0; cursor: pointer; background: rgba(255,255,255,.2); border-radius: 30px; transition: background .2s; }
     .switch .slider::before { content: ''; position: absolute; height: 24px; width: 24px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; }
@@ -1377,7 +1382,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D8</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E2</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4516,13 +4521,80 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
       })()],
       ['Vastgesteld (Sd<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin:0 3px"><polyline points="20 6 9 17 4 12"/></svg>)', (game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal))) ? fmt1(parseFloat(game.sdFinal)) : '—'],
     ]],
+    // ── Per negen ─────────────────────────────────────────────────────────────
+    // Een EIGEN kaart, niet een blok binnen Resultaat: zo is de grens van het
+    // inklapbare deel de kaart zelf. Eerder liep het omhulsel door tot het einde van de
+    // kaart en klapte PCC & Dagresultaat mee weg.
+    // De tilde in de titel maakt de kaart inklapbaar; hij staat standaard dicht, want je
+    // kijkt er maar af en toe naar.
+    ...(game.holes.length === 18 ? [['~Per negen', (() => {
+      // Hetzelfde label als de subtabs op het scorescherm, en uit dezelfde bron: de
+      // hole-id's zelf. Zo staat er bij een baan met een eigen nummering hetzelfde als
+      // op het tabblad, zonder dat er ergens '1...9' hardgecodeerd staat.
+      const label = (van, tot) => {
+        const deel = game.holes.slice(van, tot);
+        return `${deel[0].id}...${deel[deel.length - 1].id}`;
+      };
+      // Elk cijfer op een eigen regel, met hetzelfde label als in de secties hierboven.
+      // Op één regel samengeperst ('55 (+18) · netto 37 (E) · Stb 18') moest je zoeken
+      // welk getal waarbij hoorde; zo staan de twee negens bovendien recht onder elkaar.
+      const blok = (van, tot) => {
+        const deel = game.holes.slice(van, tot);
+        const ingevuld = deel.filter(h => h && h.score != null);
+        const kop = [[label(van, tot), null]];
+        if (!ingevuld.length) return kop.concat([['Bruto (STR)', '—']]);
+        const bruto = ingevuld.reduce((s, h) => s + h.score, 0);
+        const par   = ingevuld.reduce((s, h) => s + h.par, 0);
+        const phcp  = ingevuld.reduce((s, h) => s + (h.phcp || 0), 0);
+        const stb   = deel.reduce((s, h) => s + stbFor(h), 0);
+        const netto = bruto - phcp;
+        // Netto wordt tegen de PAR afgezet, net als in de regels hierboven: de
+        // handicapslagen zitten al in het nettogetal, dus tegen de persoonlijke par
+        // zou je ze dubbel tellen.
+        const ags = ingevuld.reduce((s, h) => s + agsFor(h), 0);
+        const metPutts = ingevuld.filter(h => h.putts != null);
+        return kop.concat([
+          // Het aantal holes alleen tonen zolang de lus niet af is: anders vergelijk
+          // je een halve negen met een hele.
+          ...(ingevuld.length < deel.length
+              ? [['Holes', `${ingevuld.length} / ${deel.length} gespeeld`]] : []),
+          ['Bruto (STR)', `${bruto} (${rawFmt(bruto - par)} vs par)`],
+          ['Netto',       `${netto} (${rawFmt(netto - par)} vs par)`],
+          // AGS alleen als hij AFWIJKT van bruto: anders staat er twee keer hetzelfde
+          // getal. Wijkt hij af, dan is het verschil precies wat de netto-dubbelbogey-
+          // begrenzing heeft weggenomen — dus dat je op deze lus holes hebt opgeblazen.
+          ...(ags !== bruto ? [['Aangepast (AGS)', ags]] : []),
+          ['Stableford (STB)', stb],
+          // Putts alleen als je ze bijhoudt, net als in de sectie hierboven. Juist hier
+          // nuttig: ligt een slechtere lus aan je lange spel of aan je putten?
+          ...(metPutts.length
+              ? [['Putts', metPutts.reduce((s, h) => s + h.putts, 0)
+                  + (metPutts.length < ingevuld.length ? ` (${metPutts.length} holes)` : '')]]
+              : []),
+        ]);
+      };
+      return [...blok(0, 9), ...blok(9, 18)];
+    })()]] : []),
   ];
 
   document.getElementById('sumInfo').innerHTML = sections.map(([title, rows]) => {
     let alt = 0; // wisselende achtergrond, subkoppen tellen niet mee
-    return `<div class="card" style="margin-bottom:12px;padding:12px 16px">` +
-    `<div style="font-size:17px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">${title}</div>` +
-    rows.map(([label, value]) => {
+    // Een sectie waarvan de TITEL met '~' begint is inklapbaar: dan wordt het gouden
+    // kopje een tikbaar kopje en komt de hele inhoud van die kaart in het omhulsel.
+    // Eerder liep het omhulsel vanaf een rij tot het einde van de kaart, en dan klapte
+    // ook de sectie eronder mee weg — precies de regels die je tijdens een ronde wilt
+    // zien.
+    const inklapbaar = title.startsWith('~');
+    const kopTekst = inklapbaar ? title.slice(1) : title;
+    const kaartKop = `<div class="card" style="margin-bottom:12px;padding:12px 16px">`
+      + (inklapbaar
+        ? `<div class="more-toggle" style="color:var(--gold);font-size:17px;font-weight:800;`
+          + `text-transform:uppercase;letter-spacing:.7px;margin:0" onclick="toggleMoreInfo(this)">`
+          + `${kopTekst}<svg width="12" height="12" viewBox="0 0 24 24" fill="none"`
+          + ` stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">`
+          + `<polyline points="9 6 15 12 9 18"/></svg></div><div class="more-full">`
+        : `<div style="font-size:17px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">${kopTekst}</div>`);
+    const stukken = rows.map(([label, value]) => {
       // value === null → groen subkopje binnen de sectie
       if (value === null) {
         return `<div style="font-size:17px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 4px">${label}</div>`;
@@ -4532,8 +4604,8 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
         `<span class="sum-info-label">${label}</span>` +
         `<span class="sum-info-value">${value}</span>` +
         `</div>`;
-    }).join('') +
-    `</div>`;
+    }).join('') + (inklapbaar ? '</div>' : '');
+    return kaartKop + stukken + `</div>`;
   }).join('');
 }
 
@@ -9064,6 +9136,11 @@ function restoreActiveRound() {
     club: r.club, clubShort: r.clubShort,
     pcc: r.pcc ?? null, sdFinal: r.sdFinal ?? null, qualifying: !!r.qualifying,
     started: true,
+    // De notitie MOET hier mee. Deze opsomming bouwt de lopende ronde opnieuw op nadat
+    // de app uit het geheugen is gehaald; alles wat hier ontbreekt is daarna leeg. En
+    // omdat de eerstvolgende score de ronde opnieuw wegschrijft — met note leeg — was je
+    // notitie dan definitief weg. Dat trof elke ronde die je niet in één keer uitspeelde.
+    note: r.note || undefined,
     holes: r.holes.map(h => ({ ...h })),
   };
   currentHole = game.holes.findIndex(h => h.score === null);
@@ -16096,7 +16173,9 @@ document.addEventListener('focusin', (e) => {
       <div id="exportMeerKop" onclick="toggleExportMeer()" style="font-size:17px;font-weight:800;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 6px;display:flex;align-items:center;gap:8px;cursor:pointer">
         <span id="exportMeerLabel" style="flex:1">Meer</span><span id="exportMeerPijl"></span>
       </div>
-      <div id="exportMeerBlok" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+      <!-- Lijn links, zoals bij de andere uitklapjes: zo zie je tot waar 'Meer' loopt.
+           Groen, want het kopje erboven is groen. -->
+      <div id="exportMeerBlok" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;padding-left:10px;border-left:2px solid var(--green-light)">
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="csv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Spreadsheet (CSV)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="txt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Tekst (TXT)</button>
       <button class="btn-secondary export-opt" style="width:100%;box-sizing:border-box;padding:14px;font-size:20px;display:flex;align-items:center;gap:12px" data-format="png"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Afbeelding (PNG)</button>
