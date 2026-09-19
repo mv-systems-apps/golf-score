@@ -1382,7 +1382,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E2</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E3</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4567,9 +4567,13 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
           ['Stableford (STB)', stb],
           // Putts alleen als je ze bijhoudt, net als in de sectie hierboven. Juist hier
           // nuttig: ligt een slechtere lus aan je lange spel of aan je putten?
+          // Ook het gemiddelde per hole, want bij een onvolledige lus zegt het totaal
+          // weinig — dan vergelijk je drie holes met negen.
           ...(metPutts.length
               ? [['Putts', metPutts.reduce((s, h) => s + h.putts, 0)
-                  + (metPutts.length < ingevuld.length ? ` (${metPutts.length} holes)` : '')]]
+                  + (metPutts.length < ingevuld.length ? ` (${metPutts.length} holes)` : '')],
+                 ['Putts per hole',
+                  fmt1(metPutts.reduce((s, h) => s + h.putts, 0) / metPutts.length)]]
               : []),
         ]);
       };
