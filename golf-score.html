@@ -1377,7 +1377,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D6</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0D8</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -4151,7 +4151,10 @@ function sluitInvoer() {
   const h = game.holes[i];
   if (!h || h.score === null) return;
   const volgende = volgendeLegeHole(i);
-  if (volgende >= 0) setCurrentHole(volgende);
+  if (volgende < 0) return;
+  // Het tabblad wisselt mee vanuit setCurrentHole: daar geldt het voor élke weg naar een
+  // andere hole, niet alleen voor dit automatische doorspringen.
+  setCurrentHole(volgende);
 }
 
 function toggleScoreButtons(i) {
@@ -4270,6 +4273,15 @@ function setCurrentHole(i) {
   if (scoreTapHole !== null && scoreTapHole !== i) clearScoreTap(false);
   currentHole = i;
   game.holes[i]._initScore = game.holes[i].score;
+  // Bij 18 holes staan de twee negens op een eigen tabblad. Komt de huidige hole op de
+  // andere negen te liggen, dan moet het tabblad mee — anders sta je op een hole die je
+  // niet ziet. Hier, bij het wisselen van HOLE, geldt het voor élke weg daarheen:
+  // automatisch doorspringen, zelf een hole aantikken, of een ronde hervatten.
+  // Zelf bladeren wisselt geen hole, dus je eigen keuze blijft staan.
+  if (game.holes.length === 18 && typeof selectNine === 'function') {
+    const doelNine = i >= 9 ? 1 : 0;
+    if (currentNine !== doelNine) selectNine(doelNine);
+  }
 }
 
 // Voorbereiding voor een handmatige scorewijziging op hole i (= currentHole)
