@@ -1382,7 +1382,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E3</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E4</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -9841,7 +9841,17 @@ function handicapTabellen() {
       const qualAll = saved
         .filter(r => r.player === mainPlayer && r.qualifying && isDoneForTrend(r))
         .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`)); // oudste eerst
-      const lowHi = effectiveLowHi(mainPlayer, saved);
+      // De Low HI hoort PER RONDE te gelden, niet één keer voor de hele geschiedenis.
+      // Eerder werd hier de Low HI van VANDAAG genomen en op elke ronde toegepast. Bij
+      // een eerste ronde van jaren terug leverde dat een hardcap op tegen een getal dat
+      // toen nog niet bestond: de app remde een ronde uit het verleden af met je laagste
+      // handicap van nu. De grafiek deed het al wel per ronde; deze lijst niet.
+      // Een HANDMATIGE Low HI is wel een vaste waarde: die stel je zelf in en geldt dan
+      // voor alles.
+      const handmatigeLowHi = getManualLowHi();
+      // Per ronde: de laagste handicap uit de rondes tot en met deze, binnen 365 dagen
+      // ervoor. Wordt hieronder gevuld naarmate we chronologisch doorlopen.
+      const hiTotNu = [];   // { t, hi } per qualifying ronde, in volgorde
       // Eén doorlopende, incrementele ESR-berekening (zelfde kern-inzicht als
       // computeEsrAdjustmentsIncremental hierboven) — bij elke stap i wordt de 'adj'-kaart
       // net zo bijgewerkt als in computeEsrAdjustments(), en meteen daarna (met de op dát
@@ -9876,7 +9886,20 @@ function handicapTabellen() {
         }
         // Laatste 20 t/m deze ronde, nieuwste eerst — zoals whsHandicap verwacht.
         const pool = qualAll.slice(0, idx + 1).slice(-20).reverse();
-        const whs = whsHandicap(pool, lowHi, esrAdj);
+        // De Low HI zoals die op het moment van DEZE ronde gold.
+        const tHier = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
+        const grens = isFinite(tHier) ? tHier - 365 * 24 * 60 * 60 * 1000 : -Infinity;
+        let lowHiHier = handmatigeLowHi;
+        if (lowHiHier == null) {
+          hiTotNu.forEach(({ t, hi }) => {
+            if (hi == null || !isFinite(t) || t < grens) return;
+            if (lowHiHier == null || hi < lowHiHier) lowHiHier = hi;
+          });
+        }
+        const whs = whsHandicap(pool, lowHiHier, esrAdj);
+        // De ONGECAPTE waarde bewaren voor de volgende rondes: de Low HI is de laagste
+        // handicap die gold, en caps werken alleen omhoog.
+        hiTotNu.push({ t: tHier, hi: whs ? whs.rawValue : null });
         const oldHcpVal = parseFloat(r.hcp);
         hcpTrendMap[r.id] = {
           oldHcp: isFinite(oldHcpVal) ? oldHcpVal : null,
