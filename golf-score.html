@@ -1382,7 +1382,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E4</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E5</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -12917,6 +12917,11 @@ function doOpenRoundResultModal(idx) {
   document.getElementById('editPccBtn').textContent = formatPcc(_editPccVal);
   const sdSrc = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
   setValidatedInput(document.getElementById('editSdInput'), (sdSrc != null && sdSrc !== '') ? String(sdSrc) : '');
+  // De notitie MOET hier gevuld worden. Bij opslaan wordt dit veld uitgelezen en een leeg
+  // veld betekent 'geen notitie' — dus zonder deze regel wiste elk bezoek aan Vaststellen
+  // stilletjes de notitie van die ronde. PCC en dagresultaat werden wél ingevuld.
+  const notitieVeld = document.getElementById('resultNoteInput');
+  if (notitieVeld) notitieVeld.value = (isActive ? (game.note ?? round.note) : round.note) || '';
   updateEditSdHint(round);
   document.getElementById('roundResultModal').classList.remove('hidden');
 }
