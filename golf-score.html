@@ -1392,7 +1392,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E7</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E8</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -5193,6 +5193,37 @@ function bouwClubBlok(club, { byClub, avgSdOf, avgDiffOf, fmtDiff }) {
 // De handicapindex die gold VÓÓR een ronde: de staffel over de voorgaande (max. 20)
 // dagresultaten uit de VOLLEDIGE geschiedenis, zonder ESR of caps. Zelfde rekenwijze als
 // 'Verdeling rond je handicap'. Geeft null als er nog te weinig voorgeschiedenis is.
+// Welke rondes horen bij de gekozen periodeknop. Gedeeld door het statistiekenscherm en
+// de analyse, zodat beide precies dezelfde rondes nemen. 'rounds' is chronologisch.
+// - l20:   de laatste twintig
+// - jaar:  365 dagen terug vanaf je LAATSTE ronde (niet vanaf vandaag) — net als Low HI
+// - alles: alles
+// Heeft de gekozen periode minder dan twee dagresultaten, dan valt hij terug op de eerste
+// die er wel genoeg heeft: een grafiek met één punt zegt niets.
+function periodeStart(rounds, key) {
+  if (key === 'l20') return Math.max(0, rounds.length - 20);
+  if (key === 'jaar') {
+    const laatste = rounds[rounds.length - 1];
+    const laatsteTs = laatste
+      ? new Date(`${laatste.date || '1970-01-01'}T${laatste.time || '00:00'}`).getTime()
+      : Date.now();
+    const grens = (isFinite(laatsteTs) ? laatsteTs : Date.now()) - 365 * 24 * 60 * 60 * 1000;
+    const i = rounds.findIndex(r => {
+      const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
+      return isFinite(t) && t >= grens;
+    });
+    return i === -1 ? rounds.length : i;
+  }
+  return 0;
+}
+function effectievePeriode(rounds, gekozen) {
+  const punten = key => rounds.slice(periodeStart(rounds, key))
+    .filter(r => { const e = effectiveSD(r); return e && e.value != null; }).length;
+  let periode = gekozen || 'l20';
+  if (punten(periode) < 2) periode = ['l20', 'jaar', 'alles'].find(k => punten(k) >= 2) || periode;
+  return { periode, start: periodeStart(rounds, periode) };
+}
+
 function indexVoorRonde(rounds, idx) {
   const lookback = rounds.slice(Math.max(0, idx - 20), idx);
   const sds = lookback.map(x => { const pe = effectiveSD(x); return pe ? pe.value : null; })
@@ -5696,22 +5727,9 @@ function renderPlayerStats() {
   // zodat het handicapverloop van het eerste zichtbare punt correct blijft.
   // Ankerpunt is de datum van de laatst ingevoerde ronde (niet 'vandaag') — consistent met
   // hoe Low HI zijn 365-dagen-venster ook altijd vanaf de laatste ronde terugrekent.
-  const lastRoundForYear = rounds[rounds.length - 1];
-  const lastRoundTs = lastRoundForYear
-    ? new Date(`${lastRoundForYear.date || '1970-01-01'}T${lastRoundForYear.time || '00:00'}`).getTime()
-    : Date.now();
-  const yearAgoTs = (isFinite(lastRoundTs) ? lastRoundTs : Date.now()) - 365 * 24 * 60 * 60 * 1000;
-  const startIdxOf = (key) => {
-    if (key === 'l20') return Math.max(0, rounds.length - 20);
-    if (key === 'jaar') {
-      const i = rounds.findIndex(r => {
-        const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
-        return isFinite(t) && t >= yearAgoTs;
-      });
-      return i === -1 ? rounds.length : i;
-    }
-    return 0;
-  };
+  // Zelfde bepaling als de analyse gebruikt (periodeStart), zodat beide dezelfde
+  // rondes nemen.
+  const startIdxOf = (key) => periodeStart(rounds, key);
   // Aantal bruikbare punten per periode (minimaal 2 voor een grafiek)
   const pointsOf = (key) => sdSeries.slice(startIdxOf(key)).filter(v => v != null).length;
 
@@ -6962,7 +6980,13 @@ function analysisRounds() {
 }
 
 function buildGameAnalysis() {
-  const rondes = analysisRounds();
+  // De analyse staat onder de periodeknoppen en volgt ze, net als de kaarten daar. Het
+  // Overzicht noemt het aantal rondes en de datums, dus je ziet over welke periode het
+  // gaat. 'alle' blijft nodig voor wat je hele voorgeschiedenis vraagt: de handicap die
+  // vóór een ronde gold.
+  const alle = analysisRounds();
+  const { start: periodeBegin } = effectievePeriode(alle, window._statChartPeriod);
+  const rondes = alle.slice(periodeBegin);
   const secties = [];
   const aanbev = [];
   const minN = getMinRoundsStat();
@@ -6991,7 +7015,7 @@ function buildGameAnalysis() {
   {
     const regels = [];
     const eerste = rondes[0].date, laatste = rondes[rondes.length - 1].date;
-    regels.push(`${rondes.length} qualifying rondes van ${formatFullDate(eerste)} t/m ${formatFullDate(laatste)} \u2014 al je opgeslagen rondes.`);
+    regels.push(`${rondes.length} qualifying rondes van ${formatFullDate(eerste)} t/m ${formatFullDate(laatste)}.`);
     const hcpNu = currentOfficialHcp();
     if (hcpNu != null) regels.push(`Je handicap is nu <b>${fmt1(hcpNu)}</b>.`);
     if (sds.length) {
@@ -7071,7 +7095,9 @@ function buildGameAnalysis() {
     rondes.forEach((r, i) => {
       const sd = sdOf(r);
       if (sd == null) return;
-      const hi = indexVoorRonde(rondes, i);
+      // Uit de volledige geschiedenis: anders missen de eerste rondes van de periode
+      // hun voorgeschiedenis.
+      const hi = indexVoorRonde(alle, periodeBegin + i);
       if (hi == null) return;
       const d = new Date(`${r.date}T${r.time || '00:00'}`);
       if (!isFinite(d.getTime())) return;
