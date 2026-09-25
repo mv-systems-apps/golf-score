@@ -153,6 +153,13 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html.light-mode .info-msg { color: var(--info-grey); }
     html, body { transition: background-color .2s ease, color .2s ease; }
+    /* Het html-element had zelf geen achtergrond: de kleur kwam alleen van body. Dat
+       werkt, maar op het moment dat Android de kleur van de navigatiebalk ophaalt kan dat
+       vlak onbeschilderd zijn — bij het scrollen, het wisselen van scherm of het doorveren
+       aan de rand. Het systeem valt dan terug op zijn eigen standaard, en de balk werd
+       zwart. Met een eigen achtergrond is er altijd iets te zien.
+       Zelfde kleur als body, dus in donkere modus donkergroen en in lichte modus licht. */
+    html { background-color: var(--green-deep); }
 
 
 
@@ -1392,7 +1399,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0E9</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EA</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
