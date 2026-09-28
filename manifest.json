@@ -5,7 +5,7 @@
   "start_url": "./golf-score.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1a8a54",
+  "background_color": "#000000",
   "theme_color": "#1a3a2a",
   "orientation": "portrait",
   "icons": [
