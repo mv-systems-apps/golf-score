@@ -1399,7 +1399,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EE</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EF</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -3937,7 +3937,6 @@ function startRoundConfirmed() {
     storage.removeItem('golf_active_id');
     if (game2Id) { storage.removeItem('golf_game2_id'); game2Id = null; }
     activePlayer = 1;
-    stempelAlsBackupGewijzigd();   // was de vorige ronde af, dan hoort hij nu in de backup
   }
 
   const name = document.getElementById('iName').value.trim() || 'Speler';
@@ -7679,6 +7678,9 @@ async function checkAppUpdate() {
 }
 setTimeout(checkAppUpdate, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkAppUpdate, 2500); });
+// Terug in de app: de backupstand opnieuw bepalen. De dagendrempel kan verlopen zijn
+// terwijl de app op de achtergrond stond; zonder dit zag je dat pas bij een tabwissel.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateLastBackupDisplay(); });
 
 // ══ KENMERK: OPEN JE DE APP OP DE JUISTE PLEK? ═══════════════════════════
 // De browser houdt gegevens apart per adres ÉN per browserprofiel. Dezelfde app in een
@@ -9003,24 +9005,21 @@ function doAdditiveImport(parsed, overslagTekst = '') {
     }
     loadSaved();
   }
-  // Voorkomt dat de backup-herinnering afgaat op basis van zojuist geïmporteerde rondes
-  // (die immers al ergens vandaan kwamen, dus per definitie al een keer geëxporteerd
-  // zijn geweest) — alleen écht nieuw gespeelde rondes na dit moment tellen weer mee.
+  // Toegevoegde afgeronde rondes staan nog niet in een backup van DIT toestel — alleen
+  // in het bestand waar je ze vandaan haalde. Ze tellen daarom als nieuwe rondes voor de
+  // backupmelding (Marks keuze). Eerder werd de telling hier bijgewerkt alsof ze al
+  // geback-upt waren; de melding kwam dan toch, maar telde ze als één bewerking.
   // Uitzondering: als er nog HELEMAAL geen backup-datum bekend was (bv. een schone import
   // op een nieuw toestel, waarbij dit dezelfde weg volgt als een volledige herstel-import,
   // zie de aanroeplogica hierboven), dan ís deze import zelf het meest actuele, volledige
   // beeld — dan mag de backup-datum niet 'ongewijzigd' blijven, want die bestond nog niet.
-  // Vóór nav('archive') gezet, zodat de banner meteen met de juiste staat rendert.
-  if (storage.getItem('golf_last_backup_date')) {
-    storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
-    naBackupBijwerken();
-  } else {
+  if (!storage.getItem('golf_last_backup_date')) {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
-  try { storage.setItem('golf_backup_fingerprint', backupVingerafdruk()); } catch (e) {}
     storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
-    naBackupBijwerken();
+    legBackupInhoudVast();
   }
+  naBackupBijwerken();
   // Blijft in Instellingen staan (net als bij het importeren van clubs) i.p.v. weg te
   // navigeren naar Archief — de relevante onderdelen hier worden rechtstreeks ververst.
   updateStorageSettingsUI();
@@ -9058,9 +9057,8 @@ function doFullRestoreImport(parsed) {
   storage.setItem('golf_last_backup_count', String(afgerondeRondesCount(entries)));
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
-  // Ook hier vastleggen wat er nu staat, en pas NA het loslaten van de oude actieve
-  // ronde: de vingerafdruk laat de actieve ronde weg, dus ervóór zou hij net verschillen.
-  try { storage.setItem('golf_backup_fingerprint', backupVingerafdruk()); } catch (e) {}
+  // Een volledig herstel is een complete momentopname: vastleggen wat er nu staat.
+  legBackupInhoudVast();
   naBackupBijwerken();
   game = { started: false, holes: [] };
   game2Id = null;
@@ -9275,7 +9273,6 @@ function saveActiveRound(skipLoadSaved = false) {
 function clearActiveRound() {
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
-  stempelAlsBackupGewijzigd();
   game2Id = null;
   activePlayer = 1;
   player2Visible = false;
@@ -9314,7 +9311,6 @@ function finishActiveRound(btn) {
   saveActiveRound(true);
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
-  stempelAlsBackupGewijzigd();
   game = { started: false, holes: [] };
   currentHole = 0;
   resetHeader();
@@ -11021,7 +11017,6 @@ function saveAndClearActiveRound(btn) {
   unlockSiblingButtons(btn);
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
-  stempelAlsBackupGewijzigd();
 
   game = { started: false, holes: [] };
   currentHole = 0;
@@ -13605,7 +13600,7 @@ async function doResetAll() {
    'golf_gender','golf_profile_name2','golf_profile_hcp2','golf_fav_player2_name',
    'golf_fav_player2_hcp','golf_default_player2_name','golf_default_player2_hcp',
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
-   'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_progress_indicator','golf_bad_weather',
+   'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_backup_fp_bij_backup','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
    'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_backup_fingerprint', 'golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
@@ -13990,15 +13985,10 @@ async function tryWriteToExportFolder(filename, content) {
 }
 
 async function exportAllRounds() {
-  const activeId = storage.getItem('golf_active_id');
   const all = loadSavedRounds();
-  const saved = all.filter(r => {
-    if (String(r.id) === activeId) return false;
-    if (r._justImported) return false;
-    const played = gespeeldeHoles(r);
-    const total  = r.holesCount  ?? r.holes?.length ?? 0;
-    return played >= total && total > 0;
-  });
+  // Zelfde definitie als de telling en de vingerafdruk (zie hoortInBackup): ook een
+  // afgeronde ronde die je op dit moment open hebt staat, gaat mee.
+  const saved = all.filter(hoortInBackup);
   if (!saved.length) {
     document.querySelectorAll('.export-rounds-error').forEach(msg => {
       msg.textContent = 'Geen afgeronde rondes om te exporteren';
@@ -14045,11 +14035,8 @@ async function exportAllRounds() {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
     storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
-    // Vastleggen WAT er in deze backup zit. Zonder dit bleef de vingerafdruk van vóór de
-    // backup staan; liep die achter, dan zag de eerstvolgende opslag (bijvoorbeeld het
-    // starten of pauzeren van een ronde) een 'wijziging' die er niet was, en ging de
-    // backupmelding aan terwijl alle afgeronde rondes veilig stonden.
-    storage.setItem('golf_backup_fingerprint', backupVingerafdruk());
+    // Vastleggen WAT er in deze backup zit: daartegen vergelijkt de backupmelding.
+    legBackupInhoudVast();
     naBackupBijwerken();
     updateLastBackupDisplay();
   } catch(e) { console.error('Backup rondes mislukt:', e); }
@@ -14062,30 +14049,76 @@ async function exportAllRounds() {
 // Rondes opslaan én vastleggen dát er iets gewijzigd is. Zo telt niet alleen een
 // nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
 // van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
-// Korte vingerafdruk van wat er in het BACKUPBESTAND zou komen: alleen afgeronde
-// rondes (niet de actieve, niet de zojuist geïmporteerde) en alleen de velden die
-// exportAllRounds meeneemt. Zo telt het plannen of verwijderen van een ronde niet als
-// "gewijzigd" — dat verandert het bestand immers niet.
+// Wat hoort in de backup? Eén definitie voor de telling, de vingerafdruk én het
+// backupbestand zelf (Marks keuze): elke ronde waarvan alle holes zijn ingevuld —
+// ook als hij op dit moment open staat, voor speler 1 en speler 2 gelijk. Niet: rondes
+// in de categorie 'Geïmporteerd' (tot je op 'Sla op' tikt), gepauzeerde en geplande.
+// Eerder viel de actieve ronde van speler 1 er altijd buiten. Opende je een afgeronde
+// ronde en maakte je dan een backup, dan ontbrak die ronde in het bestand.
+function hoortInBackup(r) {
+  return !!r && !r._justImported && isRondeAf(r);
+}
+
+// Een waarde als tekst met de sleutels in vaste (alfabetische) volgorde. De volgorde
+// van de velden in een ronde verandert bij het opslaan van een geopende ronde; zonder
+// dit zag de vingerafdruk dat als een wijziging terwijl de inhoud gelijk was.
+function vasteVolgorde(v) {
+  if (Array.isArray(v)) return '[' + v.map(vasteVolgorde).join(',') + ']';
+  if (v && typeof v === 'object') {
+    return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort()
+      .map(k => JSON.stringify(k) + ':' + vasteVolgorde(v[k])).join(',') + '}';
+  }
+  return v === undefined ? 'null' : JSON.stringify(v);
+}
+
+// Korte vingerafdruk van wat er in het BACKUPBESTAND zou komen: de rondes die er
+// volgens hoortInBackup in horen, met alleen de velden die exportAllRounds meeneemt.
+// De volgorde van de rondes en van hun velden telt niet mee: alleen de inhoud.
+// Bewaard per opgeslagen lijst, zodat de stip en de backupregel hem vaak mogen opvragen
+// (gemeten ~0,6 ms bij 73 rondes, ~6 ms bij 1000 — maar nu één keer per wijziging).
+let _vingerafdrukRuw = null, _vingerafdrukWaarde = null;
 function backupVingerafdruk(lijst) {
-  const activeId = storage.getItem('golf_active_id');
+  const ruw = lijst ? null : storage.getItem('golf_rounds');
+  if (!lijst && ruw === _vingerafdrukRuw && _vingerafdrukWaarde !== null) return _vingerafdrukWaarde;
   const relevant = (lijst || leesRondes())
-    .filter(r => {
-      if (String(r.id) === activeId) return false;
-      if (r._justImported) return false;
-      const totaal = r.holesCount ?? (r.holes || []).length;
-      return totaal > 0 && gespeeldeHoles(r) >= totaal;
-    })
+    .filter(hoortInBackup)
     .map(r => {
       // Dezelfde velden als de export: id, tellers en hulpvelden blijven buiten beeld.
       const { id, total, totalStb, playedCount, holesCount, currentHole, started,
               _justImported, sd: _oudeSd, ...rest } = r;
-      return { ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => h) };
-    });
-  const tekst = JSON.stringify(relevant);
+      return vasteVolgorde({ ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => h) });
+    })
+    .sort();
+  const tekst = relevant.join('\n');
   // Eenvoudige hash (djb2): we hoeven alleen te wéten of er iets veranderd is.
   let h = 5381;
   for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
-  return String(h) + ':' + relevant.length;
+  const uitkomst = String(h) + ':' + relevant.length;
+  if (!lijst) { _vingerafdrukRuw = ruw; _vingerafdrukWaarde = uitkomst; }
+  return uitkomst;
+}
+
+// Vastleggen dat de huidige inhoud in een backup staat. Aangeroepen bij het maken van
+// een rondebackup en bij een volledig herstel (dat ís een complete momentopname).
+function legBackupInhoudVast() {
+  try {
+    const fp = backupVingerafdruk();
+    storage.setItem('golf_backup_fp_bij_backup', fp);
+    storage.setItem('golf_backup_fingerprint', fp);
+  } catch (e) { /* opslag niet beschikbaar */ }
+}
+
+// Wijkt wat er NU in een backup zou komen af van de laatste backup? Vergelijkt inhoud,
+// geen tijdstippen — net als de clubs. Een wijziging die je terugdraait telt daardoor
+// niet, en een verkeerd staande klok speelt geen rol. Installaties die nog geen backup
+// maakten met deze versie hebben die vingerafdruk niet: dan de oude vergelijking op
+// tijdstip, tot de eerstvolgende backup.
+function gewijzigdSindsBackup() {
+  const bijBackup = storage.getItem('golf_backup_fp_bij_backup');
+  if (bijBackup) return backupVingerafdruk() !== bijBackup;
+  const changedTs = storage.getItem('golf_rounds_changed');
+  const backupTs = storage.getItem('golf_last_backup_ts');
+  return !!changedTs && (!backupTs || changedTs > backupTs);
 }
 
 // Verwijderen van rondes mag alleen als JIJ daarom vraagt. De paden die dat doen
@@ -14132,14 +14165,11 @@ function setRoundsAndMark(json) {
   return gelukt;
 }
 
-// Alleen stempelen als het BACKUPBESTAND verandert (zie backupVingerafdruk): een
+// Tijdstip van de laatste wijziging aan de backupinhoud (zie backupVingerafdruk): een
 // geplande ronde toevoegen of verwijderen raakt de backup niet, een ronde starten ook
-// niet. Loopt na elke schrijfactie van de rondelijst, én op het moment dat een ronde
-// ophoudt de actieve ronde te zijn (afronden, opslaan en sluiten, of een nieuwe ronde
-// starten terwijl de vorige nog openstond). De actieve ronde zit niet in de backup;
-// is hij helemaal gespeeld, dan komt hij er pas bij als hij wordt losgelaten — en
-// daarbij wordt de rondelijst niet opnieuw geschreven, dus zonder deze aanroep kwam er
-// geen stempel en bleef de backupmelding grijs.
+// niet. De backupmelding zelf vergelijkt inhoud (gewijzigdSindsBackup); dit tijdstip is
+// alleen nog de terugval voor installaties die nog geen backup met die vergelijking
+// hebben gemaakt.
 function stempelAlsBackupGewijzigd() {
   try {
     const nu = backupVingerafdruk();
@@ -14170,14 +14200,7 @@ function isRondeAf(r) {
 }
 
 function afgerondeRondesCount(lijst) {
-  const activeId = storage.getItem('golf_active_id');
-  return (lijst || leesRondes()).filter(r => {
-    if (String(r.id) === activeId) return false;
-    if (r._justImported) return false;
-    const gespeeld = gespeeldeHoles(r);
-    const totaal = r.holesCount ?? r.holes?.length ?? 0;
-    return totaal > 0 && gespeeld >= totaal;
-  }).length;
+  return (lijst || leesRondes()).filter(hoortInBackup).length;
 }
 
 // Clubs zijn 'achterstallig' zodra ze sinds de laatste clubbackup zijn gewijzigd.
@@ -14214,14 +14237,10 @@ function isBackupOverdue(lijst) {
   // Is er sinds de laatste backup überhaupt iets gewijzigd? Zo niet, dan is er niets
   // te backuppen en zwijgt de app — ook als de dagen-drempel verstrijkt (Marks keuze).
   // 'Gewijzigd' betekent hier precies hetzelfde als voor de grijze regel
-  // (isErIetsOnveiligs): een ronde erbij, óf een wijziging ná de backup. Eerder keek
-  // deze controle alleen naar het stempel, en een afgeronde ronde gaf geen stempel —
-  // dan stond de regel grijs terwijl je drempel allang gehaald was.
-  const changedTs = storage.getItem('golf_rounds_changed');
-  const backupTs = storage.getItem('golf_last_backup_ts');
+  // (isErIetsOnveiligs): een ronde erbij, óf een backupinhoud die afwijkt van die van
+  // de laatste backup (gewijzigdSindsBackup).
   const nieuweRondes = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  const gewijzigdNaBackup = !!changedTs && (!backupTs || changedTs > backupTs);
-  if (!nieuweRondes && !gewijzigdNaBackup) return false;
+  if (!nieuweRondes && !gewijzigdSindsBackup()) return false;
   // De tweede drempel telt WIJZIGINGEN, niet alleen nieuwe rondes. Een dagresultaat
   // vaststellen of een score corrigeren is net zo goed werk dat je kwijt kunt raken,
   // maar telde eerder nergens mee: met de drempels op 1 dag en 1 ronde bleef zo'n
@@ -14244,9 +14263,7 @@ function isErIetsOnveiligs() {
   const total = afgerondeRondesCount();
   const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  const changedTs = storage.getItem('golf_rounds_changed');
-  const backupTs = storage.getItem('golf_last_backup_ts');
-  return nieuw > 0 || (!!changedTs && (!backupTs || changedTs > backupTs));
+  return nieuw > 0 || gewijzigdSindsBackup();
 }
 
 function updateLastBackupDisplay() {
@@ -14302,9 +14319,7 @@ function toonNieuweRondesRegel(overdue) {
   // er is één tijdstempel voor de hele lijst, geen stempel per ronde. Daarom het
   // aantal nieuwe rondes plus het moment van de laatste wijziging: samen vertelt dat
   // of er werk is dat nog niet veilig staat, zonder extra administratie (Marks keuze).
-  const changedTs = storage.getItem('golf_rounds_changed');
-  const backupTs = storage.getItem('golf_last_backup_ts');
-  const gewijzigdNaBackup = !!changedTs && (!backupTs || changedTs > backupTs);
+  const gewijzigdNaBackup = gewijzigdSindsBackup();
   const elTop = document.getElementById('newRoundsInfoTop');
   if (!nieuw && !gewijzigdNaBackup) {
     el.classList.add('hidden'); el.innerHTML = '';
