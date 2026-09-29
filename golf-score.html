@@ -1319,25 +1319,6 @@
           <button id="clearExportFolderBtn" class="btn-secondary" style="flex:1;padding:8px 14px;font-size:17px" onclick="clearExportFolder()" disabled>Standaard</button>
         </div>
       </div>
-      <div class="subpanel" style="margin-top:12px">
-        <div style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px">Backupherinnering</div>
-        <!-- 'in je rondes' staat er bewust bij: clubs hebben hun eigen melding, zonder
-             drempels. En juist hier, vlak onder de knoppen Rondes en Clubs, is die
-             verwarring het makkelijkst gemaakt. -->
-        <div style="font-size:17px;color:var(--muted);margin-bottom:8px">Waarschuw bij wijzigingen in <i>rondes</i> zodra:</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <span style="font-size:17px;color:var(--muted);flex:1">Dagen sinds backup</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(-1)">−</button>
-          <span id="backupReminderDaysVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">7</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderDays(1)">+</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:17px;color:var(--muted);flex:1">Wijzigingen en/of nieuwe rondes</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(-1)">−</button>
-          <span id="backupReminderRoundsVal" style="font-size:20px;font-weight:700;color:var(--white);min-width:32px;text-align:center">2</span>
-          <button class="btn-secondary" style="padding:6px 16px;font-size:20px;font-weight:700" onclick="adjustBackupReminderRounds(1)">+</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1399,7 +1380,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EF</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F1</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -1463,7 +1444,7 @@ function rebuildCourseLookup() {
 
 // Geeft true/false terug: de baaneditor moet weten of het echt gelukt is, anders zou
 // hij "Opgeslagen" melden terwijl de wijziging bij de volgende start weg is.
-// Vingerafdruk van de clubgegevens, zoals backupVingerafdruk dat voor de rondes doet.
+// Vingerafdruk van de clubgegevens, zoals rondeVingerafdruk dat per ronde doet.
 // Alleen om te WETEN of er iets veranderd is, niet om iets te herstellen.
 function clubsVingerafdruk() {
   const tekst = JSON.stringify(CLUBS || {});
@@ -3454,29 +3435,6 @@ function trimRondes(lijst) {
   if (metScores) console.warn(`Maximum bereikt: ${metScores} ingevulde ronde(s) verwijderd.`);
   // De oorspronkelijke volgorde blijft staan; alleen de oudste vallen eruit.
   return lijst.filter(r => !weg.has(r.id));
-}
-
-// Instelbare drempels voor de backup-herinnering (zowel de banner in Archief als de
-// oranje kleuring van 'Backup Rondes' in Instellingen → Gegevens) — zie isBackupOverdue().
-function getBackupReminderDays() {
-  const raw = parseInt(storage.getItem('golf_backup_reminder_days'), 10);
-  // Standaard 1 dag: wie de app net gebruikt heeft nog geen backupgewoonte, en zonder
-  // backup is één keer browsergegevens wissen genoeg om alles kwijt te zijn.
-  return (isFinite(raw) && raw >= 1 && raw <= 90) ? raw : 1;
-}
-function setBackupReminderDays(v) {
-  const clamped = Math.max(1, Math.min(90, Math.round(v)));
-  storage.setItem('golf_backup_reminder_days', String(clamped));
-  return clamped;
-}
-function getBackupReminderRounds() {
-  const raw = parseInt(storage.getItem('golf_backup_reminder_rounds'), 10);
-  return (isFinite(raw) && raw >= 1 && raw <= 50) ? raw : 1;   // zie hierboven
-}
-function setBackupReminderRounds(v) {
-  const clamped = Math.max(1, Math.min(50, Math.round(v)));
-  storage.setItem('golf_backup_reminder_rounds', String(clamped));
-  return clamped;
 }
 
 function showStartError(msg) {
@@ -7681,6 +7639,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) setT
 // Terug in de app: de backupstand opnieuw bepalen. De dagendrempel kan verlopen zijn
 // terwijl de app op de achtergrond stond; zonder dit zag je dat pas bij een tabwissel.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) updateLastBackupDisplay(); });
+// De instelbare backupdrempels zijn vervallen (vaste regel, zie isBackupOverdue): hun
+// opgeslagen waarden opruimen, zodat ze bij bestaande installaties niet blijven staan.
+['golf_backup_reminder_days', 'golf_backup_reminder_rounds'].forEach(k => storage.removeItem(k));
 
 // ══ KENMERK: OPEN JE DE APP OP DE JUISTE PLEK? ═══════════════════════════
 // De browser houdt gegevens apart per adres ÉN per browserprofiel. Dezelfde app in een
@@ -13600,7 +13561,7 @@ async function doResetAll() {
    'golf_gender','golf_profile_name2','golf_profile_hcp2','golf_fav_player2_name',
    'golf_fav_player2_hcp','golf_default_player2_name','golf_default_player2_hcp',
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
-   'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_rounds_changed','golf_backup_fp_bij_backup','golf_progress_indicator','golf_bad_weather',
+   'golf_last_backup_date','golf_last_backup_count','golf_last_backup_ts','golf_backup_inhoud','golf_backup_onzeker','golf_rounds_changed','golf_backup_fp_bij_backup','golf_progress_indicator','golf_bad_weather',
    'golf_quick_grouping',
    'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_backup_fingerprint', 'golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
@@ -14042,26 +14003,29 @@ async function exportAllRounds() {
   } catch(e) { console.error('Backup rondes mislukt:', e); }
 }
 
-// Toont een herinnering als er lang niet of veel wijzigingen sinds de laatste back-up zijn
-// Gedeelde 'is een backup inmiddels achterstallig'-check — gebruikt door zowel de
-// Archief-herinneringsbanner als de statusregel in Instellingen → Gegevens → Backup, zodat
-// beide plekken altijd hetzelfde, consistente signaal geven.
-// Rondes opslaan én vastleggen dát er iets gewijzigd is. Zo telt niet alleen een
-// nieuwe ronde mee voor de backupwaarschuwing, maar ook het bewerken of verwijderen
-// van een bestaande — dat veranderde het aantal niet en bleef daardoor onopgemerkt.
-// Wat hoort in de backup? Eén definitie voor de telling, de vingerafdruk én het
-// backupbestand zelf (Marks keuze): elke ronde waarvan alle holes zijn ingevuld —
-// ook als hij op dit moment open staat, voor speler 1 en speler 2 gelijk. Niet: rondes
-// in de categorie 'Geïmporteerd' (tot je op 'Sla op' tikt), gepauzeerde en geplande.
-// Eerder viel de actieve ronde van speler 1 er altijd buiten. Opende je een afgeronde
-// ronde en maakte je dan een backup, dan ontbrak die ronde in het bestand.
+// ── Backupmelding ─────────────────────────────────────────────────────────────────
+// Opzet (Marks keuze, na een reeks fouten met stempels): de app onthoudt ALLEEN iets op
+// het moment van de backup — per ronde in het bestand een korte vingerafdruk. De
+// melding wordt daarna telkens opnieuw afgeleid uit de rondes die er nu staan:
+//   nieuw     — hoort nu in de backup en zat er toen niet in;
+//   bewerkt   — zat erin, maar de inhoud is anders;
+//   verwijderd — zat erin en hoort er nu niet meer in.
+// Er is geen stempel dat bij het opslaan gezet moet worden, dus ook geen opslagweg die
+// het kan vergeten. Eerder deed de app dat wel ('laatst gewijzigd', 'laatst gezien'), en
+// elke fout in de melding kwam daaruit voort.
+
+// Wat hoort in de backup? Eén definitie voor de melding én het backupbestand zelf
+// (Marks keuze): elke ronde waarvan alle holes zijn ingevuld — ook als hij op dit
+// moment open staat, voor speler 1 en speler 2 gelijk. Niet: rondes in de categorie
+// 'Geïmporteerd' (tot je op 'Sla op' tikt), gepauzeerde en geplande.
 function hoortInBackup(r) {
   return !!r && !r._justImported && isRondeAf(r);
 }
 
 // Een waarde als tekst met de sleutels in vaste (alfabetische) volgorde. De volgorde
-// van de velden in een ronde verandert bij het opslaan van een geopende ronde; zonder
-// dit zag de vingerafdruk dat als een wijziging terwijl de inhoud gelijk was.
+// van de velden in een ronde verandert bij het opslaan van een geopende ronde; die telt
+// niet als wijziging. Alleen nog voor de overstap (vingerafdruk0EF): traag, want hij
+// loopt elke waarde apart langs.
 function vasteVolgorde(v) {
   if (Array.isArray(v)) return '[' + v.map(vasteVolgorde).join(',') + ']';
   if (v && typeof v === 'object') {
@@ -14071,54 +14035,115 @@ function vasteVolgorde(v) {
   return v === undefined ? 'null' : JSON.stringify(v);
 }
 
-// Korte vingerafdruk van wat er in het BACKUPBESTAND zou komen: de rondes die er
-// volgens hoortInBackup in horen, met alleen de velden die exportAllRounds meeneemt.
-// De volgorde van de rondes en van hun velden telt niet mee: alleen de inhoud.
-// Bewaard per opgeslagen lijst, zodat de stip en de backupregel hem vaak mogen opvragen
-// (gemeten ~0,6 ms bij 73 rondes, ~6 ms bij 1000 — maar nu één keer per wijziging).
-let _vingerafdrukRuw = null, _vingerafdrukWaarde = null;
-function backupVingerafdruk(lijst) {
-  const ruw = lijst ? null : storage.getItem('golf_rounds');
-  if (!lijst && ruw === _vingerafdrukRuw && _vingerafdrukWaarde !== null) return _vingerafdrukWaarde;
-  const relevant = (lijst || leesRondes())
-    .filter(hoortInBackup)
-    .map(r => {
-      // Dezelfde velden als de export: id, tellers en hulpvelden blijven buiten beeld.
-      const { id, total, totalStb, playedCount, holesCount, currentHole, started,
-              _justImported, sd: _oudeSd, ...rest } = r;
-      return vasteVolgorde({ ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => h) });
-    })
-    .sort();
-  const tekst = relevant.join('\n');
+// Vingerafdruk van één ronde zoals hij in het backupbestand komt: alleen de velden die
+// exportAllRounds meeneemt (id, tellers en hulpvelden blijven buiten beeld). De velden
+// in vaste volgorde, zodat een andere volgorde niet als wijziging telt.
+function metVasteVolgorde(o) {
+  const n = {};
+  for (const k of Object.keys(o).sort()) n[k] = o[k];
+  return n;
+}
+function rondeVingerafdruk(r) {
+  const { id, total, totalStb, playedCount, holesCount, currentHole, started,
+          _justImported, sd: _oudeSd, ...rest } = r;
+  const tekst = JSON.stringify(metVasteVolgorde({
+    ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => metVasteVolgorde(h)) }));
   // Eenvoudige hash (djb2): we hoeven alleen te wéten of er iets veranderd is.
   let h = 5381;
   for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
-  const uitkomst = String(h) + ':' + relevant.length;
-  if (!lijst) { _vingerafdrukRuw = ruw; _vingerafdrukWaarde = uitkomst; }
-  return uitkomst;
+  return (h >>> 0).toString(36);
 }
 
-// Vastleggen dat de huidige inhoud in een backup staat. Aangeroepen bij het maken van
-// een rondebackup en bij een volledig herstel (dat ís een complete momentopname).
+// De backupinhoud van NU: { rondenummer: vingerafdruk } voor elke ronde die in de backup
+// hoort. Bewaard per opgeslagen rondelijst: de stip en de backupregel vragen hem vaak
+// op, maar hij wordt alleen opnieuw berekend als de rondes echt veranderd zijn.
+// Herkend aan de bewaarde rondelijst zelf (leesRondes geeft dezelfde lijst terug zolang
+// de opslag niet veranderd is), zodat hier niet nog eens de hele opslag wordt gelezen.
+// Per ronde wordt bovendien onthouden wat er al berekend is, herkend aan de ronde zoals
+// hij is opgeslagen. Bij een wijziging (bijvoorbeeld een ingevulde hole) wordt dan alleen
+// de gewijzigde ronde opnieuw berekend; de rest wordt herkend en overgeslagen.
+// Gemeten bij 2500 rondes: ~50 ms voor alles, ~8 ms met dit geheugen.
+let _inhoudLijst = null, _inhoudWaarde = null, _rondeGeheugen = new Map();
+function huidigeBackupInhoud() {
+  const lijst = leesRondes();
+  if (lijst === _inhoudLijst && _inhoudWaarde) return _inhoudWaarde;
+  const inhoud = {}, geheugen = new Map();
+  lijst.forEach(r => {
+    if (!hoortInBackup(r)) return;
+    const sleutel = JSON.stringify(r);
+    let fp = _rondeGeheugen.get(sleutel);
+    if (fp === undefined) fp = rondeVingerafdruk(r);
+    geheugen.set(sleutel, fp);
+    inhoud[String(r.id)] = fp;
+  });
+  _inhoudLijst = lijst; _inhoudWaarde = inhoud; _rondeGeheugen = geheugen;
+  return inhoud;
+}
+
+// Vastleggen wat er in de backup zit. Aangeroepen op precies de momenten dat er een
+// complete momentopname ontstaat: een rondebackup maken, een volledig herstel, en een
+// eerste import op een installatie zonder backup.
 function legBackupInhoudVast() {
   try {
-    const fp = backupVingerafdruk();
-    storage.setItem('golf_backup_fp_bij_backup', fp);
-    storage.setItem('golf_backup_fingerprint', fp);
+    storage.setItem('golf_backup_inhoud', JSON.stringify(huidigeBackupInhoud()));
+    storage.removeItem('golf_backup_onzeker');
   } catch (e) { /* opslag niet beschikbaar */ }
 }
 
-// Wijkt wat er NU in een backup zou komen af van de laatste backup? Vergelijkt inhoud,
-// geen tijdstippen — net als de clubs. Een wijziging die je terugdraait telt daardoor
-// niet, en een verkeerd staande klok speelt geen rol. Installaties die nog geen backup
-// maakten met deze versie hebben die vingerafdruk niet: dan de oude vergelijking op
-// tijdstip, tot de eerstvolgende backup.
-function gewijzigdSindsBackup() {
-  const bijBackup = storage.getItem('golf_backup_fp_bij_backup');
-  if (bijBackup) return backupVingerafdruk() !== bijBackup;
+// Eenmalige overstap van de versies met stempels (t/m 13527DA-0EF). Die hebben een
+// backupdatum maar geen vastgelegde inhoud. Zegt de oude administratie dat er niets
+// openstaat, dan geldt de huidige stand als laatste backup. Staat er wel iets open, dan
+// weten we niet wát — dan blijft de melding staan tot je volgende backup.
+function zetOverOpInhoud() {
+  if (!storage.getItem('golf_last_backup_date') || storage.getItem('golf_backup_inhoud')) return;
+  const inhoud = huidigeBackupInhoud();
+  const aantal = Object.keys(inhoud).length;
+  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
   const changedTs = storage.getItem('golf_rounds_changed');
   const backupTs = storage.getItem('golf_last_backup_ts');
-  return !!changedTs && (!backupTs || changedTs > backupTs);
+  const bijBackup = storage.getItem('golf_backup_fp_bij_backup');
+  const oudNieuw = isNaN(lastCount) ? aantal : Math.max(0, aantal - lastCount);
+  // Backup gemaakt met 0EF? Die legde de inhoud al vast als één vingerafdruk over alle
+  // rondes; die vergelijking is betrouwbaar. Anders het oude stempel.
+  const oudGewijzigd = bijBackup
+    ? vingerafdruk0EF() !== bijBackup
+    : !!changedTs && (!backupTs || changedTs > backupTs);
+  storage.setItem('golf_backup_inhoud', JSON.stringify(inhoud));
+  if (oudNieuw > 0 || oudGewijzigd) storage.setItem('golf_backup_onzeker', String(Math.max(1, oudNieuw)));
+  ['golf_rounds_changed', 'golf_backup_fingerprint', 'golf_backup_fp_bij_backup']
+    .forEach(k => storage.removeItem(k));
+}
+
+// Alleen voor de overstap: de vingerafdruk zoals 13527DA-0EF die bij een backup bewaarde.
+function vingerafdruk0EF() {
+  const delen = leesRondes().filter(hoortInBackup).map(r => {
+    const { id, total, totalStb, playedCount, holesCount, currentHole, started,
+            _justImported, sd: _oudeSd, ...rest } = r;
+    return vasteVolgorde({ ...rest, holes: (r.holes || []).map(({ _initScore, ...h }) => h) });
+  }).sort();
+  const tekst = delen.join('\n');
+  let h = 5381;
+  for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
+  return String(h) + ':' + delen.length;
+}
+
+// Wat is er sinds de laatste backup veranderd? null = er is nog nooit een backup gemaakt.
+function backupVerschil() {
+  if (!storage.getItem('golf_last_backup_date')) return null;
+  zetOverOpInhoud();
+  let toen = {};
+  try { toen = JSON.parse(storage.getItem('golf_backup_inhoud') || '{}') || {}; } catch (e) { toen = {}; }
+  const nu = huidigeBackupInhoud();
+  let nieuw = 0, bewerkt = 0, verwijderd = 0;
+  for (const id in nu) {
+    if (!(id in toen)) nieuw++;
+    else if (toen[id] !== nu[id]) bewerkt++;
+  }
+  for (const id in toen) if (!(id in nu)) verwijderd++;
+  // Overstap met een open stand van vóór deze versie: minstens zoveel als toen openstond.
+  const onzeker = parseInt(storage.getItem('golf_backup_onzeker') || '0', 10) || 0;
+  const totaal = nieuw + bewerkt + verwijderd;
+  return { nieuw, bewerkt, verwijderd, totaal: Math.max(totaal, onzeker) };
 }
 
 // Verwijderen van rondes mag alleen als JIJ daarom vraagt. De paden die dat doen
@@ -14160,24 +14185,7 @@ function setRoundsAndMark(json) {
       return false;
     }
   }
-  const gelukt = storage.setItem('golf_rounds', json) !== false;
-  stempelAlsBackupGewijzigd();
-  return gelukt;
-}
-
-// Tijdstip van de laatste wijziging aan de backupinhoud (zie backupVingerafdruk): een
-// geplande ronde toevoegen of verwijderen raakt de backup niet, een ronde starten ook
-// niet. De backupmelding zelf vergelijkt inhoud (gewijzigdSindsBackup); dit tijdstip is
-// alleen nog de terugval voor installaties die nog geen backup met die vergelijking
-// hebben gemaakt.
-function stempelAlsBackupGewijzigd() {
-  try {
-    const nu = backupVingerafdruk();
-    if (nu !== storage.getItem('golf_backup_fingerprint')) {
-      storage.setItem('golf_backup_fingerprint', nu);
-      storage.setItem('golf_rounds_changed', new Date().toISOString());
-    }
-  } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
+  return storage.setItem('golf_rounds', json) !== false;
 }
 
 // Aantal rondes dat een backup daadwerkelijk meeneemt: alleen afgeronde rondes, dus
@@ -14227,53 +14235,29 @@ function huidigeClubsVingerafdruk() {
   return fp;
 }
 
+// Vaste regel (Marks keuze, sinds de melding precies weet wat er veranderd is): zodra
+// er iets niet in je laatste backup zit, oranje plus een stip. De instelbare drempels
+// (dagen, aantal wijzigingen) zijn vervallen; ze stonden bij Mark toch op 1 en deden
+// dan niets meer. Er is daardoor ook geen grijze tussenstand meer.
 function isBackupOverdue(lijst) {
   const total = afgerondeRondesCount(lijst);
-  if (total === 0) return false;
-  const lastDate = storage.getItem('golf_last_backup_date');
-  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-  const roundsThreshold = getBackupReminderRounds();
-  if (!lastDate) return total >= roundsThreshold;
-  // Is er sinds de laatste backup überhaupt iets gewijzigd? Zo niet, dan is er niets
-  // te backuppen en zwijgt de app — ook als de dagen-drempel verstrijkt (Marks keuze).
-  // 'Gewijzigd' betekent hier precies hetzelfde als voor de grijze regel
-  // (isErIetsOnveiligs): een ronde erbij, óf een backupinhoud die afwijkt van die van
-  // de laatste backup (gewijzigdSindsBackup).
-  const nieuweRondes = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  if (!nieuweRondes && !gewijzigdSindsBackup()) return false;
-  // De tweede drempel telt WIJZIGINGEN, niet alleen nieuwe rondes. Een dagresultaat
-  // vaststellen of een score corrigeren is net zo goed werk dat je kwijt kunt raken,
-  // maar telde eerder nergens mee: met de drempels op 1 dag en 1 ronde bleef zo'n
-  // bewerking grijs tot de volgende dag. Een bewerking telt daarom als één wijziging,
-  // bovenop de rondes die erbij zijn gekomen.
-  const bewerkt = nieuweRondes === 0 ? 1 : 0;   // wel iets gewijzigd, geen ronde erbij
-  const wijzigingen = nieuweRondes + bewerkt;
-  const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
-  return wijzigingen >= roundsThreshold || daysSince >= getBackupReminderDays();
+  if (total === 0) return false;              // niets om te bewaren
+  const verschil = backupVerschil();
+  if (!verschil) return true;                 // nog nooit een backup
+  return verschil.totaal > 0;
 }
 
 
-// Toont 'Laatste backup: X dagen geleden' bovenaan Instellingen → Gegevens → Backup,
-// op basis van golf_last_backup_date/-count; de losse herinneringsbalk bovenaan Rondes
-// is vervallen, de signalering loopt nu via het oranje stipje op de Instellingen-tab.
-// Staat er werk dat nog niet in een backup zit? Dat is: rondes erbij sinds de laatste
-// backup, of een wijziging ná het tijdstip van die backup. Die tweede vangt ook een
-// bewerkte ronde, die in geen van de drempels meetelt.
+// Staat er werk dat nog niet in een backup zit? Sinds de drempels vervallen zijn is dat
+// precies dezelfde vraag als isBackupOverdue: regel en stip gaan samen aan en uit.
 function isErIetsOnveiligs() {
-  const total = afgerondeRondesCount();
-  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-  const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  return nieuw > 0 || gewijzigdSindsBackup();
+  return isBackupOverdue();
 }
 
 function updateLastBackupDisplay() {
   refreshTabDot();
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;   // regel bestaat alleen in Instellingen; de stip is hierboven al bijgewerkt
-  const daysValEl = document.getElementById('backupReminderDaysVal');
-  if (daysValEl) daysValEl.textContent = getBackupReminderDays();
-  const roundsValEl = document.getElementById('backupReminderRoundsVal');
-  if (roundsValEl) roundsValEl.textContent = getBackupReminderRounds();
   const overdue = isBackupOverdue();
   el.style.color = ''; // kleur zit in het kernbericht-span (zelfde patroon als de andere Controle-regels)
   const label = 'Backup rondes';
@@ -14281,28 +14265,20 @@ function updateLastBackupDisplay() {
   if (!lastDate) {
     // Nog nooit een backup: dat IS de reden, dus hier wel oranje.
     el.innerHTML = overdue ? `<span style="color:var(--orange);font-weight:700">${label}: geen</span>` : `${label}: geen`;
-    toonNieuweRondesRegel(overdue);
+    toonNieuweRondesRegel();
     return;
   }
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
   const daysText = daysSince <= 0 ? 'vandaag' : daysSince === 1 ? 'gisteren' : `${daysSince} dagen geleden`;
-  // Bij oranje (drempel overschreden) ook het aantal nieuwe rondes tonen — anders lijkt
-  // het onlogisch als bv. '4 dagen geleden' oranje is terwijl de dagen-limiet op 7 staat:
-  // de rondes-drempel kan dan de eigenlijke reden zijn (het is een OF-voorwaarde), en dat
-  // moet dan ook zichtbaar zijn i.p.v. alleen het dagen-getal.
-  // De datum is een feit en blijft neutraal; de reden staat in de regel eronder. Alleen
-  // als de backup te oud is ZONDER dat er iets gewijzigd is, is de datum zelf de reden.
-  const alleenTeOud = overdue && !isErIetsOnveiligs();
-  el.innerHTML = alleenTeOud
-    ? `<span style="color:var(--orange);font-weight:700">${label}: ${daysText}</span>`
-    : `${label}: ${daysText}`;
-  toonNieuweRondesRegel(overdue);
+  // De datum is een feit en blijft neutraal; de reden staat in de regel eronder.
+  el.innerHTML = `${label}: ${daysText}`;
+  toonNieuweRondesRegel();
 }
 
 // Aantal rondes dat sinds de laatste backup is bijgekomen — altijd zichtbaar zolang
 // er iets nieuws is (niet alleen bij een te oude backup), want dit is precies wat je
 // kwijtraakt als er iets misgaat. Oranje zodra de herinneringsdrempel is bereikt.
-function toonNieuweRondesRegel(overdue) {
+function toonNieuweRondesRegel() {
   // De backupregel bovenaan meekopiëren: dit is het enige punt dat bij ÉLKE uitgang
   // van updateLastBackupDisplay wordt bereikt (er zijn er twee — dat ging eerst mis).
   {
@@ -14312,46 +14288,22 @@ function toonNieuweRondesRegel(overdue) {
   }
   const el = document.getElementById('newRoundsInfo');
   if (!el) { toonClubBackupRegel(); return; }
-  const total = afgerondeRondesCount();
-  const lastCount = parseInt(storage.getItem('golf_last_backup_count') || '', 10);
-  const nieuw = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
-  // De app weet WEL hoeveel rondes erbij kwamen, maar NIET hoeveel er bewerkt zijn —
-  // er is één tijdstempel voor de hele lijst, geen stempel per ronde. Daarom het
-  // aantal nieuwe rondes plus het moment van de laatste wijziging: samen vertelt dat
-  // of er werk is dat nog niet veilig staat, zonder extra administratie (Marks keuze).
-  const gewijzigdNaBackup = gewijzigdSindsBackup();
+
+  // Staat er iets dat niet in je laatste backup zit (zie backupVerschil)?
   const elTop = document.getElementById('newRoundsInfoTop');
-  if (!nieuw && !gewijzigdNaBackup) {
+  if (!isErIetsOnveiligs()) {
     el.classList.add('hidden'); el.innerHTML = '';
     if (elTop) { elTop.classList.add('hidden'); elTop.innerHTML = ''; }
     toonClubBackupRegel();
     return;
   }
-  // Deze regel is de REDEN dat je een backup zou moeten maken, en krijgt daarom de
-  // oranje kleur — niet de datumregel erboven, want 'gisteren' is op zichzelf geen
-  // probleem. De kleur hing eerder aan de dagendrempel, en dat liet twee gevallen door:
-  // een backup van vanochtend met een ronde van vanmiddag, en een bewerkte ronde (die
-  // telt in geen van beide drempels mee). In beide gevallen stond er werk niet veilig
-  // zonder dat iets opviel.
-  // Eén tekst voor alle gevallen, zonder aantal en zonder tijdstip. De handeling is
-  // hetzelfde of er nu één ronde bij is of drie plus een paar bewerkingen: je maakt een
-  // backup. Het aantal is informatie waar je niets mee doet.
-  // Eerdere varianten noemden het aantal nieuwe rondes en het moment van de laatste
-  // wijziging. Dat las geforceerd (twee fragmenten met een punt ertussen in plaats van
-  // een zin), het gaf drie verschillende teksten voor één situatie, en het deed een
-  // belofte die de app niet kan waarmaken: of er NAAST een nieuwe ronde ook nog iets
-  // bewerkt is, is niet te zien — er is één stempel voor de hele lijst.
-  // TWEE NIVEAUS. Er is altijd een regel zodra er iets niet veilig staat, maar de
-  // TOON hangt af van je drempels (Instellingen -> Exporteren -> Backupherinnering):
-  //   * grijs  — er is iets gewijzigd; handig om te weten, verder geen haast;
-  //   * oranje — je drempel in dagen of nieuwe rondes is gehaald: tijd om te backuppen.
-  // De stip op het tandwiel volgt de oranje stand, niet de grijze.
-  // Eerder was alles oranje zodra er iets veranderde, en daarmee deden de drempels
-  // niets meer: de melding kwam toch wel.
-  const dringend = isBackupOverdue();
-  el.innerHTML = dringend
-    ? `<span style="color:var(--orange);font-weight:700">Wijzigingen sinds laatste backup</span>`
-    : `<span style="color:var(--muted)">Wijzigingen sinds laatste backup</span>`;
+  // Deze regel is de REDEN dat je een backup zou moeten maken, en is daarom oranje —
+  // niet de datumregel erboven, want 'gisteren' is op zichzelf geen probleem.
+  // Eén tekst voor alle gevallen, zonder aantal en zonder tijdstip: de handeling is
+  // hetzelfde of er nu één ronde bij is of drie plus een paar bewerkingen.
+  // Er is geen grijze stand meer: die hing aan de instelbare drempels, en die zijn
+  // vervallen (Marks keuze). Iets niet in de backup = oranje, met een stip op het tandwiel.
+  el.innerHTML = `<span style="color:var(--orange);font-weight:700">Wijzigingen sinds laatste backup</span>`;
   el.classList.remove('hidden');
   if (elTop) { elTop.innerHTML = el.innerHTML; elTop.classList.remove('hidden'); }
   // NA de ronderegel: die bepaalt of de clubregel zijn korte vorm krijgt.
@@ -14402,19 +14354,6 @@ function adjustMinRoundsStat(delta) {
   const el = document.getElementById('minRoundsStatVal');
   if (el) el.textContent = newVal;
   renderPlayerStats();
-}
-
-function adjustBackupReminderDays(delta) {
-  const newVal = setBackupReminderDays(getBackupReminderDays() + delta);
-  const el = document.getElementById('backupReminderDaysVal');
-  if (el) el.textContent = newVal;
-  updateLastBackupDisplay();
-}
-function adjustBackupReminderRounds(delta) {
-  const newVal = setBackupReminderRounds(getBackupReminderRounds() + delta);
-  const el = document.getElementById('backupReminderRoundsVal');
-  if (el) el.textContent = newVal;
-  updateLastBackupDisplay();
 }
 
 async function exportAllClubs() {
