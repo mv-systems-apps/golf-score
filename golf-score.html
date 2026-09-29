@@ -1399,7 +1399,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0ED</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EE</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -9056,9 +9056,12 @@ function doFullRestoreImport(parsed) {
   storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
   storage.setItem('golf_last_backup_count', String(afgerondeRondesCount(entries)));
-  naBackupBijwerken();
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
+  // Ook hier vastleggen wat er nu staat, en pas NA het loslaten van de oude actieve
+  // ronde: de vingerafdruk laat de actieve ronde weg, dus ervóór zou hij net verschillen.
+  try { storage.setItem('golf_backup_fingerprint', backupVingerafdruk()); } catch (e) {}
+  naBackupBijwerken();
   game = { started: false, holes: [] };
   game2Id = null;
   activePlayer = 1;
@@ -14042,6 +14045,11 @@ async function exportAllRounds() {
     storage.setItem('golf_last_backup_date', todayISO());
     storage.setItem('golf_last_backup_ts', new Date().toISOString());
     storage.setItem('golf_last_backup_count', String(afgerondeRondesCount()));
+    // Vastleggen WAT er in deze backup zit. Zonder dit bleef de vingerafdruk van vóór de
+    // backup staan; liep die achter, dan zag de eerstvolgende opslag (bijvoorbeeld het
+    // starten of pauzeren van een ronde) een 'wijziging' die er niet was, en ging de
+    // backupmelding aan terwijl alle afgeronde rondes veilig stonden.
+    storage.setItem('golf_backup_fingerprint', backupVingerafdruk());
     naBackupBijwerken();
     updateLastBackupDisplay();
   } catch(e) { console.error('Backup rondes mislukt:', e); }
