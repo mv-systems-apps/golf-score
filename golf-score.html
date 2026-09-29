@@ -1399,7 +1399,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EB</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0EC</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -3937,6 +3937,7 @@ function startRoundConfirmed() {
     storage.removeItem('golf_active_id');
     if (game2Id) { storage.removeItem('golf_game2_id'); game2Id = null; }
     activePlayer = 1;
+    stempelAlsBackupGewijzigd();   // was de vorige ronde af, dan hoort hij nu in de backup
   }
 
   const name = document.getElementById('iName').value.trim() || 'Speler';
@@ -9271,6 +9272,7 @@ function saveActiveRound(skipLoadSaved = false) {
 function clearActiveRound() {
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
+  stempelAlsBackupGewijzigd();
   game2Id = null;
   activePlayer = 1;
   player2Visible = false;
@@ -9309,6 +9311,7 @@ function finishActiveRound(btn) {
   saveActiveRound(true);
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
+  stempelAlsBackupGewijzigd();
   game = { started: false, holes: [] };
   currentHole = 0;
   resetHeader();
@@ -11015,6 +11018,7 @@ function saveAndClearActiveRound(btn) {
   unlockSiblingButtons(btn);
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
+  stempelAlsBackupGewijzigd();
 
   game = { started: false, holes: [] };
   currentHole = 0;
@@ -14116,8 +14120,19 @@ function setRoundsAndMark(json) {
     }
   }
   const gelukt = storage.setItem('golf_rounds', json) !== false;
-  // Alleen stempelen als het BACKUPBESTAND hierdoor verandert (zie backupVingerafdruk):
-  // een geplande ronde toevoegen of verwijderen raakt de backup niet.
+  stempelAlsBackupGewijzigd();
+  return gelukt;
+}
+
+// Alleen stempelen als het BACKUPBESTAND verandert (zie backupVingerafdruk): een
+// geplande ronde toevoegen of verwijderen raakt de backup niet, een ronde starten ook
+// niet. Loopt na elke schrijfactie van de rondelijst, én op het moment dat een ronde
+// ophoudt de actieve ronde te zijn (afronden, opslaan en sluiten, of een nieuwe ronde
+// starten terwijl de vorige nog openstond). De actieve ronde zit niet in de backup;
+// is hij helemaal gespeeld, dan komt hij er pas bij als hij wordt losgelaten — en
+// daarbij wordt de rondelijst niet opnieuw geschreven, dus zonder deze aanroep kwam er
+// geen stempel en bleef de backupmelding grijs.
+function stempelAlsBackupGewijzigd() {
   try {
     const nu = backupVingerafdruk();
     if (nu !== storage.getItem('golf_backup_fingerprint')) {
@@ -14125,7 +14140,6 @@ function setRoundsAndMark(json) {
       storage.setItem('golf_rounds_changed', new Date().toISOString());
     }
   } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
-  return gelukt;
 }
 
 // Aantal rondes dat een backup daadwerkelijk meeneemt: alleen afgeronde rondes, dus
@@ -14191,20 +14205,20 @@ function isBackupOverdue(lijst) {
   if (!lastDate) return total >= roundsThreshold;
   // Is er sinds de laatste backup überhaupt iets gewijzigd? Zo niet, dan is er niets
   // te backuppen en zwijgt de app — ook als de dagen-drempel verstrijkt (Marks keuze).
-  // Zonder tijdstempels (oude installatie) valt hij terug op het oude gedrag.
+  // 'Gewijzigd' betekent hier precies hetzelfde als voor de grijze regel
+  // (isErIetsOnveiligs): een ronde erbij, óf een wijziging ná de backup. Eerder keek
+  // deze controle alleen naar het stempel, en een afgeronde ronde gaf geen stempel —
+  // dan stond de regel grijs terwijl je drempel allang gehaald was.
   const changedTs = storage.getItem('golf_rounds_changed');
   const backupTs = storage.getItem('golf_last_backup_ts');
-  if (changedTs && backupTs && changedTs <= backupTs) return false;
-  // Ook zwijgen als er NOOIT een wijziging is vastgelegd: dan is er per definitie niets
-  // te bewaren. Zonder deze regel telde de bewerking hieronder er toch één, en stond de
-  // stip meteen na een verse backup alweer aan.
-  if (!changedTs) return false;
+  const nieuweRondes = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
+  const gewijzigdNaBackup = !!changedTs && (!backupTs || changedTs > backupTs);
+  if (!nieuweRondes && !gewijzigdNaBackup) return false;
   // De tweede drempel telt WIJZIGINGEN, niet alleen nieuwe rondes. Een dagresultaat
   // vaststellen of een score corrigeren is net zo goed werk dat je kwijt kunt raken,
   // maar telde eerder nergens mee: met de drempels op 1 dag en 1 ronde bleef zo'n
   // bewerking grijs tot de volgende dag. Een bewerking telt daarom als één wijziging,
   // bovenop de rondes die erbij zijn gekomen.
-  const nieuweRondes = isNaN(lastCount) ? total : Math.max(0, total - lastCount);
   const bewerkt = nieuweRondes === 0 ? 1 : 0;   // wel iets gewijzigd, geen ronde erbij
   const wijzigingen = nieuweRondes + bewerkt;
   const daysSince = Math.floor((new Date(todayISO()) - new Date(lastDate)) / 86400000);
