@@ -662,8 +662,8 @@
     .kop-dag.weekend { background: rgba(128,128,128,.12); background: color-mix(in srgb, var(--muted) 14%, transparent); }
     .kop-dag.weekend.rond-l { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .kop-dag.weekend.rond-r { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
-    /* Weekdagletters gewoon, zaterdag en zondag vet en donkerder. Alle dagcijfers gewoon,
-       ook in de rondjes; alleen het aantal daarna ('+1') is vet (Marks keuze). */
+    /* Weekdagletters gewoon, zaterdag en zondag vet en donkerder. Dagcijfers gewoon, behalve
+       vandaag, de geplande dagen en het aantal daarna ('+1'): die zijn vet (Marks keuze). */
     .kop-dag span:first-child { font-size: 11px; font-weight: 400; color: var(--muted); line-height: 1.2; }
     .kop-dag.weekend span:first-child { color: var(--white); font-weight: 800; }
     .kop-dag span:last-child { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
@@ -674,8 +674,8 @@
        in het donkere — beide contrast ~5. Wit op het lichtere groen van het donkere thema
        haalde maar 2,5. Staat er vandaag iets gepland, dan komt de gouden ring om het groene
        rondje heen, zodat je beide ziet. */
-    .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--gold); }
-    .kop-dag.gepland span:last-child { background: var(--green-light); color: var(--green-deep); box-shadow: none; }
+    .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--gold); font-weight: 800; }
+    .kop-dag.gepland span:last-child { background: var(--green-light); color: var(--green-deep); font-weight: 800; box-shadow: none; }
     .kop-dag.gepland.vandaag span:last-child { box-shadow: 0 0 0 2px var(--gold); }
     .kop-dag.kop-later span:last-child { color: var(--green-light); font-weight: 800; }
   </style>
@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F9</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0FA</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
