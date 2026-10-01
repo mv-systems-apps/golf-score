@@ -661,9 +661,16 @@
     .kop-dag.weekend span:first-child { color: var(--white); }
     .kop-dag span:last-child { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
       border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--white); }
-    .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--green-light); }
-    .kop-dag.gepland span:last-child { background: var(--gold); color: #fff; font-weight: 800; box-shadow: none; }
-    .kop-dag.kop-later span:last-child { color: var(--gold); font-weight: 800; }
+    /* Goud = 'hier ben je' (zoals de actieve tab): een ring om vandaag. Groen = de ronde
+       (zoals de club/baan-regel erboven): de geplande dagen en het aantal daarna. Het cijfer
+       in de groene rondjes is var(--green-deep): bijna wit in het lichte thema, donkergroen
+       in het donkere — beide contrast ~5. Wit op het lichtere groen van het donkere thema
+       haalde maar 2,5. Staat er vandaag iets gepland, dan komt de gouden ring om het groene
+       rondje heen, zodat je beide ziet. */
+    .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--gold); }
+    .kop-dag.gepland span:last-child { background: var(--green-light); color: var(--green-deep); font-weight: 800; box-shadow: none; }
+    .kop-dag.gepland.vandaag span:last-child { box-shadow: 0 0 0 2px var(--gold); }
+    .kop-dag.kop-later span:last-child { color: var(--green-light); font-weight: 800; }
   </style>
 </head>
 <body>
@@ -1393,7 +1400,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F4</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F5</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -11261,7 +11268,7 @@ function updateHeaderClubName() {
 // Regel 1, net als bij een actieve ronde: links hoe lang nog (Vandaag, Morgen, '+3 dgn',
 // '+2 wkn'), rechts de volledige datum met tijd. Regel 2: de volledige clubnaam, met de
 // baan erbij als dat helemaal past (anders zonder baan, nooit afgekapt). Daaronder de 14
-// dagen vanaf vandaag, met aan het eind in goud hoeveel momenten er daarna nog gepland
+// dagen vanaf vandaag, met aan het eind in groen hoeveel momenten er daarna nog gepland
 // zijn ('+1' t/m '+9', daarboven '>9'). Tik op de kop: Rondes in de agendaweergave.
 // Geen geplande rondes: 'Geen geplande rondes' met het baansilhouet.
 const KOP_DAGEN = 14;
