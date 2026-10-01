@@ -655,11 +655,19 @@
     .hdr-round-name { display: block; font-size:20px; font-weight: 800; color: var(--green-light); line-height: 1; }
     .header-score-wrap { width: 100%; margin-top: 0; display: flex; align-items: center; justify-content: space-between; }
     /* Strook met de komende 14 dagen in de lege kop (zie toonLegeKop). */
-    .kop-dag { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .kop-dag span:first-child { font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1.2; }
-    .kop-dag.weekend span:first-child { color: var(--white); }
+    .kop-dag { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 0; }
+    /* Weekend (za+zo) als één zacht getint blokje, zodat de weekenden als ankers in de rij
+       staan (Marks keuze). Zaterdag links afgerond, zondag rechts; valt één van de twee
+       buiten de strook (begint op zondag, eindigt op zaterdag), dan aan beide kanten. */
+    .kop-dag.weekend { background: rgba(128,128,128,.12); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+    .kop-dag.weekend.rond-l { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+    .kop-dag.weekend.rond-r { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+    /* Weekdagletters gewoon, zaterdag en zondag vet en donkerder. Alle dagcijfers gewoon,
+       ook in de rondjes; alleen het aantal daarna ('+1') is vet (Marks keuze). */
+    .kop-dag span:first-child { font-size: 11px; font-weight: 400; color: var(--muted); line-height: 1.2; }
+    .kop-dag.weekend span:first-child { color: var(--white); font-weight: 800; }
     .kop-dag span:last-child { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--white); }
+      border-radius: 50%; font-size: 13px; font-weight: 400; color: var(--white); }
     /* Goud = 'hier ben je' (zoals de actieve tab): een ring om vandaag. Groen = de ronde
        (zoals de club/baan-regel erboven): de geplande dagen en het aantal daarna. Het cijfer
        in de groene rondjes is var(--green-deep): bijna wit in het lichte thema, donkergroen
@@ -667,7 +675,7 @@
        haalde maar 2,5. Staat er vandaag iets gepland, dan komt de gouden ring om het groene
        rondje heen, zodat je beide ziet. */
     .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--gold); }
-    .kop-dag.gepland span:last-child { background: var(--green-light); color: var(--green-deep); font-weight: 800; box-shadow: none; }
+    .kop-dag.gepland span:last-child { background: var(--green-light); color: var(--green-deep); box-shadow: none; }
     .kop-dag.gepland.vandaag span:last-child { box-shadow: 0 0 0 2px var(--gold); }
     .kop-dag.kop-later span:last-child { color: var(--green-light); font-weight: 800; }
   </style>
@@ -1399,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F6</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F9</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1407,10 +1415,6 @@
       Aangeboden zonder garantie. De handicapberekening is een eigen implementatie
       volgens de WHS-regels en geen officiële registratie — je officiële handicap
       loopt via je club en de NGF.
-    </div>
-    <div style="font-size:17px;color:var(--muted);line-height:1.6;margin-top:10px">
-      Vragen, of werkt iets niet zoals je verwacht? Stuur een bericht naar het adres
-      hierboven en noem het versienummer.
     </div>
   </div>
   </div>
@@ -11371,7 +11375,12 @@ function toonLegeKop() {
     const d = new Date(); d.setDate(d.getDate() + i);
     const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const gepland = dagen.has(iso), weekend = d.getDay() === 0 || d.getDay() === 6;
-    html += `<div class="kop-dag${gepland ? ' gepland' : ''}${i === 0 ? ' vandaag' : ''}${weekend ? ' weekend' : ''}">`
+    // Afronding van het weekendblokje: zaterdag links (en rechts als hij de laatste dag
+    // van de strook is), zondag rechts (en links als hij de eerste is).
+    const rond = !weekend ? '' : d.getDay() === 6
+      ? ' rond-l' + (i === KOP_DAGEN - 1 ? ' rond-r' : '')
+      : ' rond-r' + (i === 0 ? ' rond-l' : '');
+    html += `<div class="kop-dag${gepland ? ' gepland' : ''}${i === 0 ? ' vandaag' : ''}${weekend ? ' weekend' + rond : ''}">`
       + `<span>${letters[d.getDay()]}</span><span>${d.getDate()}</span></div>`;
   }
   // Aan het eind van de strook: hoeveel er daarna nog gepland staat, als vijftiende kolom.
@@ -14315,7 +14324,7 @@ function setRoundsAndMark(json) {
         console.error('Opslaan geweigerd: dit zou ingevulde ronde(s) laten verdwijnen:',
                       kwijt.map(r => `${r.player} ${r.date} ${r.time || ''}`).join(' | '));
         showInfoModal('Opslaan geblokkeerd',
-          `Er ging iets mis: deze actie zou ${kwijt.length === 1 ? 'een ingevulde ronde' : kwijt.length + ' ingevulde rondes'} laten verdwijnen. Er is niets gewijzigd. Maak een backup en meld dit.`,
+          `Er ging iets mis: deze actie zou ${kwijt.length === 1 ? 'een ingevulde ronde' : kwijt.length + ' ingevulde rondes'} laten verdwijnen. Er is niets gewijzigd. Maak voor de zekerheid een backup.`,
           'red');
         return false;
       }
