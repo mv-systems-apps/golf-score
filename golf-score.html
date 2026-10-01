@@ -655,13 +655,22 @@
     #hdrTrack { font-size:20px; font-weight: 700; color: var(--white); letter-spacing: .3px; text-align: right; line-height: 1; flex: 0 0 auto; white-space: nowrap; }
     .hdr-round-name { display: block; font-size:20px; font-weight: 800; color: var(--green-light); line-height: 1; }
     .header-score-wrap { width: 100%; margin-top: 0; display: flex; align-items: center; justify-content: space-between; }
+    /* Strook met de komende 14 dagen in de lege kop (zie toonLegeKop). */
+    .kop-dag { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .kop-dag span:first-child { font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1.2; }
+    .kop-dag.weekend span:first-child { color: var(--white); }
+    .kop-dag span:last-child { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--white); }
+    .kop-dag.vandaag span:last-child { box-shadow: inset 0 0 0 2px var(--green-light); }
+    .kop-dag.gepland span:last-child { background: var(--gold); color: #fff; font-weight: 800; box-shadow: none; }
+    .kop-dag.kop-later span:last-child { color: var(--gold); font-weight: 800; }
   </style>
 </head>
 <body>
 
 <!-- Geen position:relative hier: de kop is sticky (zie CSS) en dat zou dat overschrijven.
      Sticky is zelf al een positioneringscontext, dus het baanbeeld hangt er gewoon in. -->
-<header>
+<header onclick="kopTik()">
   <div class="hdr-top-row" style="position:relative;z-index:1">
     <h1><span id="hdrClubName"></span></h1>
     <span id="hdrTrack"></span>
@@ -693,6 +702,10 @@
       <circle cx="22" cy="51" r="2.6" fill="#fff" stroke="var(--green-light)" stroke-width=".8"/>
     </svg>
   </div>
+  <!-- Geplande rondes in de lege kop: de komende 14 dagen op één rij, met een gouden
+       rondje op elke dag waarop iets gepland staat. Vult dezelfde ruimte als het
+       baansilhouet (dat dan verdwijnt), dus de kop blijft even hoog. Zie toonLegeKop. -->
+  <div id="hdrGeplandStrook" class="hidden" style="position:absolute;left:12px;right:12px;bottom:8px;z-index:1;display:grid;grid-template-columns:repeat(14,1fr)"></div>
   <div class="header-score-wrap hidden">
     <div class="hdr-tee-row">
       <span class="hdr-gender" id="hdrGender"></span>
@@ -1380,7 +1393,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F1</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F3</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -6822,6 +6835,7 @@ function refreshTabDot(rondes) {
   // De stip hoort bij de DRINGENDE stand: je drempel in dagen of nieuwe rondes is
   // gehaald. Een wijziging alleen geeft een grijze regel en geen stip — anders zou de
   // app bij elke ingevulde hole om aandacht vragen.
+  toonLegeKop();
   const stipNodig = isBackupOverdue(rondes) || isClubsBackupOverdue();
   const tabSet0 = document.getElementById('tab-settings');
   if (tabSet0) tabSet0.classList.toggle('has-dot', stipNodig);
@@ -11100,13 +11114,10 @@ function toonLeegBeeld(aan) {
 }
 
 function resetHeader() {
-  toonLeegBeeld(true);
-  const clubNameEl = document.getElementById('hdrClubName');
-  clubNameEl.textContent = 'Geen actieve ronde';
-  clubNameEl.classList.add('info-msg');
-  clubNameEl.style.color = 'var(--info-grey)';
   document.getElementById('hdrTrack').innerHTML = '&nbsp;';
   document.getElementById('hdrRoundName').innerHTML = '&nbsp;';
+  _legeKopSleutel = null;              // na het leegmaken altijd opnieuw opbouwen
+  toonLegeKop();
   document.getElementById('hdrHoleCount').textContent = '';
   const playerBar = document.getElementById('playerSwitchBar');
   if (playerBar) { playerBar.classList.remove('hidden'); playerBar.style.visibility = 'hidden'; }
@@ -11236,16 +11247,135 @@ function updateHeaderClubName() {
   const el = document.getElementById('hdrClubName');
   if (!el) return;
   if (game.started) {
+    verbergGepland();
     el.textContent = game.clubShort || game.club || '?';
     el.classList.remove('info-msg');
     el.style.color = '';
     toonLeegBeeld(false);
   } else {
-    el.textContent = 'Geen actieve ronde';
+    toonLegeKop();
+  }
+}
+
+// ── Geplande rondes in de kop (alleen zonder actieve ronde) ──────────────────────
+// Regel 1, net als bij een actieve ronde: links hoe lang nog (Vandaag, Morgen, '+3 dgn',
+// '+2 wkn'), rechts de volledige datum met tijd. Regel 2: de volledige clubnaam, met de
+// baan erbij als dat helemaal past (anders zonder baan, nooit afgekapt). Daaronder de 14
+// dagen vanaf vandaag, met aan het eind in goud hoeveel momenten er daarna nog gepland
+// zijn ('+1' t/m '+9', daarboven '>9'). Tik op de kop: Rondes in de agendaweergave.
+// Geen geplande rondes: 'Geen geplande rondes' met het baansilhouet.
+const KOP_DAGEN = 14;
+
+// Gepland = dezelfde definitie als overal in de app (categorie Gepland, de agenda waar
+// een tik op de kop naartoe gaat, het cijfertje op het app-icoon): niet afgerond en
+// datum/tijd nog in de toekomst; niet de actieve ronde en niet 'Geïmporteerd'. Rondes op
+// dezelfde datum en tijd (jij en je medespeler) tellen als één. Oplopend op datum en tijd.
+// (Eerst was het 'vandaag of later, zonder scores'; dan verscheen een gestarte en weer
+// gepauzeerde ronde zonder scores in de kop als gepland, maar niet in de agenda.)
+function geplandeMomenten() {
+  const nu = Date.now();
+  const actief = storage.getItem('golf_active_id');
+  const p2 = storage.getItem('golf_game2_id');
+  const momenten = new Map();
+  for (const r of leesRondes()) {
+    if (!r.date || r._justImported || isRondeAf(r)) continue;
+    if (String(r.id) === actief || String(r.id) === p2) continue;
+    if (!(new Date(`${r.date}T${r.time || '00:00'}`).getTime() > nu)) continue;
+    const sleutel = r.date + 'T' + (r.time || '');
+    if (!momenten.has(sleutel)) momenten.set(sleutel, r);
+  }
+  return [...momenten.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => r);
+}
+
+// Hoe lang nog, kort (Marks keuze): Vandaag, Morgen, '+N dgn' zolang de dag in de strook
+// van 14 dagen valt, daarna '+N wkn' in hele weken naar beneden afgerond ('+2 wkn' =
+// ruim twee weken; de exacte datum staat ernaast). Bij 1 zonder n: 'dg', 'wk'.
+function hoeLangNog(iso) {
+  const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
+  const n = Math.round((new Date(iso + 'T00:00:00') - vandaag) / 86400000);
+  if (n <= 0) return 'Vandaag';
+  if (n === 1) return 'Morgen';
+  if (n < KOP_DAGEN) return '+' + n + ' dgn';
+  const w = Math.floor(n / 7);
+  return '+' + w + (w === 1 ? ' wk' : ' wkn');
+}
+
+function verbergGepland() {
+  document.getElementById('hdrGeplandStrook')?.classList.add('hidden');
+  const sub = document.getElementById('hdrRoundName');
+  if (sub) { sub.style.fontSize = ''; sub.style.marginTop = ''; }
+  const kop = document.querySelector('header');
+  if (kop) kop.style.cursor = '';
+  _legeKopSleutel = null;
+}
+
+// Alleen opnieuw opbouwen als er iets veranderd is: deze functie loopt mee met elke
+// verversing van de tabstippen.
+var _legeKopSleutel = null;
+function toonLegeKop() {
+  if (game && game.started) return;
+  const el = document.getElementById('hdrClubName');
+  if (!el) return;
+  const momenten = geplandeMomenten();
+  const sleutel = todayISO() + '|' + window.innerWidth + '|' + momenten.map(r => r.date + 'T' + (r.time || '') + r.club + r.track).join(',');
+  if (sleutel === _legeKopSleutel) return;
+  _legeKopSleutel = sleutel;
+  const strook = document.getElementById('hdrGeplandStrook');
+  const sub = document.getElementById('hdrRoundName');
+  const rechts = document.getElementById('hdrTrack');
+  const kop = document.querySelector('header');
+  if (!momenten.length) {
+    el.textContent = 'Geen geplande rondes';
     el.classList.add('info-msg');
     el.style.color = 'var(--info-grey)';
+    rechts.innerHTML = '&nbsp;';
+    sub.innerHTML = '&nbsp;'; sub.style.fontSize = ''; sub.style.marginTop = '';
+    strook.classList.add('hidden'); strook.innerHTML = '';
+    kop.style.cursor = '';
     toonLeegBeeld(true);
+    return;
   }
+  toonLeegBeeld(false);
+  kop.style.cursor = 'pointer';
+  const eerste = momenten[0];
+  el.textContent = hoeLangNog(eerste.date);
+  el.classList.remove('info-msg');
+  el.style.color = '';
+  // Rechts de volledige datum, in dezelfde notatie als bij een actieve ronde.
+  rechts.textContent = formatFullDate(eerste.date) + (eerste.time ? ' · ' + eerste.time : '');
+  // Hoeveel momenten vallen na de getoonde 14 dagen?
+  const grens = new Date(); grens.setDate(grens.getDate() + KOP_DAGEN);
+  const grensIso = grens.getFullYear() + '-' + String(grens.getMonth() + 1).padStart(2, '0') + '-' + String(grens.getDate()).padStart(2, '0');
+  const later = momenten.filter(r => r.date >= grensIso).length;
+  // Volledige clubnaam; de baan alleen als die er helemaal bij past.
+  // 17px + 3px marge = de 20px van de gewone regel: de kop blijft precies even hoog.
+  sub.style.fontSize = '17px'; sub.style.marginTop = '3px';
+  const club = eerste.club || eerste.clubShort || '';
+  sub.textContent = eerste.track ? club + ' · ' + eerste.track : club;
+  if (eerste.track && sub.scrollWidth > sub.clientWidth) sub.textContent = club;
+  // De strook: 14 dagen vanaf vandaag.
+  const dagen = new Set(momenten.map(r => r.date));
+  const letters = ['Z', 'M', 'D', 'W', 'D', 'V', 'Z'];
+  let html = '';
+  for (let i = 0; i < KOP_DAGEN; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const gepland = dagen.has(iso), weekend = d.getDay() === 0 || d.getDay() === 6;
+    html += `<div class="kop-dag${gepland ? ' gepland' : ''}${i === 0 ? ' vandaag' : ''}${weekend ? ' weekend' : ''}">`
+      + `<span>${letters[d.getDay()]}</span><span>${d.getDate()}</span></div>`;
+  }
+  // Aan het eind van de strook: hoeveel er daarna nog gepland staat, als vijftiende kolom.
+  if (later) html += `<div class="kop-dag kop-later"><span>&nbsp;</span><span>${later > 9 ? '>9' : '+' + later}</span></div>`;
+  strook.style.gridTemplateColumns = `repeat(${later ? KOP_DAGEN + 1 : KOP_DAGEN},1fr)`;
+  strook.innerHTML = html;
+  strook.classList.remove('hidden');
+}
+
+// Tik op de kop: zonder actieve ronde en met geplande rondes naar de agenda in Rondes.
+function kopTik() {
+  if ((game && game.started) || document.getElementById('hdrGeplandStrook')?.classList.contains('hidden')) return;
+  nav('archive');
+  if (!window._groupByPlanned) toggleGroupByPlanned();
 }
 
 function cleanupTempClub() {
