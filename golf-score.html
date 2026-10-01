@@ -1393,7 +1393,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F3</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0F4</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       &copy; 2026 m.j.vandervelden@gmail.com<br>
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
@@ -11287,17 +11287,18 @@ function geplandeMomenten() {
   return [...momenten.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => r);
 }
 
-// Hoe lang nog, kort (Marks keuze): Vandaag, Morgen, '+N dgn' zolang de dag in de strook
-// van 14 dagen valt, daarna '+N wkn' in hele weken naar beneden afgerond ('+2 wkn' =
-// ruim twee weken; de exacte datum staat ernaast). Bij 1 zonder n: 'dg', 'wk'.
-function hoeLangNog(iso) {
+// Hoe lang nog (Marks keuze): Vandaag, Morgen, '+N dagen' zolang de dag in de strook van
+// 14 dagen valt, daarna '+N weken' in hele weken naar beneden afgerond ('+2 weken' = ruim
+// twee weken; de exacte datum staat ernaast). Met kort=true de afkorting ('dgn'/'wkn',
+// bij 1 zonder n): die gebruikt de kop alleen als de volledige vorm niet past.
+function hoeLangNog(iso, kort = false) {
   const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
   const n = Math.round((new Date(iso + 'T00:00:00') - vandaag) / 86400000);
   if (n <= 0) return 'Vandaag';
   if (n === 1) return 'Morgen';
-  if (n < KOP_DAGEN) return '+' + n + ' dgn';
+  if (n < KOP_DAGEN) return '+' + n + (kort ? ' dgn' : ' dagen');
   const w = Math.floor(n / 7);
-  return '+' + w + (w === 1 ? ' wk' : ' wkn');
+  return '+' + w + (kort ? (w === 1 ? ' wk' : ' wkn') : (w === 1 ? ' week' : ' weken'));
 }
 
 function verbergGepland() {
@@ -11338,11 +11339,15 @@ function toonLegeKop() {
   toonLeegBeeld(false);
   kop.style.cursor = 'pointer';
   const eerste = momenten[0];
-  el.textContent = hoeLangNog(eerste.date);
   el.classList.remove('info-msg');
   el.style.color = '';
-  // Rechts de volledige datum, in dezelfde notatie als bij een actieve ronde.
+  // Rechts de volledige datum, in dezelfde notatie als bij een actieve ronde; die blijft
+  // altijd compleet. Links eerst de volledige woorden, en alleen als regel 1 dan niet
+  // past de afkorting — echt gemeten, want de breedte hangt af van toestel en lettertype.
   rechts.textContent = formatFullDate(eerste.date) + (eerste.time ? ' · ' + eerste.time : '');
+  el.textContent = hoeLangNog(eerste.date);
+  const regel1 = el.closest('h1');
+  if (regel1 && regel1.scrollWidth > regel1.clientWidth) el.textContent = hoeLangNog(eerste.date, true);
   // Hoeveel momenten vallen na de getoonde 14 dagen?
   const grens = new Date(); grens.setDate(grens.getDate() + KOP_DAGEN);
   const grensIso = grens.getFullYear() + '-' + String(grens.getMonth() + 1).padStart(2, '0') + '-' + String(grens.getDate()).padStart(2, '0');
