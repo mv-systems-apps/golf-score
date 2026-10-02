@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0FA</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0FB</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -4320,6 +4320,9 @@ function setDoubleBogey(i) {
   const h   = game.holes[i];
   beginEdit(i);
   h.score = h.ppar + 2;
+  // Net als bij plus, min en ongedaan maken: lege putts worden 2. Ontbrak hier, waardoor
+  // een met lang indrukken ingevulde hole zonder putts bleef en uit de puttcijfers viel.
+  syncPuttsWithScore(i);
   pulseScore(i);
   if (navigator.vibrate) navigator.vibrate(20);
   updateHeader();
