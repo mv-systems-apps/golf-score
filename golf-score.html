@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-0FB</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-108</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1448,20 +1448,35 @@ window.addEventListener('resize', setRealVH);
 // ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
 const CLUBS = {};;
 
-// Afgeleid: plat COURSES object en COURSE_CLUBS voor backward compat
+// COURSES: de banen van de club die op het startscherm gekozen is — en ALLEEN die.
+// Clubnamen zijn uniek, baannamen niet: elke club mag een baan 'Noord' of een
+// wedstrijdlus 'Maanwedstrijd' hebben. Eerder stonden hier de banen van alle clubs door
+// elkaar met alleen de naam als sleutel; bij twee clubs met dezelfde baannaam bleef er
+// één over, en kreeg een ronde bij de ene club de holes, par en CR van de andere.
+// De lijst wordt opnieuw opgebouwd zodra de gekozen club verandert; dat gebeurt op één
+// plek, in de opslaglaag (zie 'storage'), zodat geen enkele route het kan overslaan.
+//
+// COURSE_CLUBS: baannaam -> clubnaam over ALLE clubs. Alleen nog voor oude rondes die
+// zelf geen clubnaam bewaren; bij een dubbele naam wint de gekozen club.
 const COURSES = {};
 const COURSE_CLUBS = {};
 
-function rebuildCourseLookup() {
+function rebuildCourseLookup(opslaan = true) {
   Object.keys(COURSES).forEach(k => delete COURSES[k]);
   Object.keys(COURSE_CLUBS).forEach(k => delete COURSE_CLUBS[k]);
   Object.values(CLUBS).forEach(cl => {
-    Object.entries(cl.courses).forEach(([name, data]) => {
-      COURSES[name] = data;
-      COURSE_CLUBS[name] = cl.club;
-    });
+    Object.keys(cl.courses || {}).forEach(name => { COURSE_CLUBS[name] = cl.club; });
   });
-  saveClubsToStorage();
+  const gekozen = CLUBS[storage.getItem('golf_default_club')];
+  if (gekozen) {
+    Object.entries(gekozen.courses || {}).forEach(([name, data]) => {
+      COURSES[name] = data;
+      COURSE_CLUBS[name] = gekozen.club;
+    });
+  }
+  // Wie de uitkomst van het opslaan nodig heeft, slaat zelf op en geeft hier false mee:
+  // anders worden de clubgegevens twee keer achter elkaar weggeschreven.
+  if (opslaan) saveClubsToStorage();
 }
 
 // Geeft true/false terug: de baaneditor moet weten of het echt gelukt is, anders zou
@@ -2081,7 +2096,7 @@ const storage = (() => {
     const ls = localStorage;
     return {
       getItem:    k     => ls.getItem(k),
-      removeItem: k     => ls.removeItem(k),
+      removeItem: k     => { ls.removeItem(k); if (k === 'golf_default_club') rebuildCourseLookup(false); },
       // Geeft true/false terug: aanroepers die iets ONOMKEERBAARS doen na het opslaan
       // (zoals de oude planning verwijderen) moeten kunnen controleren of het gelukt is.
       // Bij een volle opslag mislukt een grotere lijst wegschrijven, terwijl een
@@ -2090,6 +2105,8 @@ const storage = (() => {
       setItem:    (k,v) => {
         try {
           ls.setItem(k, v);
+          // De banenlijst hoort bij de gekozen club: wisselt die, dan mee wisselen.
+          if (k === 'golf_default_club') rebuildCourseLookup(false);
           // Gelukt: de storingsmelding mag weg, maar alleen als het DEZELFDE sleutel is
           // die eerder faalde. De app schrijft voortdurend andere sleutels weg, en die
           // slagen wél — die zouden de waarschuwing meteen weer wissen terwijl je rondes
@@ -2120,7 +2137,7 @@ const storage = (() => {
     storageIsPersistent = false;
   }
   const mem = {};
-  return { getItem: k => k in mem ? mem[k] : null, setItem: (k,v) => { mem[k]=String(v); return true; }, removeItem: k => { delete mem[k]; } };
+  return { getItem: k => k in mem ? mem[k] : null, setItem: (k,v) => { mem[k]=String(v); if (k === 'golf_default_club') rebuildCourseLookup(false); return true; }, removeItem: k => { delete mem[k]; if (k === 'golf_default_club') rebuildCourseLookup(false); } };
 })();
 
 // Veilig opgeslagen rondes inladen: valt terug op een lege lijst bij corrupte data,
@@ -2276,6 +2293,37 @@ function refreshTrackSelectionAfterCategoryChange() {
     sel.track = fallback || null;
   }
   rebuildStartScreen();
+}
+
+// Is deze wedstrijdlus zichtbaar bij het huidige filter? Een lus van 9 of 18 holes volgt
+// het 9/18-filter. Een lus met een ander aantal holes staat er altijd: voor dat aantal
+// bestaat geen filterknop, en zonder deze regel vond je hem alleen door het filter uit
+// te zetten. Het par-3-filter geldt niet voor lussen.
+function lusZichtbaar(name) {
+  const n = (COURSES[name]?.holeIds || []).length;
+  if ((n === 9 || n === 18) && sel.holeCount) return String(n) === sel.holeCount;
+  return true;
+}
+
+// Is deze ronde gespeeld op een wedstrijdlus? De ronde bewaart dat zelf (gezet bij het
+// starten), zodat het blijft kloppen als de lus later wordt verwijderd of hernoemd.
+// Er wordt bewust NIET bij de baan gekeken: er bestaan geen oudere rondes op een
+// wedstrijdlus, dus één bron volstaat (Marks keuze).
+function isLusRonde(r) {
+  return !!(r && r.wedstrijdlus === true);
+}
+
+// CR en SR van een wedstrijdlus zijn geschat, dus de ronde begint als niet-qualifying —
+// of je de lus nu aantikt of de app hem kiest. Je kunt het daarna zelf weer aanzetten.
+function zetQualifyingUitVoorLus() {
+  sel.qualifying = false;
+  sel2.qualifying = false;
+  ['qualifyToggle1', 'qualifyToggle2'].forEach(id => { const t = document.getElementById(id); if (t) t.checked = false; });
+}
+
+function toggleLusKop() {
+  storage.setItem('golf_lussen_open', storage.getItem('golf_lussen_open') === '1' ? '0' : '1');
+  buildTrackList();
 }
 
 function trackMatchesFilters(name) {
@@ -2700,21 +2748,33 @@ function switchToPlayer(n) {
   loadSaved();
 }
 
+// De lopende ronde zoals hij wordt opgeslagen. Dit is de ENIGE plek waar dat gebeurt;
+// saveActiveRound en het wisselen van speler gebruiken hem allebei.
+//
+// De ronde wordt in zijn geheel overgenomen; alleen wat van het spelen afhangt wordt
+// bijgewerkt. Eerder stond hier (en op twee andere plekken) een opsomming van velden.
+// Een veld dat in één van die lijsten ontbrak, verdween stil — zo raakte de notitie
+// kwijt, en zo zou het elk nieuw veld vergaan. Nu kan een veld niet meer wegvallen,
+// ook een veld dat later wordt toegevoegd niet.
 function buildRoundEntry() {
   const played = game.holes.filter(h => h.score !== null);
-  return {
-    id: game.id, date: game.date, time: game.time,
-    player: game.player, hcp: game.hcp, gender: game.gender,
-    track: game.track, tee: game.tee, CR: game.CR, SR: game.SR, PAR: game.PAR, chcp: game.chcp,
-    club: game.club, clubShort: game.clubShort,
+  const entry = {
+    ...game,
     total: played.reduce((s, h) => s + h.score, 0),
     totalStb: game.holes.reduce((s, h) => s + stbFor(h), 0),
     holesCount: game.holes.length,
     currentHole, started: true,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
-    note: game.note || undefined,
     holes: game.holes.map(h => ({ ...h })),
   };
+  // Lege optionele velden staan niet in de opslag (zoals altijd al): een ronde zonder
+  // notitie heeft geen veld 'note', een gewone ronde geen veld 'wedstrijdlus'.
+  if (!entry.note) delete entry.note;
+  if (!entry.wedstrijdlus) delete entry.wedstrijdlus;
+  // Afgeleid uit de holes en hier niet bijgehouden; een meegekomen waarde zou verouderen.
+  delete entry.playedCount;
+  delete entry._justImported;
+  return entry;
 }
 
 function updatePlayer2Titles() {
@@ -2844,29 +2904,58 @@ function buildTrackList() {
     document.getElementById('cat-18')?.classList.toggle('active', sel.holeCount === '18');
   }
 
+  // Eerst bepalen wát er staat, dan kiezen, dan pas tekenen. Zo is een baan die de app
+  // zelf kiest ook meteen als gekozen getekend, en volgt een wedstrijdlus dezelfde regel
+  // als wanneer je hem aantikt.
+  const gewoon = [], lussen = [];
   Object.keys(COURSES).sort((a, b) => a.localeCompare(b, 'nl')).forEach(name => {
     if ((COURSE_CLUBS[name] || '') !== defaultClub) return;
-    if (!trackMatchesFilters(name)) return;
-    const course = COURSES[name];
-
-    visibleNames.push(name);
-    const n = course.holeIds.length;
-    const btn = document.createElement('button');
-    btn.className = 'track-btn' + (name === sel.track ? ' active' : '');
-    btn.innerHTML = `<span class="track-name">${escapeHtml(name)}</span><span class="track-sub">${n}h</span>`;
-    btn.onclick = () => { sel.track = name; sel.chcpOverride = null; sel._teeUserSelected = false; sel._holeCountUserCleared = false; rebuildStartScreen(); updateHeaderClubName(); };
-    el.appendChild(btn);
+    if (COURSES[name].wedstrijdlus) { if (lusZichtbaar(name)) lussen.push(name); }
+    else if (trackMatchesFilters(name)) gewoon.push(name);
   });
+  visibleNames.push(...gewoon, ...lussen);
 
   // Selecteer automatisch de eerste zichtbare baan als de huidige selectie niet (meer) geldig is
   if (visibleNames.length && !visibleNames.includes(sel.track)) {
     sel.track = visibleNames[0];
     sel.chcpOverride = null;
-    // Hermarkeer knoppen zonder recursie
-    el.querySelectorAll('.track-btn').forEach(b => {
-      const nameEl = b.querySelector('.track-name');
-      b.classList.toggle('active', nameEl?.textContent === sel.track);
-    });
+    if (COURSES[sel.track].wedstrijdlus) zetQualifyingUitVoorLus();
+  }
+
+  const baanKnop = name => {
+    const n = COURSES[name].holeIds.length;
+    const btn = document.createElement('button');
+    btn.className = 'track-btn' + (name === sel.track ? ' active' : '');
+    btn.innerHTML = `<span class="track-name">${escapeHtml(name)}</span><span class="track-sub">${n}h</span>`;
+    btn.onclick = () => {
+      sel.track = name; sel.chcpOverride = null; sel._teeUserSelected = false; sel._holeCountUserCleared = false;
+      if (COURSES[name].wedstrijdlus) zetQualifyingUitVoorLus();
+      rebuildStartScreen(); updateHeaderClubName();
+    };
+    el.appendChild(btn);
+  };
+  gewoon.forEach(baanKnop);
+  // Wedstrijdlussen staan onder de gewone banen, achter een eigen inklapkop.
+  if (lussen.length) {
+    const open = storage.getItem('golf_lussen_open') === '1';
+    const kop = document.createElement('div');
+    kop.id = 'lusKop';
+    kop.style.cssText = 'display:flex;align-items:center;cursor:pointer;line-height:1;padding:6px 2px 2px';
+    kop.onclick = toggleLusKop;
+    kop.innerHTML = `<span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">Wedstrijdlussen</span>`
+      + `<span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${lussen.length}</span>`
+      + `<span style="margin-left:8px;display:inline-flex;line-height:0;transform:${open ? 'rotate(90deg)' : 'none'}">${arrowSvg(14, false, 'var(--green-light)', false)}</span>`;
+    el.appendChild(kop);
+    // Dicht: alleen de GEKOZEN lus blijft staan, anders zie je niet welke baan je speelt.
+    lussen.filter(name => open || name === sel.track).forEach(baanKnop);
+    // Eén berekening, alleen voor de gekozen lus.
+    if (COURSES[sel.track]?.wedstrijdlus && lusStatus(defaultClub, sel.track) === 'verouderd') {
+      const hint = document.createElement('div');
+      hint.id = 'lusVerouderd';
+      hint.style.cssText = 'font-size:15px;color:var(--orange);padding:0 2px';
+      hint.textContent = 'Een bronbaan van deze lus is gewijzigd. Bijwerken kan bij Clubs.';
+      el.appendChild(hint);
+    }
   }
 
   // Heren/Dames disabled als er geen banen zichtbaar zijn
@@ -3064,18 +3153,6 @@ function calcChcpAuto() {
   const teeData = course.tees[genderKey]?.[sel.tee];
   if (!teeData) return null;
   return calcChcp(course.holeIds.length, teeData.CR, teeData.SR, teePar(teeData), hcp);
-}
-
-function recalcPpar() {
-  if (!game.started || !game.holes.length) return;
-  const auto = calcChcpAuto();
-  const chcp = sel.chcpOverride !== null ? sel.chcpOverride : (auto !== null ? auto : game.chcp ?? 0);
-  const n = game.holes.length;
-  const phcps = distributeChcp(chcp, n, game.holes);
-  game.holes.forEach((h, i) => {
-    h.phcp = phcps[i];
-    h.ppar = h.par + phcps[i];
-  });
 }
 
 function updateChcp() {
@@ -3419,12 +3496,12 @@ function savePlayerProfile() {
     storage.removeItem('golf_profile_name2');
     showPlayer2Msg('Speler 2 gewist: gelijk aan speler 1', 'error');
   }
-  // Ook bijwerken in actieve ronde
-  if (game.started) {
-    if (name) game.player = name;
-    if (!isNaN(hcp)) game.hcp = hcp;
-    saveActiveRound();
-  }
+  // Het startscherm raakt een LOPENDE ronde niet. Hier werden naam en handicap ook in de
+  // actieve ronde geschreven: wie tijdens een ronde het startscherm alvast klaarzette,
+  // veranderde de speler en de handicap van de ronde die liep — terwijl de baanhandicap
+  // en de slagen per hole bleven staan. Stond speler 2 op het scherm, dan kreeg ZIJN
+  // ronde de naam van speler 1. De naam wijzig je via Ronde bewerken; de handicap van
+  // een ronde ligt vast vanaf de start.
   updateComputedHcp();
 }
 
@@ -3468,7 +3545,25 @@ function showStartError(msg) {
   el._hideTimer = setTimeout(() => el.classList.add('hidden'), 2000);
 }
 
-function startRound() {
+function startRound(vervangenBevestigd) {
+  controleerHerplan();
+  ververstCorrigeerScores();
+  // Opnieuw plannen blijft staan als je het startscherm verlaat. Dat voorkomt dat je
+  // notitie verdwijnt, maar het maakt ook mogelijk dat je later terugkomt, een heel
+  // andere ronde start, en daarmee ongemerkt de oude vervangt. De melding bovenaan zegt
+  // het wel; wie tussendoor weg is geweest krijgt de vraag daarom ook bij het starten.
+  if (_herplanIds && _herplanOnderbroken && !vervangenBevestigd) {
+    const oud = loadSavedRounds().find(r => String(r.id) === _herplanIds[0]);
+    const wanneer = oud ? `${formatFullDate(oud.date)}${oud.time ? ' om ' + oud.time : ''}` : '';
+    const wat = _corrigeerScores ? 'gecorrigeerd' : 'opnieuw gepland';
+    toonKeuzeModal('Ronde vervangen?', 'orange',
+      `De ronde van ${wanneer} wordt ${wat}: hij verdwijnt en deze nieuwe ronde komt ervoor in de plaats.`
+      + (_corrigeerScores ? ' De scores gaan mee.' : ''),
+      [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
+       { tekst: 'Vervangen', actie: () => startRound(true) },
+       { tekst: 'Oude ronde laten staan', actie: () => { const n1 = leesStartNote(1), n2 = leesStartNote(2); annuleerHerplan(); zetStartNote(1, n1); zetStartNote(2, n2); zetNoteLezen(1, false); zetNoteLezen(2, false); } }]);
+    return;
+  }
   const name = document.getElementById('iName').value.trim();
   if (!name) { showStartError('Voer een speler in'); return; }
   const hcp = getHcp();
@@ -3714,6 +3809,9 @@ const HERPLAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none
 // oude planning verdwijnt pas als de nieuwe wordt vastgelegd — breek je af, dan blijft
 // alles staan.
 let _herplanIds = null;
+// Ben je tijdens het opnieuw plannen of corrigeren van het startscherm weggeweest? Dan
+// vraagt Start eerst of de oude ronde echt vervangen moet worden (zie startRound).
+let _herplanOnderbroken = false;
 // Bij CORRIGEREN worden ook de ingevulde scores meegenomen: je hebt de ronde gespeeld,
 // alleen met de verkeerde tee, baan of datum. Alles wat van de omstandigheden afhangt —
 // baanhandicap, persoonlijke par, stableford, dagresultaat — wordt opnieuw berekend,
@@ -3768,6 +3866,7 @@ function herplanRonde(id, metScores = false) {
     maat = r;
   }
   r = hoofd;
+  _herplanOnderbroken = false;
   _herplanIds = [String(hoofd.id)].concat(maat ? [String(maat.id)] : []);
 
   // Corrigeren: de scores van BEIDE rondes bewaren, en ze koppelen aan de SPELER — niet
@@ -3887,12 +3986,41 @@ function toonHerplanBanner(r, maat, kwijt) {
 
 function annuleerHerplan() {
   _herplanIds = null;
+  _herplanOnderbroken = false;
   _corrigeerScores = null;
   const el = document.getElementById('herplanBanner');
   if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
   // Ook de notitievelden leegmaken: anders lekt de notitie van de geannuleerde
   // herplanning door naar de volgende ronde die je aanmaakt.
   wisStartNotes();
+}
+
+// Een lopende herplanning geldt alleen zolang de oude ronde(s) er nog staan zoals ze
+// waren: bij opnieuw plannen nog leeg, bij corrigeren nog met scores. Is er intussen
+// iets veranderd (verwijderd, backup teruggezet, toch gaan spelen), dan vervalt hij —
+// anders zou het starten een ronde vervangen die je niet meer bedoelt.
+function controleerHerplan() {
+  if (!_herplanIds) return;
+  const saved = loadSavedRounds();
+  const geldig = _herplanIds.every(id => {
+    const r = saved.find(x => String(x.id) === id);
+    return r && (_corrigeerScores ? true : gespeeldeHoles(r) === 0);
+  }) && (!_corrigeerScores || gespeeldeHoles(saved.find(x => String(x.id) === _herplanIds[0])) > 0);
+  if (!geldig) annuleerHerplan();
+}
+
+// Corrigeren: de scores opnieuw ophalen vlak voor het starten. Nu een correctie blijft
+// staan terwijl je elders in de app bent, kan er intussen een score zijn bijgekomen of
+// gewijzigd; met de stand van het moment van aantikken zou die verloren gaan.
+function ververstCorrigeerScores() {
+  if (!_corrigeerScores || !_herplanIds) return;
+  const saved = loadSavedRounds();
+  const pak = id => {
+    const r = saved.find(x => String(x.id) === id);
+    return r ? (r.holes || []).map(h => ({ score: h.score ?? null, putts: h.putts ?? null })) : null;
+  };
+  _corrigeerScores = { p1: pak(_herplanIds[0]) || _corrigeerScores.p1,
+                       p2: _herplanIds[1] ? (pak(_herplanIds[1]) || _corrigeerScores.p2) : null };
 }
 
 // Wordt aangeroepen zodra de nieuwe ronde is vastgelegd: pas dán verdwijnt de oude.
@@ -3963,6 +4091,9 @@ function startRoundConfirmed() {
     qualifying: !!sel.qualifying,
     started: true,
     note: leesStartNote(1) || undefined,
+    // De ronde onthoudt zelf dat hij op een wedstrijdlus is gespeeld: de lus is tijdelijk
+    // en kan na afloop worden verwijderd.
+    wedstrijdlus: course.wedstrijdlus ? true : undefined,
     holes: buildRoundHoles(course, teeData, phcps),
   };
   // Corrigeren: de scores van de oude ronde overnemen. Hebben de banen niet evenveel
@@ -4010,6 +4141,7 @@ function startRoundConfirmed() {
         date: startDate || todayISO(), time: startTime || null,
         player: name2, hcp: isNaN(hcp2) ? null : hcp2,
         note: leesStartNote(2) || undefined,
+        wedstrijdlus: course.wedstrijdlus ? true : undefined,
         gender: sel2.gender, track: sel.track, tee: sel2.tee,
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
         CR: teeData2.CR, SR: teeData2.SR, PAR: parTee2, chcp: chcp2,
@@ -6167,6 +6299,9 @@ const kpi = (label, val, opts = {}) => `<div class="${opts.cls || ''}" style="te
   // Uitsplitsing per club → banen (inklapbaar, standaard ingeklapt)
   const byClub = {};
   periodRounds.forEach(r => {
+    // Een wedstrijdlus is geen vaste baan: hij hoort niet in het overzicht per baan. In
+    // alle andere cijfers tellen zijn rondes gewoon mee.
+    if (isLusRonde(r)) return;
     const club = r.club ? r.club : 'Onbekende club';
     const track = r.track || 'Onbekend';
     byClub[club] = byClub[club] || {};
@@ -9025,6 +9160,7 @@ function doAdditiveImport(parsed, overslagTekst = '') {
 // 'Volledig herstellen': vervangt het hele archief in één keer door de inhoud van het
 // bestand. Een eventuele actieve ronde hoorde bij de oude data en wordt losgelaten.
 function doFullRestoreImport(parsed) {
+  annuleerHerplan();   // de rondes worden vervangen; een lopende herplanning hoort bij de oude
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
   // Vervangen is onomkeerbaar: eerst controleren of de nieuwe lijst er echt in staat.
@@ -9215,21 +9351,7 @@ function exportCsv(round, btn) {
 // ══ AUTOMATISCH ARCHIVEREN VAN RONDES ════════════════════════════════════
 function saveActiveRound(skipLoadSaved = false) {
   if (!game.started) return;
-  const played = game.holes.filter(h => h.score !== null);
-  const total  = played.reduce((s, h) => s + h.score, 0);
-  const totalStb = game.holes.reduce((s, h) => s + stbFor(h), 0);
-
-  const entry = {
-    id: game.id, date: game.date, time: game.time,
-    player: game.player, hcp: game.hcp, gender: game.gender,
-    track: game.track, tee: game.tee, CR: game.CR, SR: game.SR, PAR: game.PAR, chcp: game.chcp,
-    club: game.club, clubShort: game.clubShort,
-    total, totalStb, holesCount: game.holes.length,
-    currentHole,
-    pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
-    note: game.note || undefined,
-    holes: game.holes.map(h => ({ ...h })),
-  };
+  const entry = buildRoundEntry();
 
   const saved = loadSavedRounds();
   const idx = saved.findIndex(r => r.id === game.id);
@@ -9319,20 +9441,16 @@ function restoreActiveRound() {
     return false;
   }
 
+  // De opgeslagen ronde in zijn geheel overnemen (zie buildRoundEntry): wat hier zou
+  // ontbreken is na het herstellen leeg, en de eerstvolgende score schrijft dat weg.
   game = {
-    id: r.id, date: r.date, time: r.time,
-    player: r.player, hcp: r.hcp, gender: r.gender,
-    track: r.track, tee: r.tee, CR: r.CR, SR: r.SR, PAR: r.PAR, chcp: r.chcp ?? 0,
-    club: r.club, clubShort: r.clubShort,
+    ...r,
+    chcp: r.chcp ?? 0,
     pcc: r.pcc ?? null, sdFinal: r.sdFinal ?? null, qualifying: !!r.qualifying,
     started: true,
-    // De notitie MOET hier mee. Deze opsomming bouwt de lopende ronde opnieuw op nadat
-    // de app uit het geheugen is gehaald; alles wat hier ontbreekt is daarna leeg. En
-    // omdat de eerstvolgende score de ronde opnieuw wegschrijft — met note leeg — was je
-    // notitie dan definitief weg. Dat trof elke ronde die je niet in één keer uitspeelde.
-    note: r.note || undefined,
     holes: r.holes.map(h => ({ ...h })),
   };
+  delete game._justImported;
   currentHole = game.holes.findIndex(h => h.score === null);
   if (currentHole < 0) currentHole = 0;
   if (game.holes.length > 0) game.holes[currentHole]._initScore = game.holes[currentHole].score;
@@ -11218,15 +11336,23 @@ function renderClubCourseList() {
     list.innerHTML = `<div style="font-size:17px;color:var(--muted)">Nog geen banen</div>`;
     return;
   }
-  const groups = { 9: [], 18: [], overig: [] };
+  const groups = { 9: [], 18: [], overig: [], lus: [] };
   names.forEach(name => {
     const n = (data.courses[name].holeIds || []).length;
-    (n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
+    // Wedstrijdlussen staan onder een eigen kop, ongeacht het aantal holes.
+    (data.courses[name].wedstrijdlus ? groups.lus : n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
   });
   const rowHtml = name => {
     const n = (data.courses[name].holeIds || []).length;
+    // Alleen voor wedstrijdlussen: is een bronbaan sinds het maken gewijzigd?
+    const status = data.courses[name].wedstrijdlus ? lusStatus(editorClub, name) : '';
+    const melding = status === 'verouderd'
+      ? `<div data-lus-status="verouderd" style="font-size:15px;font-weight:400;color:var(--orange);margin-top:2px">Een bronbaan is gewijzigd. <span onclick="werkLusBij('${escapeJsString(name)}')" style="text-decoration:underline;cursor:pointer;font-weight:700">Bijwerken</span></div>`
+      : status === 'bronweg'
+      ? `<div data-lus-status="bronweg" style="font-size:15px;font-weight:400;color:var(--muted);margin-top:2px">Een bronbaan bestaat niet meer; deze lus staat op zichzelf.</div>`
+      : '';
     return `<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;margin-top:6px">
-      <span style="flex:1;min-width:0;overflow-wrap:break-word;font-size:17px;font-weight:700">${escapeHtml(name)}</span>
+      <span style="flex:1;min-width:0;overflow-wrap:break-word;font-size:17px;font-weight:700">${escapeHtml(name)}${melding}</span>
       <span style="font-size:15px;color:var(--muted);flex:0 0 auto;white-space:nowrap">${n}h</span>
       <button class="btn-secondary" style="padding:6px 12px;flex:0 0 auto;display:flex;align-items:center" onclick="openCourseEditor('${escapeJsString(name)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
     </div>`;
@@ -11240,7 +11366,7 @@ function renderClubCourseList() {
     </div>
     <div id="clubCourseGroup${key}" class="hidden">${groups[key].map(rowHtml).join('')}</div>`;
   };
-  list.innerHTML = groupHtml(9, '9 holes') + groupHtml(18, '18 holes') + groupHtml('overig', 'Overig');
+  list.innerHTML = groupHtml(9, '9 holes') + groupHtml(18, '18 holes') + groupHtml('overig', 'Overig') + groupHtml('lus', 'Wedstrijdlussen');
 }
 
 function toggleClubCourseGroup(key) {
@@ -12623,6 +12749,14 @@ function applyClubChanges({ newClubName, newShortName }) {
   if (newClubName !== editorClub) {
     CLUBS[newClubName] = { club: newClubName, shortName: newShortName, courses: { ...oldClub.courses } };
     delete CLUBS[editorClub];
+    // De gekozen club, de thuisclub en de favorieten staan op NAAM in de opslag. Zonder
+    // dit wees de app na het hernoemen naar een club die niet meer bestaat: het
+    // startscherm toonde dan geen enkele baan, en je thuisclub was je kwijt.
+    const oudeNaam = editorClub;
+    if (storage.getItem('golf_home_club') === oudeNaam) storage.setItem('golf_home_club', newClubName);
+    const favs = getFavClubs();
+    if (favs.includes(oudeNaam)) storage.setItem('golf_fav_clubs', JSON.stringify(favs.map(f => f === oudeNaam ? newClubName : f)));
+    if (storage.getItem('golf_default_club') === oudeNaam) storage.setItem('golf_default_club', newClubName);
     editorClub = newClubName;
   } else {
     oldClub.club = newClubName;
@@ -12933,16 +13067,274 @@ function validateCourseInput() {
   return { newCourseName, holeIds, tees };
 }
 
+// ══ WEDSTRIJDLUS ════════════════════════════════════════════════════════════
+// Een tijdelijke lus (bv. de maanwedstrijd: S2, S3, S9, A1–A6) samenstellen uit holes
+// van bestaande banen van de club. Wat hier uitkomt is een GEWONE baan — holeIds plus
+// tees met par, SI, CR en SR — met één extra eigenschap: wedstrijdlus: true. Starten,
+// scoren, berekenen en de backup zien dus niets bijzonders. Alleen het aanmaken is nieuw.
+let lusClub = null;      // club waarvoor de lus wordt gemaakt
+let lusBron = null;      // baan waaruit je nu holes kiest
+let lusKeuze = [];       // gekozen holes in speelvolgorde: [{ baan, idx }]
+
+const lusTeeSleutels = c => Object.entries(c?.tees || {})
+  .flatMap(([g, m]) => Object.keys(m || {}).map(t => g + '|' + t));
+
+// De banen waaruit je kunt kiezen. Een baan die niets toevoegt valt weg: de 18-holes
+// combinatie Sandr/Airborne heeft dezelfde holes en tees als Sandr en Airborne samen.
+// Een hole telt als "al aanwezig" wanneer een eerder genoemde baan hem heeft mét alle
+// tees van deze baan — de par-3-variant van Sandr heeft dezelfde holenamen maar een
+// eigen tee, en blijft dus staan.
+function lusBronnen(club) {
+  const cs = CLUBS[club]?.courses || {};
+  const namen = Object.keys(cs).filter(n => !cs[n].wedstrijdlus)
+    .sort((a, b) => ((cs[a].holeIds || []).length - (cs[b].holeIds || []).length) || a.localeCompare(b, 'nl'));
+  const uit = [];
+  namen.forEach(n => {
+    const eigen = lusTeeSleutels(cs[n]);
+    const gedekt = (cs[n].holeIds || []).every(id => uit.some(u => {
+      if (!(cs[u].holeIds || []).includes(id)) return false;
+      const tu = new Set(lusTeeSleutels(cs[u]));
+      return eigen.every(t => tu.has(t));
+    }));
+    if (!gedekt) uit.push(n);
+  });
+  return uit;
+}
+
+// Rekent de lus uit: holenamen, en per gezamenlijke tee de par, SI, CR en SR.
+//  - Par per hole komt van de bronbaan.
+//  - SI wordt opnieuw genummerd (1..n) op volgorde van moeilijkheid. Twee bronbanen
+//    kunnen dezelfde SI hebben en een baan mag geen dubbele SI bevatten. De volgorde is
+//    de rang van de hole binnen zijn eigen baan, zodat een 9- en een 18-holesbaan
+//    eerlijk naast elkaar staan.
+//  - CR en SR zijn een SCHATTING: voor zo'n lus bestaat geen officiële rating. CR is de
+//    CR van elke bronbaan naar rato van het aantal gebruikte holes, bijgesteld met het
+//    verschil tussen de echte par van de lus en de par naar rato. SR is het gewogen
+//    gemiddelde.
+function berekenLus(club, keuze) {
+  const cs = CLUBS[club]?.courses || {};
+  const n = keuze.length;
+  const holeIds = keuze.map(k => cs[k.baan].holeIds[k.idx]);
+  const banen = [...new Set(keuze.map(k => k.baan))];
+  let sleutels = banen.length ? lusTeeSleutels(cs[banen[0]]) : [];
+  banen.slice(1).forEach(b => { const s = new Set(lusTeeSleutels(cs[b])); sleutels = sleutels.filter(t => s.has(t)); });
+  const tees = {};
+  sleutels.forEach(sleutel => {
+    const [g, t] = sleutel.split('|');
+    const bronTee = b => cs[b].tees[g][t];
+    const rij = keuze.map((k, volg) => {
+      const th = bronTee(k.baan).holes || [];
+      const h = th[k.idx] || {};
+      const rang = th.filter(x => x.si < h.si).length;      // 0 = moeilijkste van zijn baan
+      return { par: h.par, bronSi: h.si, maat: (rang + 0.5) / (th.length || 1), volg };
+    });
+    [...rij].sort((a, b) => (a.maat - b.maat) || (a.bronSi - b.bronSi) || (a.volg - b.volg))
+      .forEach((h, i) => { h.si = i + 1; });
+    const par = rij.reduce((s, h) => s + (h.par || 0), 0);
+    let cr = 0, sr = 0, parNaarRato = 0;
+    banen.forEach(b => {
+      const aantal = keuze.filter(k => k.baan === b).length;
+      const totaal = (cs[b].holeIds || []).length || 1;
+      const bt = bronTee(b);
+      cr += bt.CR * aantal / totaal;
+      parNaarRato += teePar(bt) * aantal / totaal;
+      sr += bt.SR * aantal / (n || 1);
+    });
+    if (!tees[g]) tees[g] = {};
+    tees[g][t] = {
+      CR: Math.round((cr + (par - parNaarRato)) * 10) / 10,
+      SR: Math.round(sr),
+      holes: rij.map(h => ({ par: h.par, si: h.si })),
+    };
+  });
+  return { holeIds, tees, banen, aantalTees: sleutels.length };
+}
+
+// Vingerafdruk van wat de berekening oplevert: holenamen en alle tees.
+function lusStempel(lus) {
+  const tekst = JSON.stringify([lus.holeIds, lus.tees]);
+  let h = 5381;
+  for (let i = 0; i < tekst.length; i++) h = ((h << 5) + h + tekst.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// Is de lus nog in lijn met zijn bronbanen? Een lus is een KOPIE: past de club later de
+// par, SI, CR of SR van een bronbaan aan, dan verandert de lus niet mee.
+//   'actueel'    de bronbanen geven nog dezelfde uitkomst als toen
+//   'verouderd'  een bronbaan is gewijzigd; de lus kan worden bijgewerkt
+//   'bronweg'    een bronbaan of hole bestaat niet meer; bijwerken kan niet
+//   'onbekend'   de lus heeft geen herkomst (met de hand gemaakt of ingelezen)
+// Vergeleken wordt met de stempel van het MAKEN, niet met de huidige lus: wie zelf de CR
+// of SR van de lus aanpast (officiële waarden) maakt hem daarmee niet 'verouderd'.
+function lusStatus(club, naam) {
+  const cs = CLUBS[club]?.courses || {};
+  const lus = cs[naam];
+  if (!lus?.wedstrijdlus || !Array.isArray(lus.bron) || !lus.bronStempel) return 'onbekend';
+  const compleet = lus.bron.every((k, i) => cs[k.baan] && !cs[k.baan].wedstrijdlus && cs[k.baan].holeIds?.[k.idx] === lus.holeIds[i]);
+  if (!compleet) return 'bronweg';
+  const nu = berekenLus(club, lus.bron);
+  if (!nu.aantalTees) return 'bronweg';
+  return lusStempel(nu) === lus.bronStempel ? 'actueel' : 'verouderd';
+}
+
+// De lus opnieuw berekenen uit zijn bronbanen. Dit wijzigt alleen de lus zelf. Rondes die
+// al op de lus zijn gespeeld of gestart bewaren hun eigen par, SI, CR en SR en veranderen
+// niet — een ronde ligt vast zodra je begint.
+function werkLusBij(naam) {
+  const club = CLUBS[editorClub];
+  if (!club || lusStatus(editorClub, naam) !== 'verouderd') return;
+  toonKeuzeModal('Wedstrijdlus bijwerken', 'orange',
+    `"${naam}" wordt opnieuw berekend uit de bronbanen: par, SI, CR en SR. Heb je zelf de CR of SR van de lus aangepast, dan vervalt dat. `
+    + 'Rondes die je al op deze lus hebt gespeeld veranderen niet.',
+    [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
+     { tekst: 'Bijwerken', actie: () => {
+         if (clubsGewijzigdElders) { showInfoModal('Niet bijgewerkt', 'De clubgegevens zijn in een ander tabblad gewijzigd. Ververs eerst de pagina.', 'orange'); return; }
+         const oud = club.courses[naam];
+         const nu = berekenLus(editorClub, oud.bron);
+         club.courses[naam] = { ...oud, holeIds: nu.holeIds, tees: nu.tees, bronStempel: lusStempel(nu) };
+         rebuildCourseLookup(false);
+         if (!saveClubsToStorage()) {
+           club.courses[naam] = oud; rebuildCourseLookup(false);
+           showInfoModal('Niet bijgewerkt', 'Opslaan mislukt — geheugen vol of geblokkeerd.', 'red');
+         }
+         rebuildAll();
+         renderClubCourseList();
+       } }]);
+}
+
+function openLusMaker() {
+  if (!editorClub || !CLUBS[editorClub]) return;
+  lusClub = editorClub;
+  lusKeuze = [];
+  lusBron = lusBronnen(lusClub)[0] || null;
+  document.getElementById('lusNaam').value = '';
+  toonLusStatus('');
+  renderLusMaker();
+  document.getElementById('lusOverlay').classList.remove('hidden');
+}
+
+function sluitLusMaker() {
+  document.getElementById('lusOverlay').classList.add('hidden');
+  lusClub = null; lusBron = null; lusKeuze = [];
+}
+
+function toonLusStatus(tekst) {
+  const el = document.getElementById('lusStatus');
+  if (!el) return;
+  el.textContent = tekst || '';
+  el.classList.toggle('hidden', !tekst);
+}
+
+function kiesLusBron(naam) { lusBron = naam; renderLusMaker(); }
+
+// Een hole aantikken voegt hem achteraan toe; nog een keer haalt hem weg.
+function tikLusHole(idx) {
+  const cs = CLUBS[lusClub]?.courses || {};
+  const al = lusKeuze.findIndex(k => k.baan === lusBron && k.idx === idx);
+  toonLusStatus('');
+  if (al >= 0) lusKeuze.splice(al, 1);
+  else {
+    const id = cs[lusBron].holeIds[idx];
+    // Een baan mag geen twee holes met dezelfde naam hebben. Sandr en Sandr (P3) delen
+    // hun holenamen, dus dezelfde hole uit beide kiezen kan niet.
+    if (lusKeuze.some(k => cs[k.baan].holeIds[k.idx] === id)) { toonLusStatus(`Hole ${id} zit al in de lus`); return; }
+    if (lusKeuze.length >= 18) { toonLusStatus('Een lus heeft hooguit 18 holes'); return; }
+    lusKeuze.push({ baan: lusBron, idx });
+  }
+  renderLusMaker();
+}
+
+function renderLusMaker() {
+  const el = document.getElementById('lusInhoud');
+  const cs = CLUBS[lusClub]?.courses || {};
+  if (!el) return;
+  const bronnen = lusBronnen(lusClub);
+  if (!bronnen.length) { el.innerHTML = '<div style="font-size:17px;color:var(--muted)">Deze club heeft nog geen banen om uit te kiezen.</div>'; return; }
+  const n = lusKeuze.length;
+  const lus = berekenLus(lusClub, lusKeuze);
+  const kop = t => `<div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin:0 0 6px">${t}</div>`;
+  const chips = n
+    ? lus.holeIds.map((id, i) => `<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:11px;color:var(--muted)">${i + 1}</span><span style="min-width:36px;padding:5px 6px;border-radius:8px;background:var(--green-light);color:var(--green-deep);font-weight:800;font-size:15px;text-align:center">${escapeHtml(id)}</span></div>`).join('')
+    : '<span style="font-size:17px;color:var(--muted)">Nog geen holes gekozen</span>';
+  const bronKnoppen = bronnen.map(b => `<button class="gender-btn${b === lusBron ? ' active' : ''}" style="flex:1 1 auto;padding:8px 10px;font-size:16px" data-lus-bron="${escapeHtml(b)}" onclick="kiesLusBron(this.dataset.lusBron)">${escapeHtml(b)}</button>`).join('');
+  const holes = (cs[lusBron]?.holeIds || []).map((id, i) => {
+    const plek = lusKeuze.findIndex(k => k.baan === lusBron && k.idx === i);
+    const aan = plek >= 0;
+    return `<button class="btn-secondary" data-lus-hole="${i}" onclick="tikLusHole(${i})" style="padding:9px 0;font-size:15px;font-weight:700;position:relative;${aan ? 'background:rgba(201,168,76,.18);border-color:var(--gold);color:var(--gold)' : ''}">${escapeHtml(id)}${aan ? `<span style="position:absolute;top:0;right:3px;font-size:10px;color:var(--muted)">${plek + 1}</span>` : ''}</button>`;
+  }).join('');
+  let uitkomst;
+  if (!n) uitkomst = '<div style="font-size:17px;color:var(--muted)">Kies de holes van de lus.</div>';
+  else if (!lus.aantalTees) uitkomst = '<div style="font-size:17px;color:var(--red)">De gekozen banen hebben geen gezamenlijke tee.</div>';
+  else {
+    const regels = Object.entries(lus.tees).flatMap(([g, m]) => Object.entries(m).map(([t, v]) =>
+      `<span>${escapeHtml(g)} ${escapeHtml(t)}</span><span>par ${teePar(v)}</span><span>CR ${String(v.CR.toFixed(1)).replace('.', ',')}</span><span>SR ${v.SR}</span>`)).join('');
+    uitkomst = `<div style="display:grid;grid-template-columns:1fr auto auto auto;column-gap:12px;font-size:16px;color:var(--white);line-height:1.5;white-space:nowrap">${regels}</div>`
+      + `<div style="font-size:15px;color:var(--orange);margin-top:6px">CR en SR zijn geschat uit ${escapeHtml(lus.banen.join(' en '))}. Je kunt ze daarna in de baan aanpassen.</div>`;
+  }
+  const telling = `${n} gekozen`;
+  el.innerHTML =
+      kop(`Speelvolgorde <span id="lusTelling" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">· ${telling}</span>`)
+    + `<div id="lusChips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px">${chips}</div>`
+    + kop('Kies uit baan')
+    + `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${bronKnoppen}</div>`
+    + `<div id="lusHoles" style="display:grid;grid-template-columns:repeat(9,1fr);gap:4px">${holes}</div>`
+    + '<div style="font-size:15px;color:var(--muted);margin:6px 0 14px">Tik een hole aan om hem toe te voegen; nog een keer om hem weg te halen.</div>'
+    + kop('Uitkomst') + `<div id="lusUitkomst">${uitkomst}</div>`;
+}
+
+function bewaarLus() {
+  const club = CLUBS[lusClub];
+  if (!club) { toonLusStatus('De bijbehorende club bestaat niet meer'); return; }
+  if (clubsGewijzigdElders) { toonLusStatus('De clubgegevens zijn in een ander tabblad gewijzigd. Ververs eerst de pagina.'); return; }
+  const naam = document.getElementById('lusNaam').value.trim();
+  if (!naam) { toonLusStatus('Vul een naam in'); return; }
+  if (club.courses[naam]) { toonLusStatus(`Baan "${naam}" bestaat al`); return; }
+  if (!lusKeuze.length) { toonLusStatus('Kies minstens één hole'); return; }
+  const lus = berekenLus(lusClub, lusKeuze);
+  if (!lus.aantalTees) { toonLusStatus('De gekozen banen hebben geen gezamenlijke tee'); return; }
+  // 'bron' onthoudt uit welke holes de lus is samengesteld, 'bronStempel' hoe de uitkomst
+  // er toen uitzag. Daarmee is later te zien of een bronbaan sindsdien is aangepast.
+  const nieuw = { holeIds: lus.holeIds, tees: lus.tees, wedstrijdlus: true,
+                  bron: lusKeuze.map(k => ({ baan: k.baan, idx: k.idx })), bronStempel: lusStempel(lus) };
+  // Vangnet: dezelfde controle als bij het inlezen van een clubbestand, op alleen deze
+  // lus. Keurt die hem af, dan komt hij er niet in — liever een melding dan een baan
+  // die later hapert.
+  const fout = validateImportedClubData({ club: club.club, courses: { [naam]: nieuw } });
+  if (fout) { toonLusStatus(fout); return; }
+  club.courses[naam] = nieuw;
+  rebuildCourseLookup(false);
+  if (!saveClubsToStorage()) {
+    delete club.courses[naam];
+    rebuildCourseLookup(false); rebuildAll();
+    toonLusStatus('Opslaan mislukt — geheugen vol of geblokkeerd');
+    return;
+  }
+  rebuildAll();
+  sluitLusMaker();
+  renderClubCourseList();
+}
+
 function applyCourseChanges({ newCourseName, holeIds, tees }) {
   const club = CLUBS[editorClub];
+  // De baaneditor kent alleen holes en tees. De markering 'wedstrijdlus' moet een
+  // bewerking overleven, anders wordt de lus na één keer opslaan een gewone baan.
+  const oud = club.courses[editorOrigCourseName];
+  const wasLus = !!oud?.wedstrijdlus;
   if (editorOrigCourseName && editorOrigCourseName !== newCourseName) {
     delete club.courses[editorOrigCourseName];
+    // Wedstrijdlussen verwijzen op NAAM naar hun bronbanen; die verwijzing volgt de nieuwe naam.
+    Object.values(club.courses).forEach(c => (c.bron || []).forEach(k => { if (k.baan === editorOrigCourseName) k.baan = newCourseName; }));
   }
   // De baan bewaart alleen de holenamen; par en SI staan per tee (die kwamen al zo
   // uit validateCourseInput).
-  club.courses[newCourseName] = { holeIds, tees };
+  const nieuw = wasLus ? { holeIds, tees, wedstrijdlus: true } : { holeIds, tees };
+  // De herkomst van een lus blijft alleen geldig zolang de holes dezelfde zijn.
+  if (wasLus && oud.bron && oud.bronStempel && JSON.stringify(oud.holeIds) === JSON.stringify(holeIds)) {
+    nieuw.bron = oud.bron; nieuw.bronStempel = oud.bronStempel;
+  }
+  club.courses[newCourseName] = nieuw;
 
-  rebuildCourseLookup();
+  rebuildCourseLookup(false);   // het opslaan volgt hieronder, één keer
   if (!COURSES[sel.track]) {
     const fallback = Object.keys(COURSES)[0];
     if (fallback) sel.track = fallback;
@@ -13170,6 +13562,15 @@ function openRoundInfoModal(idx) {
 // maar puur voor dit veld — geen WHS-herberekeningen, dit is enkel voor het rechtzetten
 // van administratiefoutjes achteraf.
 
+// Is dit de ronde die nu in het geheugen staat (op het scorescherm)? Bij twee spelers is
+// dat de ronde van speler 1 OF die van speler 2. De bewerkschermen keken eerder alleen
+// naar golf_active_id, en dat is altijd speler 1. Stond speler 2 voor, dan ging het mis:
+// bewerkte je ZIJN ronde, dan schreef de eerstvolgende score de oude notitie terug; en
+// bewerkte je die van speler 1, dan kwamen naam en notitie op de ronde van speler 2.
+function staatInGeheugen(round) {
+  return !!(game.started && round && String(round.id) === String(game.id));
+}
+
 function doOpenRoundInfoModal(idx) {
   const saved = loadSavedRounds();
   const round = saved[idx];
@@ -13179,8 +13580,7 @@ function doOpenRoundInfoModal(idx) {
   document.getElementById('editDateInput').value = round.date || '';
   document.getElementById('editTimeInput').value = round.time || '';
   document.getElementById('editPlayerInput').value = round.player || '';
-  const activeId = storage.getItem('golf_active_id');
-  const isActive = activeId && String(round.id) === activeId;
+  const isActive = staatInGeheugen(round);
   const qSrc = isActive ? (game.qualifying ?? round.qualifying) : round.qualifying;
   document.getElementById('editQualifyToggle').checked = !!qSrc;
   document.getElementById('editNoteInput').value = (isActive ? (game.note ?? round.note) : round.note) || '';
@@ -13195,7 +13595,7 @@ function openRoundResultModal(idx) {
   const activeId = storage.getItem('golf_active_id');
   const isActive = activeId && String(round.id) === activeId;
   const isDone = isRondeAf(round);
-  const sdVal = isActive ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
+  const sdVal = staatInGeheugen(round) ? (game.sdFinal ?? round.sdFinal) : round.sdFinal;
   const hasFixedSd = sdVal != null && sdVal !== '' && isFinite(parseFloat(sdVal));
   if (isDone && !isActive && hasFixedSd) {
     showConfirmModal(
@@ -13217,8 +13617,7 @@ function doOpenRoundResultModal(idx) {
   if (!round) return;
   _roundInfoIdx = idx;
   _roundInfoOrig = { date: round.date, time: round.time, player: round.player };
-  const activeId = storage.getItem('golf_active_id');
-  const isActive = activeId && String(round.id) === activeId;
+  const isActive = staatInGeheugen(round);
   _editPccVal = (() => {
     const src = isActive ? (game.pcc ?? round.pcc) : round.pcc;
     const is9 = (round.holes?.length ?? 18) === 9;
@@ -13457,8 +13856,16 @@ function confirmRoundInfo() {
 
 function applyRoundInfo(saved, round, date, time) {
   const dateTimeChanged = round.date !== date || (round.time || '') !== (time || '');
-  // Verbreek koppeling alleen als datum/tijd daadwerkelijk wijzigt
-  if (game2Id && dateTimeChanged) {
+  // Verbreek de koppeling alleen als datum of tijd wijzigt van een van de twee LOPENDE
+  // rondes. Eerder gebeurde dit bij elke ronde: wie de datum van een oude, losse ronde
+  // verbeterde, ontkoppelde daarmee stilzwijgend de ronde die hij aan het spelen was.
+  if (game2Id && dateTimeChanged && isLopendeRonde(round)) {
+    // Staat speler 2 op het scherm, dan eerst terug naar speler 1. Zonder dit bleef de
+    // ronde van speler 2 in het geheugen staan terwijl de app die van speler 1 als
+    // actief aanwees; de eerstvolgende score maakte dan stilzwijgend speler 2 actief.
+    // Nu is het na het ontkoppelen altijd hetzelfde: speler 1 actief en op het scherm,
+    // de ronde van speler 2 losgelaten.
+    if (activePlayer === 2) switchToPlayer(1);
     game2Id = null;
     activePlayer = 1;
     storage.removeItem('golf_game2_id');
@@ -13474,7 +13881,7 @@ function applyRoundInfo(saved, round, date, time) {
   if (noteVal) round.note = noteVal; else delete round.note;
   const activeId = storage.getItem('golf_active_id');
   setRoundsAndMark( JSON.stringify(saved));
-  if (activeId && String(round.id) === activeId) {
+  if (staatInGeheugen(round)) {
     game.date = date;
     game.time = time;
     game.player = player;
@@ -13482,7 +13889,12 @@ function applyRoundInfo(saved, round, date, time) {
     game.note = round.note;
     setRoundsAndMark( JSON.stringify(saved));
     setHeaderInfo(game.track, game.tee, game.chcp);
-    recalcPpar();
+    // Hier stond een herberekening van de slagen per hole. Die rekende met wat er op het
+    // STARTSCHERM stond (baan, tee, handicap), niet met de ronde zelf. Stond daar iets
+    // anders — een andere club, of een handicap die je even probeerde — dan kreeg de
+    // lopende ronde na 'Ronde bewerken' andere slagen per hole, terwijl de baanhandicap
+    // gelijk bleef. Bewerken wijzigt speler, datum, tijd, qualifying en notitie; geen van
+    // die raakt de slagen. De slagen van een ronde liggen vast vanaf de start.
     updateHeader();
     updateHeaderScore();
     updatePlayerSwitchBar();
@@ -13522,14 +13934,14 @@ function confirmRoundResult() {
   round.sdFinal = (sdRaw === '' || isNaN(parseFloat(sdRaw))) ? null : Math.round(parseFloat(sdRaw) * 10) / 10;
   const resNoteVal = document.getElementById('resultNoteInput').value.trim();
   if (resNoteVal) round.note = resNoteVal; else delete round.note;
-  const activeId = storage.getItem('golf_active_id');
-  if (activeId && String(round.id) === activeId) {
+  const inGeheugen = staatInGeheugen(round);
+  if (inGeheugen) {
     game.pcc = round.pcc;
     game.sdFinal = round.sdFinal;
     game.note = round.note;
   }
   setRoundsAndMark( JSON.stringify(saved));
-  if (activeId && String(round.id) === activeId) {
+  if (inGeheugen) {
     saveActiveRound(false);
   }
   closeRoundResultModal();
@@ -13718,7 +14130,7 @@ async function doResetAll() {
    'golf_round_limit','golf_min_rounds_stat','golf_archive_years_closed','golf_backup_fingerprint', 'golf_set_sections', 'golf_auto_next', 'golf_track_putts','golf_putts_stats', 'golf_backup_reminder_days','golf_backup_reminder_rounds',
    'golf_actions_always_visible',
    'golf_lowhi_graph',
-   'golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
+   'golf_lussen_open','golf_stats_grp_handicap','golf_stats_grp_prestaties','golf_stats_grp_banen','golf_stats_handicap_always',
    'golf_low_hi','golf_theme','golf_scorecard_symbols','golf_home_club',
    // De clubbackup-stand hoort bij de GEGEVENS en gaat dus mee: blijft hij staan, dan
    // vergelijkt de app straks een verse clublijst met de vingerafdruk van de oude.
@@ -13881,10 +14293,10 @@ function buildClubList() {
     });
     const shortName = CLUBS[club]?.shortName || '';
     const clubKey = club.replace(/\W/g, '_');
-    const courseGroups = { 9: [], 18: [], overig: [] };
+    const courseGroups = { 9: [], 18: [], overig: [], lus: [] };
     sortedCourseEntries.forEach(([name, data]) => {
       const n = (data.holeIds || []).length;
-      (n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
+      (data.wedstrijdlus ? courseGroups.lus : n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
     });
     const courseRowHtml = ([name, data]) => {
       const caBtn = caCounts.get(club + '||' + name)
@@ -13902,7 +14314,7 @@ function buildClubList() {
       </div>
       <div id="${gid}" class="hidden" style="display:flex;flex-direction:column;gap:2px">${courseGroups[key].map(courseRowHtml).join('')}</div>`;
     };
-    const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig');
+    const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig') + courseSubGroupHtml('lus', 'Wedstrijdlussen');
     return `
     <div class="card" style="margin-bottom:10px${isActive ? ';border-left:3px solid var(--gold);border-right:3px solid var(--gold)' : ''}">
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:${isActive ? 'var(--gold)' : 'var(--white)'};cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">${escapeHtml(club)}</div>
@@ -14788,7 +15200,13 @@ function nav(id) {
   const screenEl = document.getElementById('screen-' + id);
   if (screenEl) screenEl.classList.add('active');
   if (id !== 'score') document.getElementById('puttOverlay')?.remove();
-  if (id !== 'setup') annuleerHerplan();
+  // Opnieuw plannen of corrigeren blijft staan als je het startscherm verlaat. Eerder
+  // brak de app het hier stil af: de notitie en de melding verdwenen, de rest bleef
+  // ingevuld. Wie tussendoor naar Instellingen ging (een clubbestand inlezen) kreeg
+  // daarna 'Dubbele datum & tijd', verwijderde de oude ronde — en was zijn notitie kwijt.
+  // Alleen als de oude ronde er niet meer is, of intussen is veranderd, vervalt het.
+  controleerHerplan();
+  if (_herplanIds && id !== 'setup') _herplanOnderbroken = true;
   refreshTabDot();
   if (id === 'settings') {
     // De backupstand staat in het blokje bovenaan, zichtbaar op elk tabblad — daarom
@@ -15053,7 +15471,7 @@ function switchSettingsTab(tab) {
 function updateStorageSettingsUI(rondes) {
   const saved = rondes || loadSavedRounds();
   const nonQEl = document.getElementById('nonQCount');
-  const nonQCount = saved.filter(r => !r.qualifying).length;
+  const nonQCount = saved.filter(r => !r.qualifying && !isLopendeRonde(r)).length;
   if (nonQEl) nonQEl.textContent = nonQCount;
   const purgeNonQBtn = document.getElementById('purgeNonQBtn');
   if (purgeNonQBtn) purgeNonQBtn.disabled = nonQCount === 0;
@@ -15064,7 +15482,7 @@ function updateStorageSettingsUI(rondes) {
 function confirmPurgeNonQ(btn) {
   const msg = document.getElementById('purgeNonQMsg');
   if (btn.dataset.confirm !== '1') {
-    const n = loadSavedRounds().filter(r => !r.qualifying).length;
+    const n = loadSavedRounds().filter(r => !r.qualifying && !isLopendeRonde(r)).length;
     if (n === 0) return;
     btn.dataset.confirm = '1';
     msg?.classList.remove('hidden');
@@ -15081,13 +15499,15 @@ function confirmPurgeNonQ(btn) {
   btn.dataset.confirm = '0';
   msg?.classList.add('hidden');
   _reflowMoreFull(btn);
-  const n = loadSavedRounds().filter(r => !r.qualifying).length;
+  const n = loadSavedRounds().filter(r => !r.qualifying && !isLopendeRonde(r)).length;
   showDangerModal(
     'Niet-qualifying rondes verwijderen',
     `Alle ${n} niet-qualifying ${n === 1 ? 'ronde wordt' : 'rondes worden'} definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
     'Verwijderen',
     () => {
-      const saved = loadSavedRounds().filter(r => r.qualifying);
+      // Een lopende ronde is standaard niet-qualifying en werd hier meegewist; de ronde
+      // van speler 2 was dan definitief weg.
+      const saved = loadSavedRounds().filter(r => r.qualifying || isLopendeRonde(r));
       metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
       loadSaved();
       updateStorageSettingsUI();
@@ -15099,10 +15519,21 @@ function confirmPurgeNonQ(btn) {
 // Rondes van elke andere speler dan de hoofdspeler (Start-scherm) verwijderen. Toont de
 // betrokken naam/namen expliciet in de bevestiging — juist om te voorkomen dat per
 // ongeluk de verkeerde speler wordt opgeschoond.
+// Is dit een ronde die nu loopt: de actieve ronde, of de ronde van speler 2 die eraan
+// gekoppeld is? Zulke rondes ruim je niet op met een opschoonknop en ontkoppel je niet
+// vanuit een andere ronde. Verwijderen kan altijd bij de ronde zelf.
+function isLopendeRonde(r) {
+  if (!r) return false;
+  const id = String(r.id);
+  return id === storage.getItem('golf_active_id') || id === storage.getItem('golf_game2_id');
+}
+
 function otherPlayerRounds() {
   const main = startPlayerName();
   if (!main) return [];
-  return loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() !== main.toLowerCase());
+  // De lopende ronde van speler 2 hoort er niet bij: die werd hier meegewist, waarna de
+  // koppeling naar een ronde wees die niet meer bestond.
+  return loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() !== main.toLowerCase() && !isLopendeRonde(r));
 }
 
 function updateOtherPlayerCleanupUI() {
@@ -15158,7 +15589,7 @@ function confirmDeleteOtherPlayers(btn) {
     `Rondes van ${names.join(', ')} (${rounds.length} in totaal) worden definitief verwijderd. Rondes van ${main} blijven behouden. Dit kan niet ongedaan worden gemaakt.`,
     'Verwijderen',
     () => {
-      const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase());
+      const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase() || isLopendeRonde(r));
       metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
       loadSaved();
       updateStorageSettingsUI();
@@ -16043,6 +16474,15 @@ document.addEventListener('focusin', (e) => {
   // eigen par en SI heeft: het tabblad dat als laatste opslaat, schrijft de hele baan
   // weg — inclusief de tees die het andere tabblad net had aangepast.
   window.addEventListener('storage', e => {
+    // Een ander tabblad heeft een andere club gekozen. De banenlijst hoort bij de gekozen
+    // club; zonder dit toonde dit tabblad de banen van de vorige club tot je ververste.
+    // Alleen het startscherm verandert: rondes, lopend of afgerond, blijven ongemoeid.
+    if (e.key === 'golf_default_club' && e.newValue !== e.oldValue) {
+      rebuildCourseLookup(false);
+      if (!COURSES[sel.track]) { sel.track = null; sel.tee = null; sel._teeUserSelected = false; sel.chcpOverride = null; }
+      rebuildStartScreen();
+      buildClubList();
+    }
     if (e.key === 'golf_rounds' && e.newValue !== e.oldValue) {
       showInfoModal('Bijgewerkt in ander tabblad',
         'De rondes zijn in een ander tabblad gewijzigd. Ververs deze pagina om de laatste versie te zien; anders kun je wijzigingen overschrijven.');
@@ -16336,6 +16776,25 @@ document.addEventListener('focusin', (e) => {
     <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px">Banen</div>
     <div id="clubCourseList" style="display:flex;flex-direction:column;gap:8px"></div>
     <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-top:10px;color:var(--green-light);display:flex;align-items:center;justify-content:center;gap:8px" onclick="openCourseEditor('__new__')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nieuwe baan</button>
+    <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-top:10px;color:var(--green-light);display:flex;align-items:center;justify-content:center;gap:8px" id="lusMaakKnop" onclick="openLusMaker()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nieuwe wedstrijdlus</button>
+  </div>
+</div>
+
+<!-- Wedstrijdlus maken: een tijdelijke lus samenstellen uit holes van bestaande banen.
+     Het resultaat is een GEWONE baan (holeIds + tees) met de markering wedstrijdlus. -->
+<div id="lusOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:450;overflow-y:auto;padding:12px">
+  <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Nieuwe wedstrijdlus</h2>
+      <button class="btn-secondary" style="padding:8px 14px" onclick="sluitLusMaker()" aria-label="Sluiten"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label for="lusNaam">Naam</label>
+      <input id="lusNaam" placeholder="Naam van de lus" maxlength="60" oninput="this.value=this.value.replace(/[^a-zA-Z0-9 \-_()\[\]+&]/g,'')" onblur="this.value=this.value.trim()">
+    </div>
+    <div id="lusInhoud"></div>
+    <div id="lusStatus" class="hidden" style="font-size:17px;font-weight:700;text-align:center;color:var(--red);margin:10px 0 0"></div>
+    <button class="btn-primary" style="width:100%;margin-top:14px" onclick="bewaarLus()">Opslaan als wedstrijdlus</button>
   </div>
 </div>
 
