@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-108</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-10K</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1685,8 +1685,21 @@ function roundHasWarning(r) {
   // dan waarschuwen voor een ontbrekend dagresultaat gaat over iets wat je niet kunt
   // zien en niet kunt oplossen.
   if (!whsVolgen()) return false;
+  // Alleen voor de speler bovenin Start (13527DA-10D): alleen voor hem wordt een handicap
+  // berekend, dus alleen bij zijn rondes doet een ontbrekend dagresultaat ertoe. Een
+  // ronde van speler 2 of van een ander krijgt geen driehoekje en telt niet mee in
+  // 'N zonder dagresultaat'. Vaststellen kan bij zo'n ronde nog wel.
+  if (!r || r.player !== startPlayerName()) return false;
+  // Ook niet bij een ronde in 'Geïmporteerd' zolang je niet op 'Sla op' hebt getikt
+  // (13527DA-10I): die telt nog niet mee voor je handicap (zie meetelFilter), dus een
+  // ontbrekend dagresultaat doet er dan nog niet toe.
+  if (r._justImported) return false;
+  // En niet bij een ronde die nog open staat (13527DA-10K), ook als alle holes al zijn
+  // ingevuld: het driehoekje komt pas bij het opslaan, tegelijk met de handicap en de
+  // backupmelding. Dat geldt ook voor een oude ronde die je opnieuw hebt geladen.
   const activeId = storage.getItem('golf_active_id');
   const isActiveR = (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id);
+  if (isActiveR) return false;
   const isPlayer2ActiveR = game2Id && r.id === game2Id;
   const isCurrentPlayerR = (isPlayer2ActiveR && activePlayer===2) || (!isPlayer2ActiveR && isActiveR && activePlayer===1);
   const qualifying = isCurrentPlayerR ? (game.qualifying ?? r.qualifying) : r.qualifying;
@@ -1896,9 +1909,8 @@ function computeEsrAdjustmentsIncremental(chronoRounds) {
 // op de opgeslagen rondes gaf dan het antwoord voor de ECHTE lijst terug, en dus een
 // verkeerde doorrekening. Zie ook effectiveLowHi.
 function esrMapFor(player, allRounds) {
-  const isDoneR = r => isRondeAf(r);
   const chrono = allRounds
-    .filter(r => r.player === player && r.qualifying && isDoneR(r))
+    .filter(meetelFilter(player))
     .map(r => {
       const e = effectiveSD(r);
       const sd = e ? e.value : null;
@@ -1960,10 +1972,8 @@ function whsHandicap(rounds, lowHi = null, esrMap = null) {
 
 // Verzamelt de laatste 20 afgeronde qualifying rondes van een speler (nieuwste eerst).
 function last20Qualifying(player, allRounds, activeId, game2Id_) {
-  const isDone = r => isRondeAf(r);
   return allRounds
-    .filter(r => r.player === player && r.qualifying && isDone(r)
-      && !(game2Id_ && r.id === game2Id_))
+    .filter(meetelFilter(player))
     .sort((a, b) => {
       const da = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`);
       const db = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`);
@@ -1981,8 +1991,7 @@ function last20Qualifying(player, allRounds, activeId, game2Id_) {
 // zodat een ervaren speler die net begint met de app niet meteen tegen een voorbarige
 // waarschuwing aanloopt op basis van een paar net-gelogde rondes.
 function lowHiCheckStatus(player, allRounds) {
-  const isDone = r => isRondeAf(r);
-  const qual = allRounds.filter(r => r.player === player && r.qualifying && isDone(r));
+  const qual = allRounds.filter(meetelFilter(player));
   const roundsCount = qual.length;
   let daysSinceFirst = 0;
   if (roundsCount) {
@@ -2011,9 +2020,8 @@ function currentOfficialHcp(player, allRounds) {
 // opleverde — nodig om dat punt in de verloopgrafiek te kunnen markeren. derivedLowHi()
 // zelf blijft een dunne wrapper hieromheen, zodat bestaande aanroepen ongewijzigd werken.
 function derivedLowHiDetailed(player, allRounds) {
-  const isDone = r => isRondeAf(r);
   const qual = allRounds
-    .filter(r => r.player === player && r.qualifying && isDone(r))
+    .filter(meetelFilter(player))
     .sort((a, b) => {
       const da = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`);
       const db = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`);
@@ -4186,6 +4194,8 @@ function startRoundConfirmed() {
 // 1e tik -> springt (rood) naar de waarde van bij selectie; 2e tik binnen 2s -> bevestigt;
 // geen 2e tik -> springt terug naar de gewijzigde waarde.
 let scoreTapHole = null, scoreTapChanged = null, scoreTapTimeout = null;
+// De putts van vóór een voorlopige wijziging: verloopt die, dan komen ze mee terug.
+let scoreTapPutts = null;
 let plusHoldTimer = null, plusHoldFired = false;
 let minusHoldTimer = null, minusHoldFired = false;
 const PLUS_HOLD_MS = 500;
@@ -4228,6 +4238,7 @@ function armScoreChange(i, newValue) {
   if (scoreTapHole !== null) clearScoreTap(true);
 
   scoreTapChanged = h.score;
+  scoreTapPutts = h.putts ?? null;
   scoreTapHole = i;
   h.score = newValue;
   syncPuttsWithScore(i);
@@ -4378,8 +4389,17 @@ function clearScoreTap(revert) {
   // Was deze hole nog leeg vóór de wijziging? Alleen dán doorspringen — bij een
   // correctie op een al ingevulde hole blijf je staan, anders wordt corrigeren onwerkbaar.
   const wasLeeg = scoreTapChanged === null;
-  if (revert) game.holes[i].score = scoreTapChanged;
-  syncPuttsWithScore(i);
+  if (revert) {
+    // De voorlopige wijziging vervalt in zijn geheel: de score én de putts van daarvoor.
+    // Eerder kwam alleen de score terug. Was de hole even leeg geweest, dan waren je
+    // putts weg en stond er daarna weer 2 — of niets, met putts bijhouden uit.
+    const h = game.holes[i];
+    h.score = scoreTapChanged;
+    if (scoreTapPutts != null) h.putts = scoreTapPutts; else delete h.putts;
+  } else {
+    syncPuttsWithScore(i);
+  }
+  scoreTapPutts = null;
   scoreTapHole = null;
   if (scoreTapTimeout) { clearTimeout(scoreTapTimeout); scoreTapTimeout = null; }
   pulseScore(i);
@@ -4576,34 +4596,9 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
     ['Speler', [
       ['Speler',   game.player],
       ['Hcp',      game.hcp != null ? game.hcp : '—'],
-      ...(() => {
-        // WHS alleen voor de speler bovenin Start (nooit speler 2 of een andere speler)
-        const startPlayer = startPlayerName();
-        if (!startPlayer || game.player !== startPlayer) return [];
-        const done = game.holes.length > 0 && played.length === game.holes.length;
-        if (!done || !game.qualifying) return [];
-        const sdFixed = game.sdFinal != null && game.sdFinal !== '' && isFinite(parseFloat(game.sdFinal));
-        const all = loadSavedRounds();
-        const isDone = r => isRondeAf(r);
-        const others = all.filter(r => r.player === game.player && String(r.id) !== String(game.id) && r.qualifying && isDone(r));
-        const pool = [{ ...game }, ...others]
-          .sort((a, b) => new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`) - new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`))
-          .slice(0, 20);
-        const whs = whsHandicap(pool, effectiveLowHi(game.player, all), esrMapFor(game.player, all));
-        const hcpWarnSuffix = sdFixed ? '' : ' <svg width="13" height="13" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-        const label = (sdFixed ? 'Nieuwe WHS-hcp' : 'Verwachte WHS-hcp') + hcpWarnSuffix;
-        const capLabel = !whs || !whs.capped
-          ? 'Cap'
-          : `${whs.capType === 'hard' ? 'Hardcap' : 'Softcap'} (anders ${fmt1(whs.rawValue)})`;
-        const esrLabel = (whs && whs.esrApplied)
-          ? `ESR (anders ${fmt1(whs.rawValueNoEsr)})`
-          : 'ESR';
-        return [
-          [label, whs ? fmt1(whs.value) : '—'],
-          [esrLabel, (whs && whs.esrApplied) ? 'Ja' : 'Nee'],
-          [capLabel, (whs && whs.capped) ? 'Ja' : 'Nee'],
-        ];
-      })(),
+      // Geen 'Verwachte/Nieuwe WHS-hcp' meer bij de open ronde (13527DA-10E): er wordt
+      // gerekend met wat afgerond is en niet meer actief (zie meetelFilter). De nieuwe
+      // handicap staat na het afronden op Start, op de rondekaart en in Statistiek.
     ]],
     ['Club & Baan', [
       ['Club',     clubName],
@@ -5777,9 +5772,8 @@ function renderPlayerStats() {
   }
 
   const all = loadSavedRounds();
-  const isDone = r => isRondeAf(r);
   const rounds = all
-    .filter(r => r.player === player && isDone(r) && r.qualifying)
+    .filter(meetelFilter(player))
     .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`));
 
   if (!rounds.length) {
@@ -6014,7 +6008,10 @@ const kpi = (label, val, opts = {}) => `<div class="${opts.cls || ''}" style="te
     if (prev != null && isFinite(prev) && loDerived < prev) {
       newLowBanner = `<div style="font-size:15px;color:var(--gold);font-weight:700;margin-top:8px">Nieuwe laagste handicap: ${fmt1(loDerived)} (was ${fmt1(prev)})</div>`;
     }
-    if (prev == null || loDerived !== prev) storage.setItem(seenKey, String(loDerived));
+    // Alleen als 'gezien' noteren wanneer Statistiek echt in beeld is. De pagina wordt ook
+    // op de achtergrond opgebouwd (bv. bij het omzetten van een schakelaar in
+    // Instellingen); dan zou de melding hierboven ongezien verbruikt worden.
+    if ((prev == null || loDerived !== prev) && el.getClientRects().length) storage.setItem(seenKey, String(loDerived));
   }
   const kpiRow = `<div class="card"><h2>${escapeHtml(player)}</h2>`
     // Een RASTER en geen flexrij: bij een flexrij bepaalt de vrije ruimte hoeveel er op
@@ -7024,7 +7021,7 @@ async function exportDagresultaten() {
   const player = startPlayerName();
   if (!player) return;
   const rondes = loadSavedRounds()
-    .filter(r => r.player === player && r.qualifying && r.date)
+    .filter(meetelFilter(player)).filter(r => r.date)
     .map(r => { const e = effectiveSD(r); return e == null ? null : { d: r.date, t: r.time || '', v: e.value }; })
     .filter(x => x != null)
     .sort((a, b) => (a.d + a.t).localeCompare(b.d + b.t));
@@ -7099,9 +7096,8 @@ setTimeout(updateAppBadge, 1500);
 // wél een echt AI-gesprek wil — zonder API-sleutel in de app.
 function analysisRounds() {
   const player = startPlayerName();
-  const isDoneA = r => (isRondeAf(r));
   return loadSavedRounds()
-    .filter(r => r.player === player && r.qualifying && r.date && isDoneA(r))
+    .filter(meetelFilter(player)).filter(r => r.date)
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 }
 
@@ -7113,6 +7109,7 @@ function buildGameAnalysis() {
   const alle = analysisRounds();
   const { start: periodeBegin } = effectievePeriode(alle, window._statChartPeriod);
   const rondes = alle.slice(periodeBegin);
+  const dubbeleBanen = dubbeleBaanNamen(rondes);
   const secties = [];
   const aanbev = [];
   const minN = getMinRoundsStat();
@@ -7363,7 +7360,7 @@ function buildGameAnalysis() {
         holesTot++;
         const punten = stbFor(h);
         if (punten == null) return;
-        const key = `${r.track || '?'}|${i + 1}`;
+        const key = holeSleutel(r, i);
         const p = perHole[key] = perHole[key] || { n: 0, nul: 0, club: r.club || '', track: r.track || '?', nr: i + 1 };
         p.n++;
         if (punten === 0) { p.nul++; nullersTot++; }
@@ -7383,11 +7380,11 @@ function buildGameAnalysis() {
         .slice(0, 3);
       if (kandidaten.length) {
         regels.push('Vaakst nul punten: ' + kandidaten
-          .map(p => `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (${p.nul} van ${p.n})`)
+          .map(p => `<b>${escapeHtml(baanNaamVoorHole(p, dubbeleBanen))} hole ${p.nr}</b> (${p.nul} van ${p.n})`)
           .join(', ') + '.');
         const top = kandidaten[0];
         if (top.rate >= 0.4) {
-          aanbev.push(`${top.track} hole ${top.nr} levert je in ${top.nul} van de ${top.n} keer 0 punten op. Zo'n vaste lekkage is de goedkoopste winst: speel die hole bewust defensief \u2014 kortere club van de tee, mik op het brede deel van de fairway, en accepteer dat je er een punt inlevert in plaats van er twee te verliezen.`);
+          aanbev.push(`${baanNaamVoorHole(top, dubbeleBanen)} hole ${top.nr} levert je in ${top.nul} van de ${top.n} keer 0 punten op. Zo'n vaste lekkage is de goedkoopste winst: speel die hole bewust defensief \u2014 kortere club van de tee, mik op het brede deel van de fairway, en accepteer dat je er een punt inlevert in plaats van er twee te verliezen.`);
         }
       } else {
         regels.push('Geen enkele hole springt eruit: je nullers zijn verspreid, dus het is geen vaste zwakke plek.');
@@ -7495,8 +7492,8 @@ function buildGameAnalysis() {
     rondes.forEach(r => (r.holes || []).forEach((h, i) => {
       const n = nettoOf(h);
       if (n == null) return;
-      const k = `${r.track || '?'}|${i + 1}`;
-      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0, putts: 0, puttN: 0 };
+      const k = holeSleutel(r, i);
+      const p = perHole[k] = perHole[k] || { club: r.club || '', track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0, putts: 0, puttN: 0 };
       p.som += n;
       p.n++;
       if (h.putts != null) { p.putts += h.putts; p.puttN++; }
@@ -7508,7 +7505,7 @@ function buildGameAnalysis() {
       .slice(0, 5); // zelfde aantal als in de prompt (Marks vraag: waarom verschilden die?)
     if (duurste.length) {
       secties.push({ kop: 'Duurste holes', regels: duurste.map(p =>
-        `<b>${escapeHtml(p.track)} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par${(puttsStatsEnabled() && p.puttN >= Math.max(minN, 3)) ? `, <b>${fmt1(p.putts / p.puttN)}</b> putts` : ''}, ${p.n}\u00d7 gespeeld.`
+        `<b>${escapeHtml(baanNaamVoorHole(p, dubbeleBanen))} hole ${p.nr}</b> (par ${p.par}${p.si != null ? `, SI ${p.si}` : ''}): <b>${fmtDiff(p.gem)}</b> t.o.v. je persoonlijke par${(puttsStatsEnabled() && p.puttN >= Math.max(minN, 3)) ? `, <b>${fmt1(p.putts / p.puttN)}</b> putts` : ''}, ${p.n}\u00d7 gespeeld.`
       ) });
     } else if (Object.keys(perHole).length) {
       secties.push({ kop: 'Duurste holes', regels: ['Nog te weinig herhaalde holes om betrouwbaar te vergelijken.'] });
@@ -7680,10 +7677,12 @@ async function copyAnalysisForAi() {
   // "par 4's kosten het meest" en een concreet advies per hole.
   {
     const perHole = {};
-    analysisRounds().forEach(r => (r.holes || []).forEach((h, i) => {
+    const rondesTekst = analysisRounds();
+    const dubbeleBanenTekst = dubbeleBaanNamen(rondesTekst);
+    rondesTekst.forEach(r => (r.holes || []).forEach((h, i) => {
       if (!h || h.score == null || h.par == null || h.phcp == null) return;
-      const k = `${r.track || '?'}|${i + 1}`;
-      const p = perHole[k] = perHole[k] || { track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
+      const k = holeSleutel(r, i);
+      const p = perHole[k] = perHole[k] || { club: r.club || '', track: r.track || '?', nr: i + 1, par: h.par, si: h.si, som: 0, n: 0 };
       p.som += h.score - h.par - h.phcp;
       p.n++;
     }));
@@ -7696,7 +7695,7 @@ async function copyAnalysisForAi() {
       tekst += '\nDUURSTE HOLES (t.o.v. mijn persoonlijke par, minimaal 3x gespeeld)\n';
       tekst += 'baan | hole | par | SI | gemiddeld verlies | keer gespeeld\n';
       duurste.forEach(p => {
-        tekst += `${p.track} | ${p.nr} | par ${p.par} | SI ${p.si != null ? p.si : '?'} | ${p.gem >= 0 ? '+' : ''}${fmt1(p.gem)} | ${p.n}\n`;
+        tekst += `${baanNaamVoorHole(p, dubbeleBanenTekst)} | ${p.nr} | par ${p.par} | SI ${p.si != null ? p.si : '?'} | ${p.gem >= 0 ? '+' : ''}${fmt1(p.gem)} | ${p.n}\n`;
       });
     }
   }
@@ -8104,9 +8103,11 @@ function watIfClearRefresh() {
 function courseAnalysisData(club, track) {
   const player = startPlayerName();
   if (!player) return null;
-  const isDoneCa = r => isRondeAf(r);
+  // Afgerond is ook hier: alle holes ingevuld en niet meer open (zie meetelFilter). Alleen
+  // de qualifying-eis vervalt.
+  const openCa = openRondeIds();
   const rs = loadSavedRounds()
-    .filter(r => r.player === player && isDoneCa(r) && r.club === club && r.track === track && Array.isArray(r.holes) && r.holes.length)
+    .filter(r => r.player === player && isRondeAf(r) && !r._justImported && !openCa.has(String(r.id)) && r.club === club && r.track === track && Array.isArray(r.holes) && r.holes.length)
     .sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || ''))); // nieuwste eerst
   if (!rs.length) return null;
   const cut = new Date();
@@ -9026,7 +9027,11 @@ function importRound(input) {
             const isActive = String(exactMatch.id) === storage.getItem('golf_active_id');
             const isP2 = exactMatch.id === game2Id;
             saved.splice(idx, 1);
-            metVerwijderen(() => doImportRound(r, saved));
+            // Meteen als opgeslagen neerzetten, zonder tussenstop in 'Geïmporteerd'
+            // (13527DA-10J): je hebt het overschrijven hier al bevestigd. Anders was de
+            // oude ronde weg terwijl de nieuwe nog niet meetelde voor handicap en backup,
+            // en moest je voor hetzelfde besluit nog een keer op 'Sla op' tikken.
+            metVerwijderen(() => doImportRound(r, saved, true));
             if (isActive) { storage.removeItem('golf_active_id'); restoreActiveRound(); }
             if (isP2) { game2Id = null; storage.removeItem('golf_game2_id'); updatePlayerSwitchBar(); }
             showStatus('Ronde overschreven', false);
@@ -10141,9 +10146,8 @@ function handicapTabellen() {
   {
     const mainPlayer = startPlayerName();
     if (mainPlayer) {
-      const isDoneForTrend = r => isRondeAf(r);
       const qualAll = saved
-        .filter(r => r.player === mainPlayer && r.qualifying && isDoneForTrend(r))
+        .filter(meetelFilter(mainPlayer))
         .sort((a, b) => new Date(`${a.date||'1970-01-01'}T${a.time||'00:00'}`) - new Date(`${b.date||'1970-01-01'}T${b.time||'00:00'}`)); // oudste eerst
       // De Low HI hoort PER RONDE te gelden, niet één keer voor de hele geschiedenis.
       // Eerder werd hier de Low HI van VANDAAG genomen en op elke ronde toegepast. Bij
@@ -10463,7 +10467,7 @@ function loadSaved() {
     // dat gaat over de ronde zelf.
     const warnIcons = [
       roundHasPuttWarning(r) ? puttWarnIcon : '',
-      (whsVolgen() && done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })())
+      (whsVolgen() && r.player === startPlayerName() && !r._justImported && !isActive && done && (isCurrentPlayer ? (game.qualifying ?? r.qualifying) : r.qualifying) && !(() => { const sd = isCurrentPlayer ? (game.sdFinal ?? r.sdFinal) : r.sdFinal; return sd != null && sd !== '' && isFinite(parseFloat(sd)); })())
         ? '<svg width="15" height="15" viewBox="0 0.43 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
         : '',
     ].filter(Boolean);
@@ -10666,9 +10670,8 @@ function loadSaved() {
     // met volledige kaarten (geen verkorte variant).
     const player1 = startPlayerName();
     if (player1) {
-      const isDoneForWhs = r => isRondeAf(r);
       const last20 = filtered
-        .filter(r => r.player === player1 && r.qualifying && isDoneForWhs(r))
+        .filter(meetelFilter(player1))
         .sort(sortDesc)
         .slice(0, 20);
       html += staticHeader(player1, last20.length, last20.some(roundHasWarning)) + last20.map(r => {
@@ -13365,30 +13368,38 @@ function saveCourseFromEditor(negeerElders) {
     const clubNaam = CLUBS[editorClub] ? CLUBS[editorClub].club : editorClub;
     const clubKort = CLUBS[editorClub] ? CLUBS[editorClub].shortName : '';
     const oudeBaan = editorOrigCourseName;
+    // Tees als paren [geslacht, teenaam]: de tees staan per geslacht opgeslagen. Eerder werden
+    // hier alleen de geslachten vergeleken, waardoor een hernoemde tee nooit opviel en de
+    // vraag 'ook aanpassen?' nooit kwam (13527DA-10F).
+    const teeParen = tees => Object.entries(tees || {}).flatMap(([g, tt]) => Object.keys(tt || {}).map(t => [g, t]));
     const oudeTees = (oudeBaan && CLUBS[editorClub] && CLUBS[editorClub].courses[oudeBaan])
-      ? Object.keys(CLUBS[editorClub].courses[oudeBaan].tees || {}) : [];
+      ? teeParen(CLUBS[editorClub].courses[oudeBaan].tees) : [];
     const opgeslagen = applyCourseChanges(validated);
     // Mislukt het wegschrijven (volle opslag), dan mag er geen "Opgeslagen" verschijnen:
     // de wijziging staat dan alleen nog in het geheugen en is bij de volgende start weg.
     if (!opgeslagen) throw new Error('Opslaan mislukt — geheugen vol of geblokkeerd');
     const nieuweBaan = validated.newCourseName;
-    const nieuweTees = Object.keys(validated.tees || {});
+    const nieuweTees = teeParen(validated.tees);
     const klaar = () => { editorCourseSnapshot = snapshotCourseEditor(); renderClubCourseList(); };
 
     // Eerst de baannaam; daarna pas de tees, want die zoeken op de (mogelijk nieuwe)
     // baannaam. De tweede vraag wordt vanuit de eerste gestart.
     const teeVragen = () => {
-      const verdwenen = oudeTees.filter(t => !nieuweTees.includes(t));
-      const nieuw = nieuweTees.filter(t => !oudeTees.includes(t));
+      const zit = (lijst, [g, t]) => lijst.some(([g2, t2]) => g2 === g && t2 === t);
+      const verdwenen = oudeTees.filter(p => !zit(nieuweTees, p));
+      const nieuw = nieuweTees.filter(p => !zit(oudeTees, p));
       // Alleen een hernoeming als er precies één tee weg is en precies één bij is
-      // gekomen — bij meerdere tegelijk is niet te bepalen wat waarheen ging.
-      if (verdwenen.length === 1 && nieuw.length === 1) {
-        const treffers = rondesMetTee(clubNaam, clubKort, nieuweBaan, verdwenen[0]);
+      // gekomen, bij hetzelfde geslacht — bij meerdere tegelijk is niet te bepalen wat
+      // waarheen ging.
+      if (verdwenen.length === 1 && nieuw.length === 1 && verdwenen[0][0] === nieuw[0][0]) {
+        const [geslacht, oudeTee] = verdwenen[0], nieuweTee = nieuw[0][1];
+        const vanDezeTee = r => r.tee === oudeTee && (r.gender || 'Heren') === geslacht;
+        const treffers = rondesMetTee(clubNaam, clubKort, nieuweBaan, oudeTee).filter(vanDezeTee);
         if (treffers.length) {
-          vraagNaamWijziging('Tee', verdwenen[0], nieuw[0], treffers.length,
+          vraagNaamWijziging('Tee', oudeTee, nieuweTee, treffers.length,
             r => {
               const zelfdeClub = (clubNaam && r.club === clubNaam) || (clubKort && r.clubShort === clubKort);
-              if (zelfdeClub && r.track === nieuweBaan && r.tee === verdwenen[0]) { r.tee = nieuw[0]; return true; }
+              if (zelfdeClub && r.track === nieuweBaan && vanDezeTee(r)) { r.tee = nieuweTee; return true; }
               return false;
             }, klaar);
           return true;
@@ -14691,6 +14702,20 @@ function vingerafdruk0EF() {
   return String(h) + ':' + delen.length;
 }
 
+// De rondes die op dit moment open staan (speler 1 en speler 2), als tekst-id's.
+// Marks keuze (13527DA-10B): de backupMELDING wacht tot een ronde is afgerond, ook als
+// alle holes al zijn ingevuld, en ook bij een oude ronde die je opnieuw hebt geladen om
+// te corrigeren. Het backupBESTAND verandert niet (hoortInBackup): daar gaat elke volle
+// ronde in mee, zodat een backup nooit een ronde mist. Geen stempel: dit wordt telkens
+// afgeleid uit wat er nu open staat.
+function openRondeIds() {
+  const ids = new Set();
+  const a = storage.getItem('golf_active_id');
+  if (a) ids.add(String(a));
+  if (game2Id != null) ids.add(String(game2Id));
+  return ids;
+}
+
 // Wat is er sinds de laatste backup veranderd? null = er is nog nooit een backup gemaakt.
 function backupVerschil() {
   if (!storage.getItem('golf_last_backup_date')) return null;
@@ -14698,12 +14723,16 @@ function backupVerschil() {
   let toen = {};
   try { toen = JSON.parse(storage.getItem('golf_backup_inhoud') || '{}') || {}; } catch (e) { toen = {}; }
   const nu = huidigeBackupInhoud();
+  // Een ronde die nu open staat wordt overgeslagen (zie openRondeIds): de melding komt
+  // pas na het afronden. Het backupbestand zelf neemt hem wel mee.
+  const open = openRondeIds();
   let nieuw = 0, bewerkt = 0, verwijderd = 0;
   for (const id in nu) {
+    if (open.has(id)) continue;
     if (!(id in toen)) nieuw++;
     else if (toen[id] !== nu[id]) bewerkt++;
   }
-  for (const id in toen) if (!(id in nu)) verwijderd++;
+  for (const id in toen) if (!(id in nu) && !open.has(id)) verwijderd++;
   // Overstap met een open stand van vóór deze versie: minstens zoveel als toen openstond.
   const onzeker = parseInt(storage.getItem('golf_backup_onzeker') || '0', 10) || 0;
   const totaal = nieuw + bewerkt + verwijderd;
@@ -14771,6 +14800,41 @@ function isRondeAf(r) {
   return totaal > 0 && gespeeldeHoles(r) >= totaal;
 }
 
+// Wat telt mee voor handicap en statistiek? ÉÉN definitie (Marks regel, 13527DA-10E): er
+// wordt gerekend met wat afgerond is en niet meer actief — een qualifying ronde van deze
+// speler waarvan alle holes zijn ingevuld en die niet open staat (speler 1 of 2). Een
+// ronde die je speelt telt dus pas mee na het afronden, ook als de laatste hole al is
+// ingevuld; een oude ronde die je opnieuw laadt telt niet mee zolang hij open staat; een
+// ingelezen ronde telt pas mee na 'Sla op'.
+// Geeft een filter terug en leest per aanroep één keer wat er open staat, zodat een lijst
+// van honderden rondes niet honderden keren de opslag raadpleegt.
+// Enige uitzondering op 'alleen qualifying': de baananalyse in het clubscherm.
+function meetelFilter(player) {
+  const open = openRondeIds();
+  // Ook niet: een ronde in 'Geïmporteerd' zolang je niet op 'Sla op' hebt getikt
+  // (13527DA-10H). Die is ingelezen maar nog niet van jou; de backup laat hem om dezelfde
+  // reden weg (zie hoortInBackup).
+  return r => !!r && r.player === player && !!r.qualifying && !r._justImported && isRondeAf(r) && !open.has(String(r.id));
+}
+
+// Baannamen zijn niet uniek: twee clubs mogen allebei een baan 'Noord' hebben (Marks
+// regel). Wie per hole telt, moet dus de CLUB in de sleutel meenemen — anders vallen
+// hole 1 van 'Noord' bij club A en hole 1 van 'Noord' bij club B samen (13527DA-10G).
+function holeSleutel(r, i) {
+  return `${r.club || '?'}|${r.track || '?'}|${i + 1}`;
+}
+// De baannamen die in deze rondes bij meer dan één club voorkomen. Eén keer per analyse.
+function dubbeleBaanNamen(rondes) {
+  const clubsPerBaan = {};
+  (rondes || []).forEach(r => { const t = r.track || '?'; (clubsPerBaan[t] = clubsPerBaan[t] || new Set()).add(r.club || '?'); });
+  return new Set(Object.keys(clubsPerBaan).filter(t => clubsPerBaan[t].size > 1));
+}
+// De naam van de baan bij een hole: alleen met de club erbij als de naam anders niet
+// zegt welke baan het is, zodat de tekst bij unieke namen kort blijft.
+function baanNaamVoorHole(p, dubbel) {
+  return (dubbel && dubbel.has(p.track) && p.club) ? `${p.track} (${p.club})` : p.track;
+}
+
 function afgerondeRondesCount(lijst) {
   return (lijst || leesRondes()).filter(hoortInBackup).length;
 }
@@ -14804,7 +14868,9 @@ function huidigeClubsVingerafdruk() {
 // (dagen, aantal wijzigingen) zijn vervallen; ze stonden bij Mark toch op 1 en deden
 // dan niets meer. Er is daardoor ook geen grijze tussenstand meer.
 function isBackupOverdue(lijst) {
-  const total = afgerondeRondesCount(lijst);
+  // Een open ronde telt hier nog niet mee: de melding wacht op het afronden.
+  const open = openRondeIds();
+  const total = (lijst || leesRondes()).filter(r => hoortInBackup(r) && !open.has(String(r.id))).length;
   if (total === 0) return false;              // niets om te bewaren
   const verschil = backupVerschil();
   if (!verschil) return true;                 // nog nooit een backup
@@ -15120,6 +15186,21 @@ function importCourseData(input) {
           else valid.push(data);
         });
 
+        // Geen enkele bruikbare club: dat is geen geslaagde import. Eerder stond hier
+        // "Import voltooid, 0 clubs geïmporteerd" — ook als je per ongeluk je rondebackup
+        // had gekozen. De bestandsnamen lijken op elkaar, dus dat gebeurt makkelijk.
+        if (!valid.length) {
+          const lijktRonde = x => x && typeof x === 'object' && Array.isArray(x.holes) && !x.courses;
+          const tekst = parsed.length && parsed.every(lijktRonde)
+            ? 'Dit is een bestand met rondes, geen clubbestand. Lees het in bij Rondes.'
+            : !parsed.length
+            ? 'Er staan geen clubs in dit bestand.'
+            : `Geen bruikbare clubs in dit bestand (${invalid.length} overgeslagen).`;
+          showInfoModal('Import mislukt', tekst, 'red');
+          input.value = '';
+          return;
+        }
+
         const existing = valid.filter(data => CLUBS[data.club]);
         const newOnes = valid.filter(data => !CLUBS[data.club]);
 
@@ -15150,6 +15231,9 @@ function importCourseData(input) {
       }
 
       const data = parsed;
+      if (data && typeof data === 'object' && Array.isArray(data.holes) && !data.courses) {
+        throw new Error('dit is een bestand met een ronde, geen clubbestand. Lees het in bij Rondes.');
+      }
       const validationError = validateImportedClubData(data);
       if (validationError) throw new Error(validationError);
 
@@ -15982,28 +16066,42 @@ function toggleTrackPutts() {
   if (game && game.started) renderScore();
 }
 
+// Het hoogste aantal putts dat bij een score kan: je hebt minstens één slag nodig om op
+// de green te komen, dus hooguit score − 1. Bij een hole-in-one zijn het er 0. En nooit
+// meer dan 5.
+function maxPutts(score) {
+  return Math.max(0, Math.min(5, score - 1));
+}
+
 // Putts volgen de score: een score invullen of wijzigen zet putts op 2 (alleen als
 // de instelling aanstaat en er nog niets stond), een score wissen haalt putts weg.
 // Zo bestaat er nooit een score zonder putts, en krijgen oude rondes uit een backup
 // niets ongevraagd toebedeeld — pas als je die hole zelf aanraakt.
+// Verlaag je de score tot onder het aantal putts, dan gaan de putts mee omlaag: 2 slagen
+// met 2 putts bestaat niet. Dat geldt ook met putts bijhouden uit, want het gaat om
+// gegevens die er al staan.
 function syncPuttsWithScore(i) {
   const h = game.holes[i];
   if (!h) return;
   if (h.score === null) { if (h.putts != null) delete h.putts; return; }
+  const max = maxPutts(h.score);
+  if (h.putts != null) { if (h.putts > max) h.putts = max; return; }
   if (!trackPuttsEnabled()) return;
-  if (h.putts == null) h.putts = 2;
+  h.putts = Math.min(2, max);
 }
 function stepPutts(i, d) {
   const h = game.holes[i];
   if (!h || h.score === null || !trackPuttsEnabled()) return;
-  // Vanuit "geen putts" begint de teller op 2, ongeacht welke knop je indrukt.
+  // Vanuit "geen putts" begint de teller op 2 (of lager, als de score niet meer toelaat),
+  // ongeacht welke knop je indrukt.
   // Onder de 0 wordt de waarde weer leeg — zelfde idioom als de score, die onder 1
   // ook naar "niet gespeeld" terugvalt.
-  if (h.putts == null) { h.putts = 2; }
+  const max = maxPutts(h.score);
+  if (h.putts == null) { h.putts = Math.min(2, max); }
   else {
     const next = h.putts + d;
     if (next < 0) delete h.putts;
-    else h.putts = Math.min(5, next);
+    else h.putts = Math.min(max, next);
   }
   if (navigator.vibrate) navigator.vibrate(20);
   renderScore();
