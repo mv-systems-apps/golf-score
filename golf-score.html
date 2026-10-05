@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-10K</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-10L</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1694,7 +1694,7 @@ function roundHasWarning(r) {
   // (13527DA-10I): die telt nog niet mee voor je handicap (zie meetelFilter), dus een
   // ontbrekend dagresultaat doet er dan nog niet toe.
   if (r._justImported) return false;
-  // En niet bij een ronde die nog open staat (13527DA-10K), ook als alle holes al zijn
+  // En niet bij een ronde die nog open staat (13527DA-10L), ook als alle holes al zijn
   // ingevuld: het driehoekje komt pas bij het opslaan, tegelijk met de handicap en de
   // backupmelding. Dat geldt ook voor een oude ronde die je opnieuw hebt geladen.
   const activeId = storage.getItem('golf_active_id');
@@ -2950,7 +2950,7 @@ function buildTrackList() {
     kop.id = 'lusKop';
     kop.style.cssText = 'display:flex;align-items:center;cursor:pointer;line-height:1;padding:6px 2px 2px';
     kop.onclick = toggleLusKop;
-    kop.innerHTML = `<span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">Wedstrijdlussen</span>`
+    kop.innerHTML = `<span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">Wedstrijdlus</span>`
       + `<span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${lussen.length}</span>`
       + `<span style="margin-left:8px;display:inline-flex;line-height:0;transform:${open ? 'rotate(90deg)' : 'none'}">${arrowSvg(14, false, 'var(--green-light)', false)}</span>`;
     el.appendChild(kop);
