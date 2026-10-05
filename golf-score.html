@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-10L</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-110</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1694,7 +1694,7 @@ function roundHasWarning(r) {
   // (13527DA-10I): die telt nog niet mee voor je handicap (zie meetelFilter), dus een
   // ontbrekend dagresultaat doet er dan nog niet toe.
   if (r._justImported) return false;
-  // En niet bij een ronde die nog open staat (13527DA-10L), ook als alle holes al zijn
+  // En niet bij een ronde die nog open staat (13527DA-10K), ook als alle holes al zijn
   // ingevuld: het driehoekje komt pas bij het opslaan, tegelijk met de handicap en de
   // backupmelding. Dat geldt ook voor een oude ronde die je opnieuw hebt geladen.
   const activeId = storage.getItem('golf_active_id');
@@ -2239,6 +2239,34 @@ function getPriorityGroupClub() {
   return activeClub || defaultClub || homeClub || null;
 }
 
+// ── TIJDELIJK: OUDE NAAM VAN DE LUS-MARKERING (sinds 13527DA-110) ─────────────────────
+// Tot en met 13527DA-10N heette de markering op een baan en op een ronde 'wedstrijdlus';
+// nu heet hij 'lus'. Deze twee functies zetten de oude naam om: één keer bij het openen
+// (de gegevens op het toestel) en bij het inlezen van een oud ronde- of clubbestand.
+// WEGHALEN kan zodra er geen oude gegevens of bestanden meer zijn: deze twee functies,
+// de drie aanroepen (zoek op 'zetOudeLusNaamOm' en 'zetOpgeslagenLusNamenOm') en de
+// test test-oude-lusnaam.py.
+function zetOudeLusNaamOm(x) {
+  if (Array.isArray(x)) { x.forEach(zetOudeLusNaamOm); return x; }
+  if (!x || typeof x !== 'object') return x;
+  if ('wedstrijdlus' in x) { if (x.wedstrijdlus === true) x.lus = true; delete x.wedstrijdlus; }
+  if (x.courses && typeof x.courses === 'object') Object.values(x.courses).forEach(zetOudeLusNaamOm);
+  return x;
+}
+function zetOpgeslagenLusNamenOm() {
+  ['golf_rounds', 'golf_clubs'].forEach(sleutel => {
+    const ruw = storage.getItem(sleutel);
+    if (!ruw || !ruw.includes('"wedstrijdlus"')) return;   // niets ouds: niet eens ontleden
+    try {
+      const d = JSON.parse(ruw);
+      zetOudeLusNaamOm(Array.isArray(d) ? d : Object.values(d));
+      storage.setItem(sleutel, JSON.stringify(d));
+    } catch (e) { /* onleesbaar: dat meldt het gewone laden */ }
+  });
+}
+zetOpgeslagenLusNamenOm();
+// ── einde tijdelijk ──────────────────────────────────────────────────────────────────
+
 loadClubsFromStorage();
 rebuildCourseLookup();
 
@@ -2318,7 +2346,7 @@ function lusZichtbaar(name) {
 // Er wordt bewust NIET bij de baan gekeken: er bestaan geen oudere rondes op een
 // wedstrijdlus, dus één bron volstaat (Marks keuze).
 function isLusRonde(r) {
-  return !!(r && r.wedstrijdlus === true);
+  return !!(r && r.lus === true);
 }
 
 // CR en SR van een wedstrijdlus zijn geschat, dus de ronde begint als niet-qualifying —
@@ -2776,9 +2804,9 @@ function buildRoundEntry() {
     holes: game.holes.map(h => ({ ...h })),
   };
   // Lege optionele velden staan niet in de opslag (zoals altijd al): een ronde zonder
-  // notitie heeft geen veld 'note', een gewone ronde geen veld 'wedstrijdlus'.
+  // notitie heeft geen veld 'note', een gewone ronde geen veld 'lus'.
   if (!entry.note) delete entry.note;
-  if (!entry.wedstrijdlus) delete entry.wedstrijdlus;
+  if (!entry.lus) delete entry.lus;
   // Afgeleid uit de holes en hier niet bijgehouden; een meegekomen waarde zou verouderen.
   delete entry.playedCount;
   delete entry._justImported;
@@ -2918,7 +2946,7 @@ function buildTrackList() {
   const gewoon = [], lussen = [];
   Object.keys(COURSES).sort((a, b) => a.localeCompare(b, 'nl')).forEach(name => {
     if ((COURSE_CLUBS[name] || '') !== defaultClub) return;
-    if (COURSES[name].wedstrijdlus) { if (lusZichtbaar(name)) lussen.push(name); }
+    if (COURSES[name].lus) { if (lusZichtbaar(name)) lussen.push(name); }
     else if (trackMatchesFilters(name)) gewoon.push(name);
   });
   visibleNames.push(...gewoon, ...lussen);
@@ -2927,7 +2955,7 @@ function buildTrackList() {
   if (visibleNames.length && !visibleNames.includes(sel.track)) {
     sel.track = visibleNames[0];
     sel.chcpOverride = null;
-    if (COURSES[sel.track].wedstrijdlus) zetQualifyingUitVoorLus();
+    if (COURSES[sel.track].lus) zetQualifyingUitVoorLus();
   }
 
   const baanKnop = name => {
@@ -2937,7 +2965,7 @@ function buildTrackList() {
     btn.innerHTML = `<span class="track-name">${escapeHtml(name)}</span><span class="track-sub">${n}h</span>`;
     btn.onclick = () => {
       sel.track = name; sel.chcpOverride = null; sel._teeUserSelected = false; sel._holeCountUserCleared = false;
-      if (COURSES[name].wedstrijdlus) zetQualifyingUitVoorLus();
+      if (COURSES[name].lus) zetQualifyingUitVoorLus();
       rebuildStartScreen(); updateHeaderClubName();
     };
     el.appendChild(btn);
@@ -2950,14 +2978,14 @@ function buildTrackList() {
     kop.id = 'lusKop';
     kop.style.cssText = 'display:flex;align-items:center;cursor:pointer;line-height:1;padding:6px 2px 2px';
     kop.onclick = toggleLusKop;
-    kop.innerHTML = `<span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">Wedstrijdlus</span>`
+    kop.innerHTML = `<span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px">Lus</span>`
       + `<span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${lussen.length}</span>`
       + `<span style="margin-left:8px;display:inline-flex;line-height:0;transform:${open ? 'rotate(90deg)' : 'none'}">${arrowSvg(14, false, 'var(--green-light)', false)}</span>`;
     el.appendChild(kop);
     // Dicht: alleen de GEKOZEN lus blijft staan, anders zie je niet welke baan je speelt.
     lussen.filter(name => open || name === sel.track).forEach(baanKnop);
     // Eén berekening, alleen voor de gekozen lus.
-    if (COURSES[sel.track]?.wedstrijdlus && lusStatus(defaultClub, sel.track) === 'verouderd') {
+    if (COURSES[sel.track]?.lus && lusStatus(defaultClub, sel.track) === 'verouderd') {
       const hint = document.createElement('div');
       hint.id = 'lusVerouderd';
       hint.style.cssText = 'font-size:15px;color:var(--orange);padding:0 2px';
@@ -4101,7 +4129,7 @@ function startRoundConfirmed() {
     note: leesStartNote(1) || undefined,
     // De ronde onthoudt zelf dat hij op een wedstrijdlus is gespeeld: de lus is tijdelijk
     // en kan na afloop worden verwijderd.
-    wedstrijdlus: course.wedstrijdlus ? true : undefined,
+    lus: course.lus ? true : undefined,
     holes: buildRoundHoles(course, teeData, phcps),
   };
   // Corrigeren: de scores van de oude ronde overnemen. Hebben de banen niet evenveel
@@ -4149,7 +4177,7 @@ function startRoundConfirmed() {
         date: startDate || todayISO(), time: startTime || null,
         player: name2, hcp: isNaN(hcp2) ? null : hcp2,
         note: leesStartNote(2) || undefined,
-        wedstrijdlus: course.wedstrijdlus ? true : undefined,
+        lus: course.lus ? true : undefined,
         gender: sel2.gender, track: sel.track, tee: sel2.tee,
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
         CR: teeData2.CR, SR: teeData2.SR, PAR: parTee2, chcp: chcp2,
@@ -8931,7 +8959,7 @@ function importRound(input) {
     try {
       const raw = (e.target.result || '').trim();
       if (!raw) return showStatus('Leeg bestand — geen gegevens gevonden', true);
-      let parsed = JSON.parse(raw);
+      let parsed = zetOudeLusNaamOm(JSON.parse(raw));   // tijdelijk: oude naam van de lus-markering
 
       // Array van meerdere rondes (backup)
       if (Array.isArray(parsed) && parsed.length > 1) {
@@ -11343,12 +11371,12 @@ function renderClubCourseList() {
   names.forEach(name => {
     const n = (data.courses[name].holeIds || []).length;
     // Wedstrijdlussen staan onder een eigen kop, ongeacht het aantal holes.
-    (data.courses[name].wedstrijdlus ? groups.lus : n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
+    (data.courses[name].lus ? groups.lus : n === 9 ? groups[9] : n === 18 ? groups[18] : groups.overig).push(name);
   });
   const rowHtml = name => {
     const n = (data.courses[name].holeIds || []).length;
     // Alleen voor wedstrijdlussen: is een bronbaan sinds het maken gewijzigd?
-    const status = data.courses[name].wedstrijdlus ? lusStatus(editorClub, name) : '';
+    const status = data.courses[name].lus ? lusStatus(editorClub, name) : '';
     const melding = status === 'verouderd'
       ? `<div data-lus-status="verouderd" style="font-size:15px;font-weight:400;color:var(--orange);margin-top:2px">Een bronbaan is gewijzigd. <span onclick="werkLusBij('${escapeJsString(name)}')" style="text-decoration:underline;cursor:pointer;font-weight:700">Bijwerken</span></div>`
       : status === 'bronweg'
@@ -11360,16 +11388,16 @@ function renderClubCourseList() {
       <button class="btn-secondary" style="padding:6px 12px;flex:0 0 auto;display:flex;align-items:center" onclick="openCourseEditor('${escapeJsString(name)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
     </div>`;
   };
-  const groupHtml = (key, label) => {
+  const groupHtml = (key, label, kopStijl = '') => {
     if (!groups[key].length) return '';
     return `<div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:10px" onclick="toggleClubCourseGroup('${key}')">
-      <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light)">${label}</span>
+      <span style="flex:1;font-size:17px;font-weight:700;color:var(--green-light);${kopStijl}">${label}</span>
       <span style="font-size:17px;font-weight:400;color:var(--green-light);margin-left:8px">${groups[key].length}</span>
       <span class="club-course-group-arrow" data-group="${key}" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
     </div>
     <div id="clubCourseGroup${key}" class="hidden">${groups[key].map(rowHtml).join('')}</div>`;
   };
-  list.innerHTML = groupHtml(9, '9 holes') + groupHtml(18, '18 holes') + groupHtml('overig', 'Overig') + groupHtml('lus', 'Wedstrijdlussen');
+  list.innerHTML = groupHtml(9, '9 holes') + groupHtml(18, '18 holes') + groupHtml('overig', 'Overig') + groupHtml('lus', 'Lussen', 'text-transform:uppercase;letter-spacing:.5px');
 }
 
 function toggleClubCourseGroup(key) {
@@ -13073,7 +13101,7 @@ function validateCourseInput() {
 // ══ WEDSTRIJDLUS ════════════════════════════════════════════════════════════
 // Een tijdelijke lus (bv. de maanwedstrijd: S2, S3, S9, A1–A6) samenstellen uit holes
 // van bestaande banen van de club. Wat hier uitkomt is een GEWONE baan — holeIds plus
-// tees met par, SI, CR en SR — met één extra eigenschap: wedstrijdlus: true. Starten,
+// tees met par, SI, CR en SR — met één extra eigenschap: lus: true. Starten,
 // scoren, berekenen en de backup zien dus niets bijzonders. Alleen het aanmaken is nieuw.
 let lusClub = null;      // club waarvoor de lus wordt gemaakt
 let lusBron = null;      // baan waaruit je nu holes kiest
@@ -13089,7 +13117,7 @@ const lusTeeSleutels = c => Object.entries(c?.tees || {})
 // eigen tee, en blijft dus staan.
 function lusBronnen(club) {
   const cs = CLUBS[club]?.courses || {};
-  const namen = Object.keys(cs).filter(n => !cs[n].wedstrijdlus)
+  const namen = Object.keys(cs).filter(n => !cs[n].lus)
     .sort((a, b) => ((cs[a].holeIds || []).length - (cs[b].holeIds || []).length) || a.localeCompare(b, 'nl'));
   const uit = [];
   namen.forEach(n => {
@@ -13172,8 +13200,8 @@ function lusStempel(lus) {
 function lusStatus(club, naam) {
   const cs = CLUBS[club]?.courses || {};
   const lus = cs[naam];
-  if (!lus?.wedstrijdlus || !Array.isArray(lus.bron) || !lus.bronStempel) return 'onbekend';
-  const compleet = lus.bron.every((k, i) => cs[k.baan] && !cs[k.baan].wedstrijdlus && cs[k.baan].holeIds?.[k.idx] === lus.holeIds[i]);
+  if (!lus?.lus || !Array.isArray(lus.bron) || !lus.bronStempel) return 'onbekend';
+  const compleet = lus.bron.every((k, i) => cs[k.baan] && !cs[k.baan].lus && cs[k.baan].holeIds?.[k.idx] === lus.holeIds[i]);
   if (!compleet) return 'bronweg';
   const nu = berekenLus(club, lus.bron);
   if (!nu.aantalTees) return 'bronweg';
@@ -13186,7 +13214,7 @@ function lusStatus(club, naam) {
 function werkLusBij(naam) {
   const club = CLUBS[editorClub];
   if (!club || lusStatus(editorClub, naam) !== 'verouderd') return;
-  toonKeuzeModal('Wedstrijdlus bijwerken', 'orange',
+  toonKeuzeModal('Lus bijwerken', 'orange',
     `"${naam}" wordt opnieuw berekend uit de bronbanen: par, SI, CR en SR. Heb je zelf de CR of SR van de lus aangepast, dan vervalt dat. `
     + 'Rondes die je al op deze lus hebt gespeeld veranderen niet.',
     [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
@@ -13297,7 +13325,7 @@ function bewaarLus() {
   if (!lus.aantalTees) { toonLusStatus('De gekozen banen hebben geen gezamenlijke tee'); return; }
   // 'bron' onthoudt uit welke holes de lus is samengesteld, 'bronStempel' hoe de uitkomst
   // er toen uitzag. Daarmee is later te zien of een bronbaan sindsdien is aangepast.
-  const nieuw = { holeIds: lus.holeIds, tees: lus.tees, wedstrijdlus: true,
+  const nieuw = { holeIds: lus.holeIds, tees: lus.tees, lus: true,
                   bron: lusKeuze.map(k => ({ baan: k.baan, idx: k.idx })), bronStempel: lusStempel(lus) };
   // Vangnet: dezelfde controle als bij het inlezen van een clubbestand, op alleen deze
   // lus. Keurt die hem af, dan komt hij er niet in — liever een melding dan een baan
@@ -13319,10 +13347,10 @@ function bewaarLus() {
 
 function applyCourseChanges({ newCourseName, holeIds, tees }) {
   const club = CLUBS[editorClub];
-  // De baaneditor kent alleen holes en tees. De markering 'wedstrijdlus' moet een
+  // De baaneditor kent alleen holes en tees. De markering 'lus' moet een
   // bewerking overleven, anders wordt de lus na één keer opslaan een gewone baan.
   const oud = club.courses[editorOrigCourseName];
-  const wasLus = !!oud?.wedstrijdlus;
+  const wasLus = !!oud?.lus;
   if (editorOrigCourseName && editorOrigCourseName !== newCourseName) {
     delete club.courses[editorOrigCourseName];
     // Wedstrijdlussen verwijzen op NAAM naar hun bronbanen; die verwijzing volgt de nieuwe naam.
@@ -13330,7 +13358,7 @@ function applyCourseChanges({ newCourseName, holeIds, tees }) {
   }
   // De baan bewaart alleen de holenamen; par en SI staan per tee (die kwamen al zo
   // uit validateCourseInput).
-  const nieuw = wasLus ? { holeIds, tees, wedstrijdlus: true } : { holeIds, tees };
+  const nieuw = wasLus ? { holeIds, tees, lus: true } : { holeIds, tees };
   // De herkomst van een lus blijft alleen geldig zolang de holes dezelfde zijn.
   if (wasLus && oud.bron && oud.bronStempel && JSON.stringify(oud.holeIds) === JSON.stringify(holeIds)) {
     nieuw.bron = oud.bron; nieuw.bronStempel = oud.bronStempel;
@@ -14307,7 +14335,7 @@ function buildClubList() {
     const courseGroups = { 9: [], 18: [], overig: [], lus: [] };
     sortedCourseEntries.forEach(([name, data]) => {
       const n = (data.holeIds || []).length;
-      (data.wedstrijdlus ? courseGroups.lus : n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
+      (data.lus ? courseGroups.lus : n === 9 ? courseGroups[9] : n === 18 ? courseGroups[18] : courseGroups.overig).push([name, data]);
     });
     const courseRowHtml = ([name, data]) => {
       const caBtn = caCounts.get(club + '||' + name)
@@ -14325,7 +14353,16 @@ function buildClubList() {
       </div>
       <div id="${gid}" class="hidden" style="display:flex;flex-direction:column;gap:2px">${courseGroups[key].map(courseRowHtml).join('')}</div>`;
     };
-    const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig') + courseSubGroupHtml('lus', 'Wedstrijdlussen');
+    const courseList = courseSubGroupHtml(9, '9 holes') + courseSubGroupHtml(18, '18 holes') + courseSubGroupHtml('overig', 'Overig');
+    // Lussen staan NAAST Banen, met een eigen inklapkop op hetzelfde niveau.
+    const lusGid = `courseSubGroup_${clubKey}_lus`;
+    const lusBlok = !courseGroups.lus.length ? '' : `
+      <div style="display:flex;align-items:center;cursor:pointer;line-height:1;margin-top:8px" onclick="event.stopPropagation();toggleClubSubGroup('${lusGid}')">
+        <span style="flex:1;font-size:20px;font-weight:700;color:var(--green-light)">Lussen</span>
+        <span style="font-size:15px;font-weight:400;color:var(--green-light);margin-left:8px">${courseGroups.lus.length}</span>
+        <span class="club-sub-group-arrow" data-gid="${lusGid}" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
+      </div>
+      <div id="${lusGid}" class="hidden" style="display:flex;flex-direction:column;gap:2px;margin-top:8px">${courseGroups.lus.map(courseRowHtml).join('')}</div>`;
     return `
     <div class="card" style="margin-bottom:10px${isActive ? ';border-left:3px solid var(--gold);border-right:3px solid var(--gold)' : ''}">
       <div style="font-size:20px;font-weight:700;overflow-wrap:break-word;color:${isActive ? 'var(--gold)' : 'var(--white)'};cursor:pointer" onclick="toggleClubActions(event, this.closest('.card'))">${escapeHtml(club)}</div>
@@ -14335,10 +14372,10 @@ function buildClubList() {
         <!-- Zelfde verhouding als bij de inklapkoppen elders: titel 20px vet, aantal
              15px niet vet. Alleen hier op niveau 2, want deze regel is de kop van een
              eigen lijst; de aantallen in de banenlijst zelf blijven op maat. -->
-        <span style="font-size:15px;font-weight:400;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length}</span>
+        <span style="font-size:15px;font-weight:400;color:var(--green-light);margin-left:8px">${sortedCourseEntries.length - courseGroups.lus.length}</span>
         <span class="course-arrow" style="margin-left:8px;transition:transform .2s;display:inline-flex;line-height:0">${arrowSvg(14, false, 'var(--green-light)', false)}</span>
       </div>
-      <div class="course-list-toggle" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;display:none;cursor:pointer" onclick="toggleCourseList(this)">${courseList}</div>
+      <div class="course-list-toggle" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;display:none;cursor:pointer" onclick="toggleCourseList(this)">${courseList}</div>${lusBlok}
       <div class="hidden" data-club-export-msg="${escapeHtml(club)}" style="color:var(--green-light);font-size:20px;font-weight:700;text-align:right;margin-top:6px">Tik nogmaals om te bevestigen</div>
       <div class="club-actions${actionsAlwaysVisible() ? '' : ' actions-hidden'}">
         <button class="btn-secondary" style="font-size:17px;padding:8px 14px" data-club="${escapeHtml(club)}" onclick="exportClub('${escapeJsString(club)}', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
@@ -15174,7 +15211,7 @@ function importCourseData(input) {
         input.value = '';
         return;
       }
-      const parsed = JSON.parse(raw);
+      const parsed = zetOudeLusNaamOm(JSON.parse(raw));   // tijdelijk: oude naam van de lus-markering
 
       // Array van clubs (backup)
       if (Array.isArray(parsed)) {
@@ -16874,16 +16911,16 @@ document.addEventListener('focusin', (e) => {
     <div style="font-size:17px;color:var(--green-light);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px">Banen</div>
     <div id="clubCourseList" style="display:flex;flex-direction:column;gap:8px"></div>
     <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-top:10px;color:var(--green-light);display:flex;align-items:center;justify-content:center;gap:8px" onclick="openCourseEditor('__new__')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nieuwe baan</button>
-    <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-top:10px;color:var(--green-light);display:flex;align-items:center;justify-content:center;gap:8px" id="lusMaakKnop" onclick="openLusMaker()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nieuwe wedstrijdlus</button>
+    <button class="btn-secondary" style="width:100%;padding:10px 14px;font-size:17px;margin-top:10px;color:var(--green-light);display:flex;align-items:center;justify-content:center;gap:8px" id="lusMaakKnop" onclick="openLusMaker()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nieuwe lus</button>
   </div>
 </div>
 
 <!-- Wedstrijdlus maken: een tijdelijke lus samenstellen uit holes van bestaande banen.
-     Het resultaat is een GEWONE baan (holeIds + tees) met de markering wedstrijdlus. -->
+     Het resultaat is een GEWONE baan (holeIds + tees) met de markering lus. -->
 <div id="lusOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:450;overflow-y:auto;padding:12px">
   <div style="background:var(--green-deep);border:2px solid var(--gold);border-radius:16px;padding:16px;max-width:500px;margin:0 auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Nieuwe wedstrijdlus</h2>
+      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.7px">Nieuwe lus</h2>
       <button class="btn-secondary" style="padding:8px 14px" onclick="sluitLusMaker()" aria-label="Sluiten"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="fg" style="margin-bottom:14px">
@@ -16892,7 +16929,7 @@ document.addEventListener('focusin', (e) => {
     </div>
     <div id="lusInhoud"></div>
     <div id="lusStatus" class="hidden" style="font-size:17px;font-weight:700;text-align:center;color:var(--red);margin:10px 0 0"></div>
-    <button class="btn-primary" style="width:100%;margin-top:14px" onclick="bewaarLus()">Opslaan als wedstrijdlus</button>
+    <button class="btn-primary" style="width:100%;margin-top:14px" onclick="bewaarLus()">Opslaan als lus</button>
   </div>
 </div>
 
