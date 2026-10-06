@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-110</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-111</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -2238,34 +2238,6 @@ function getPriorityGroupClub() {
   const homeClub = storage.getItem('golf_home_club');
   return activeClub || defaultClub || homeClub || null;
 }
-
-// ── TIJDELIJK: OUDE NAAM VAN DE LUS-MARKERING (sinds 13527DA-110) ─────────────────────
-// Tot en met 13527DA-10N heette de markering op een baan en op een ronde 'wedstrijdlus';
-// nu heet hij 'lus'. Deze twee functies zetten de oude naam om: één keer bij het openen
-// (de gegevens op het toestel) en bij het inlezen van een oud ronde- of clubbestand.
-// WEGHALEN kan zodra er geen oude gegevens of bestanden meer zijn: deze twee functies,
-// de drie aanroepen (zoek op 'zetOudeLusNaamOm' en 'zetOpgeslagenLusNamenOm') en de
-// test test-oude-lusnaam.py.
-function zetOudeLusNaamOm(x) {
-  if (Array.isArray(x)) { x.forEach(zetOudeLusNaamOm); return x; }
-  if (!x || typeof x !== 'object') return x;
-  if ('wedstrijdlus' in x) { if (x.wedstrijdlus === true) x.lus = true; delete x.wedstrijdlus; }
-  if (x.courses && typeof x.courses === 'object') Object.values(x.courses).forEach(zetOudeLusNaamOm);
-  return x;
-}
-function zetOpgeslagenLusNamenOm() {
-  ['golf_rounds', 'golf_clubs'].forEach(sleutel => {
-    const ruw = storage.getItem(sleutel);
-    if (!ruw || !ruw.includes('"wedstrijdlus"')) return;   // niets ouds: niet eens ontleden
-    try {
-      const d = JSON.parse(ruw);
-      zetOudeLusNaamOm(Array.isArray(d) ? d : Object.values(d));
-      storage.setItem(sleutel, JSON.stringify(d));
-    } catch (e) { /* onleesbaar: dat meldt het gewone laden */ }
-  });
-}
-zetOpgeslagenLusNamenOm();
-// ── einde tijdelijk ──────────────────────────────────────────────────────────────────
 
 loadClubsFromStorage();
 rebuildCourseLookup();
@@ -8959,7 +8931,7 @@ function importRound(input) {
     try {
       const raw = (e.target.result || '').trim();
       if (!raw) return showStatus('Leeg bestand — geen gegevens gevonden', true);
-      let parsed = zetOudeLusNaamOm(JSON.parse(raw));   // tijdelijk: oude naam van de lus-markering
+      let parsed = JSON.parse(raw);
 
       // Array van meerdere rondes (backup)
       if (Array.isArray(parsed) && parsed.length > 1) {
@@ -15211,7 +15183,7 @@ function importCourseData(input) {
         input.value = '';
         return;
       }
-      const parsed = zetOudeLusNaamOm(JSON.parse(raw));   // tijdelijk: oude naam van de lus-markering
+      const parsed = JSON.parse(raw);
 
       // Array van clubs (backup)
       if (Array.isArray(parsed)) {
