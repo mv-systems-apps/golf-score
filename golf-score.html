@@ -1407,7 +1407,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-111</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-112</div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -4603,7 +4603,7 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
     ['Club & Baan', [
       ['Club',     clubName],
       ['ClubKort', clubShort],
-      ['Baan',     game.track],
+      [game.lus ? 'Lus' : 'Baan', game.track],
       ['Holes',    game.holes.length],
       ['PAR',      game.holes.reduce((s, h) => s + h.par, 0)],
       ['Geslacht', game.gender],
@@ -8441,7 +8441,7 @@ function buildScoreText(round) {
   lines.push('Tijd: ' + (round.time || '—'));
   lines.push('Speler: ' + round.player);
   lines.push('Club: ' + clubName);
-  lines.push('Baan: ' + round.track);
+  lines.push((round.lus ? 'Lus: ' : 'Baan: ') + round.track);
   lines.push('Holes: ' + round.holes.length);
   lines.push('Geslacht: ' + round.gender);
   lines.push('Tee: ' + round.tee);
@@ -11655,7 +11655,13 @@ function openCourseEditor(courseName) {
   // Zelfde onderscheid als bij de clubeditor: bij een nog niet bestaande baan heet de
   // modal "Nieuwe baan", zodat je meteen ziet dat je iets toevoegt in plaats van wijzigt.
   const baanTitel = document.getElementById('courseEditorTitle');
-  if (baanTitel) baanTitel.textContent = courseName === '__new__' ? 'Nieuwe baan' : 'Baan bewerken';
+  // Hetzelfde venster bewerkt ook een lus; dan heet alles hier 'lus' in plaats van 'baan'.
+  const isLus = courseName !== '__new__' && !!CLUBS[editorClub]?.courses?.[courseName]?.lus;
+  if (baanTitel) baanTitel.textContent = courseName === '__new__' ? 'Nieuwe baan' : isLus ? 'Lus bewerken' : 'Baan bewerken';
+  const lusNaamVeld = document.getElementById('editorCourseName');
+  const naamKop = document.querySelector('label[for="editorCourseName"]');
+  if (naamKop) naamKop.textContent = isLus ? 'Lus' : 'Baan';
+  if (lusNaamVeld) lusNaamVeld.placeholder = isLus ? 'Naam van de lus' : 'Naam van de baan';
   if (courseName === '__new__') {
     editorOrigCourseName = null;
     document.getElementById('editorCourseName').value = '';
@@ -13001,7 +13007,7 @@ function validateCourseInput() {
   // Check op dubbele baannaam binnen dezelfde club
   const existingCourses = CLUBS[editorClub]?.courses || {};
   if (newCourseName !== editorOrigCourseName && existingCourses[newCourseName]) {
-    throw new Error(`Baan "${newCourseName}" bestaat al`);
+    throw new Error(`De naam "${newCourseName}" bestaat al`);
   }
 
   // Valideer tees — minimaal 1
@@ -13272,7 +13278,7 @@ function renderLusMaker() {
     const regels = Object.entries(lus.tees).flatMap(([g, m]) => Object.entries(m).map(([t, v]) =>
       `<span>${escapeHtml(g)} ${escapeHtml(t)}</span><span>par ${teePar(v)}</span><span>CR ${String(v.CR.toFixed(1)).replace('.', ',')}</span><span>SR ${v.SR}</span>`)).join('');
     uitkomst = `<div style="display:grid;grid-template-columns:1fr auto auto auto;column-gap:12px;font-size:16px;color:var(--white);line-height:1.5;white-space:nowrap">${regels}</div>`
-      + `<div style="font-size:15px;color:var(--orange);margin-top:6px">CR en SR zijn geschat uit ${escapeHtml(lus.banen.join(' en '))}. Je kunt ze daarna in de baan aanpassen.</div>`;
+      + `<div style="font-size:15px;color:var(--orange);margin-top:6px">CR en SR zijn geschat uit ${escapeHtml(lus.banen.join(' en '))}. Je kunt ze daarna in de lus aanpassen.</div>`;
   }
   const telling = `${n} gekozen`;
   el.innerHTML =
@@ -13291,7 +13297,7 @@ function bewaarLus() {
   if (clubsGewijzigdElders) { toonLusStatus('De clubgegevens zijn in een ander tabblad gewijzigd. Ververs eerst de pagina.'); return; }
   const naam = document.getElementById('lusNaam').value.trim();
   if (!naam) { toonLusStatus('Vul een naam in'); return; }
-  if (club.courses[naam]) { toonLusStatus(`Baan "${naam}" bestaat al`); return; }
+  if (club.courses[naam]) { toonLusStatus(`De naam "${naam}" bestaat al`); return; }
   if (!lusKeuze.length) { toonLusStatus('Kies minstens één hole'); return; }
   const lus = berekenLus(lusClub, lusKeuze);
   if (!lus.aantalTees) { toonLusStatus('De gekozen banen hebben geen gezamenlijke tee'); return; }
@@ -13411,7 +13417,7 @@ function saveCourseFromEditor(negeerElders) {
     if (oudeBaan && oudeBaan !== nieuweBaan) {
       const treffers = rondesMetBaan(clubNaam, clubKort, oudeBaan);
       if (treffers.length) {
-        vraagNaamWijziging('Baan', oudeBaan, nieuweBaan, treffers.length,
+        vraagNaamWijziging(CLUBS[editorClub]?.courses?.[nieuweBaan]?.lus ? 'Lus' : 'Baan', oudeBaan, nieuweBaan, treffers.length,
           r => {
             const zelfdeClub = (clubNaam && r.club === clubNaam) || (clubKort && r.clubShort === clubKort);
             if (zelfdeClub && r.track === oudeBaan) { r.track = nieuweBaan; return true; }
@@ -13506,8 +13512,8 @@ function deleteCourseFromEditor(btn) {
   btn.classList.remove('confirm-armed');
   msg?.classList.add('hidden');
   showDangerModal(
-    'Baan verwijderen',
-    `De baan "${courseName}" wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+    CLUBS[editorClub]?.courses?.[courseName]?.lus ? 'Lus verwijderen' : 'Baan verwijderen',
+    `De ${CLUBS[editorClub]?.courses?.[courseName]?.lus ? 'lus' : 'baan'} "${courseName}" wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`,
     'Verwijderen',
     () => {
       if (!CLUBS[editorClub]?.courses) return;
