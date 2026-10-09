@@ -13,7 +13,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-4f5ca22f3d62';
+const CACHE_VERSION = 'golf-score-e021887739c0';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
@@ -32,29 +32,46 @@ const APP_FILES = [
   './icon-maskable-512.png',
 ];
 
+// Zonder deze bestanden opent de app niet. Lukt het ophalen daarvan niet, dan wordt de
+// update afgebroken: de vorige versie en haar kopie blijven staan, en de browser probeert
+// het later vanzelf opnieuw. Voorheen ging de update toch door en verdween de oude
+// kopie; bij slecht bereik op de baan opende de app daarna offline niet meer.
+const VERPLICHT = ['./golf-score.html'];
+
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_VERSION)
-      // Per bestand toevoegen is robuuster dan addAll (dat faalt als één bestand ontbreekt).
-      // Bij falen een paar keer opnieuw proberen i.p.v. de fout stilzwijgend te negeren —
-      // anders kan bijvoorbeeld een icoon per ongeluk blijvend uit de cache verdwijnen
-      // als het ophalen ervan één keer hapert tijdens het installeren van een nieuwe versie.
-      .then(c => Promise.all(APP_FILES.map(url => addWithRetry(c, url))))
-      .then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE_VERSION);
+    // Per bestand toevoegen is robuuster dan addAll (dat faalt als één bestand ontbreekt).
+    // Bij falen een paar keer opnieuw proberen.
+    const gelukt = await Promise.all(APP_FILES.map(url => addWithRetry(c, url)));
+    const mist = APP_FILES.filter((url, i) => !gelukt[i]);
+    if (mist.some(url => VERPLICHT.includes(url))) {
+      throw new Error('Update afgebroken: ' + mist.join(', ') + ' niet opgehaald');
+    }
+    // Een pictogram of ander bijbestand dat niet lukte: overnemen uit de vorige kopie,
+    // zodat het niet ontbreekt. De achtergrondverversing haalt later de nieuwe op.
+    for (const url of mist) {
+      const oud = await caches.match(url);
+      if (oud) await c.put(url, oud);
+    }
+    await self.skipWaiting();
+  })());
 });
 
 async function addWithRetry(cache, url, attempts = 3) {
   for (let i = 0; i < attempts; i++) {
-    try { await cache.add(url); return; }
-    catch (e) { if (i === attempts - 1) { /* laatste poging ook mislukt: laat de rest van de installatie doorgaan */ } }
+    try { await cache.add(url); return true; }
+    catch (e) { /* opnieuw proberen; na de laatste poging beslist de installatie */ }
   }
+  return false;
 }
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))
+      // Alleen eigen oude caches: andere apps op dezelfde origin (GitHub Pages:
+      // mv-systems-apps.github.io/<app>/) delen dezelfde cacheopslag.
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('golf-score-') && k !== CACHE_VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

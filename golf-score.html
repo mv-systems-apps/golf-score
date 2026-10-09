@@ -993,6 +993,8 @@
 
 <!-- SCORE -->
 <div id="screen-score" class="screen">
+  <!-- Alleen zichtbaar als de browser niets kan bewaren (zie storageIsPersistent). -->
+  <div id="nietBewaardRegel" class="hidden" style="margin-bottom:8px;padding:6px 12px;background:var(--red);border-radius:var(--radius);font-size:17px;font-weight:700;color:#fff;text-align:center">Niet bewaard: deze browser kan niets opslaan</div>
   <div id="scoreEmptyMsg" style="font-size:20px;color:var(--muted)"></div>
   <!-- Sub-tabs: alleen zichtbaar bij 18-holes ronde -->
   <div id="nineTabBar" class="hidden" style="display:flex;border-bottom:2px solid rgba(255,255,255,.1)">
@@ -1407,7 +1409,15 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-112</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 13527DA-136</div>
+    <div id="laatsteFouten" class="hidden" style="margin:6px 0 12px">
+      <div style="font-size:17px;color:var(--red);font-weight:700">Laatste fouten</div>
+      <div id="laatsteFoutenTekst" style="font-size:14px;color:var(--muted);white-space:pre-wrap;word-break:break-word;margin:4px 0 8px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1;padding:10px;font-size:17px;margin:0" onclick="kopieerTekst(document.getElementById('laatsteFoutenTekst').textContent, this)">Kopieer</button>
+        <button class="btn-secondary" style="flex:1;padding:10px;font-size:17px;margin:0" onclick="wisLaatsteFouten()">Wis</button>
+      </div>
+    </div>
     <div style="font-size:17px;color:var(--muted);line-height:1.6">
       Gemaakt voor persoonlijk gebruik. Niet verspreiden of publiceren zonder toestemming.
     </div>
@@ -1427,6 +1437,98 @@
 </div>
 
 <script>
+// ── ALGEMENE FOUTVANGER ──────────────────────────────────────────────────────────────
+// Een onverwachte fout stond alleen in de console; op de baan zie je die niet, en de
+// handeling waar je mee bezig was is dan halverwege gestopt. Deze vanger MELDT alleen:
+// hij herlaadt niet, wist niets en schrijft niets naar je rondes of clubs. Hij staat
+// bovenaan en leunt op geen enkele functie van de app, zodat hij ook werkt als de fout
+// vroeg bij het opstarten valt. Zolang er geen fout is, kost hij niets.
+// De laatste vijf fouten worden bewaard (golf_fouten) en staan onder Instellingen bij
+// het versienummer, zodat je ze ook achteraf nog kunt kopiëren.
+const FOUTEN_SLEUTEL = 'golf_fouten';
+function leesFouten() {
+  try { const l = JSON.parse(localStorage.getItem(FOUTEN_SLEUTEL) || '[]'); return Array.isArray(l) ? l.filter(x => typeof x === 'string') : []; }
+  catch (e) { return []; }
+}
+function kopieerTekst(tekst, knop) {
+  const klaar = () => { if (!knop) return; const oud = knop.textContent; knop.textContent = 'Gekopieerd'; setTimeout(() => { knop.textContent = oud; }, 2000); };
+  const delen = () => { try { if (navigator.share) navigator.share({ text: tekst, title: 'Fout in Golf Score' }).catch(() => {}); } catch (e) {} };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tekst).then(klaar).catch(delen);
+    else delen();
+  } catch (e) { delen(); }
+}
+function toonLaatsteFouten() {
+  const el = document.getElementById('laatsteFouten');
+  if (!el) return;
+  const lijst = leesFouten();
+  el.classList.toggle('hidden', !lijst.length);
+  const t = document.getElementById('laatsteFoutenTekst');
+  if (t) t.textContent = lijst.join('\n');
+}
+function wisLaatsteFouten() {
+  try { localStorage.removeItem(FOUTEN_SLEUTEL); } catch (e) {}
+  toonLaatsteFouten();
+}
+function meldOnverwachteFout(omschrijving) {
+  try {
+    const stempel = document.getElementById('appVersionStamp');
+    const versie = ((stempel && stempel.textContent) || '').replace(/^Versie\s+/, '').trim();
+    const nu = new Date(), twee = n => String(n).padStart(2, '0');
+    const regel = `${versie} · ${nu.getFullYear()}-${twee(nu.getMonth() + 1)}-${twee(nu.getDate())} ${twee(nu.getHours())}:${twee(nu.getMinutes())} · ${String(omschrijving).slice(0, 300)}`;
+    try { localStorage.setItem(FOUTEN_SLEUTEL, JSON.stringify([regel, ...leesFouten()].slice(0, 5))); } catch (e) {}
+    toonLaatsteFouten();
+    // Eén melding per keer: een fout die zich bij elke hertekening herhaalt, stapelt geen
+    // vensters. Na het sluiten mag er weer een komen.
+    if (document.getElementById('foutMelding') || !document.body) return;
+    const laag = document.createElement('div');
+    laag.id = 'foutMelding';
+    laag.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+    const vak = document.createElement('div');
+    vak.style.cssText = 'background:var(--green-deep);border:2px solid var(--red);color:var(--white);border-radius:16px;padding:20px;max-width:320px;width:100%;font-size:20px;line-height:1.5;text-align:center';
+    const kop = document.createElement('div');
+    kop.textContent = 'Er ging iets mis';
+    kop.style.cssText = 'font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--red);margin-bottom:16px';
+    const uitleg = document.createElement('div');
+    uitleg.textContent = 'Je laatste handeling is mogelijk niet opgeslagen. Controleer je scorekaart. Herlaad de app als het blijft gebeuren.';
+    const detail = document.createElement('div');
+    detail.id = 'foutMeldingDetail';
+    detail.textContent = regel;
+    detail.style.cssText = 'font-size:15px;color:var(--muted);margin:14px 0 16px;overflow-wrap:break-word';
+    const knoppen = document.createElement('div');
+    knoppen.style.cssText = 'display:flex;gap:8px';
+    const maak = (tekst, klik, hoofd) => {
+      const b = document.createElement('button');
+      b.textContent = tekst; b.onclick = klik; b.className = hoofd ? 'btn-primary' : 'btn-secondary';
+      b.style.cssText = 'flex:1;margin-top:0;padding:12px;font-size:20px';
+      knoppen.appendChild(b); return b;
+    };
+    const kopieer = maak('Kopieer', () => kopieerTekst(regel, kopieer), false);
+    maak('Sluiten', () => laag.remove(), true);
+    vak.append(kop, uitleg, detail, knoppen);
+    laag.appendChild(vak);
+    document.body.appendChild(laag);
+  } catch (e) { /* de vanger zelf mag nooit een nieuwe fout veroorzaken */ }
+}
+// Alleen fouten van de app zelf: een browserextensie of een script van een andere
+// herkomst ("Script error." zonder bestand) hoort hier niet.
+window.addEventListener('error', e => {
+  if (e.target && e.target !== window) return;                       // een plaatje of bestand dat niet laadt
+  const bestand = e.filename || '';
+  if (!bestand || bestand.split(/[?#]/)[0] !== location.href.split(/[?#]/)[0]) return;
+  if (/ResizeObserver loop/.test(e.message || '')) return;            // onschuldige browsermelding
+  meldOnverwachteFout(`${(e.message || 'onbekende fout').replace(/^Uncaught /, '')} (regel ${e.lineno}:${e.colno})`);
+});
+window.addEventListener('unhandledrejection', e => {
+  const r = e.reason;
+  if (r && r.name === 'AbortError') return;                           // delen of opslaan zelf afgebroken
+  const stapel = (r && r.stack) || '';
+  if (stapel && !stapel.includes(location.href.split(/[?#]/)[0])) return;
+  const plek = (stapel.match(/:(\d+):(\d+)\)?\s*(\n|$)/) || []);
+  meldOnverwachteFout(`${(r && (r.name ? r.name + ': ' : '') + (r.message || '')) || String(r)}${plek[1] ? ` (regel ${plek[1]}:${plek[2]})` : ''} [async]`);
+});
+document.addEventListener('DOMContentLoaded', toonLaatsteFouten, { once: true });
+
 // Voorkomt dat de browser bij een herlaad (bv. pull-to-refresh) automatisch de oude
 // scrollpositie probeert te herstellen. Dat kan, in combinatie met een adresbalk die op
 // dat moment in- of uitgeklapt is, een viewport opleveren die (tijdelijk) net iets kleiner
@@ -1445,8 +1547,8 @@ function setRealVH() {
 setRealVH();
 window.addEventListener('resize', setRealVH);
 
-// ══ EXACTE BAANDATA uit mvgolfcourses.json ══════════════════════════════
-const CLUBS = {};;
+// ══ CLUBS: je eigen clubs, uit de opslag (de app begint zonder clubs) ═══════════════
+const CLUBS = {};
 
 // COURSES: de banen van de club die op het startscherm gekozen is — en ALLEEN die.
 // Clubnamen zijn uniek, baannamen niet: elke club mag een baan 'Noord' of een
@@ -1490,21 +1592,39 @@ function clubsVingerafdruk() {
   return String(h >>> 0);
 }
 
-function saveClubsToStorage() {
-  if (clubsOnleesbaar) {
+// Een nieuwe club (createNewClub) waar nog geen naam aan is gegeven.
+function isNieuweClubZonderNaam(sleutel, data = CLUBS[sleutel]) {
+  return String(sleutel).startsWith('__nieuw__') && !(data && data.club);
+}
+// ...en ook nog zonder banen: die hoort niet in de opslag, en wordt bij het laden
+// opgeruimd. Heeft hij al wel banen, dan blijft hij bewaard (anders zou je die kwijt
+// zijn); je ziet hem dan als naamloze club en kunt hem alsnog een naam geven.
+function isLegeNieuweClub(sleutel, data = CLUBS[sleutel]) {
+  return isNieuweClubZonderNaam(sleutel, data) && !Object.keys((data && data.courses) || {}).length;
+}
+// herstel: clubbackup terugzetten na onleesbare clubgegevens (zie vraagHerstelNaOnleesbaar).
+function saveClubsToStorage(herstel = false) {
+  if (clubsOnleesbaar && herstel !== true) {
     console.warn('Opslaan geweigerd: de opgeslagen clubgegevens zijn niet leesbaar.');
     return false;
   }
   try {
-    const gelukt = storage.setItem('golf_clubs', JSON.stringify(CLUBS)) !== false;
+    // Een nieuwe club waar je nog geen naam aan gaf (createNewClub) bestaat alleen in de
+    // editor. Hij hoort niet in de opslag: sluit je de app met de editor open, dan bleef
+    // er anders een naamloze club achter.
+    const teBewaren = Object.keys(CLUBS).some(k => isLegeNieuweClub(k))
+      ? Object.fromEntries(Object.entries(CLUBS).filter(([k]) => !isLegeNieuweClub(k))) : CLUBS;
+    const gelukt = storage.setItem('golf_clubs', JSON.stringify(teBewaren)) !== false;
     // Stempelen zodra de clubgegevens ECHT anders zijn. Clubs verander je zelden, dus
     // er is bewust geen dagen- of aantallendrempel: de melding komt alleen als er iets
     // te beschermen valt, en zwijgt zolang je niets wijzigt.
     try {
       // Alleen de vingerafdruk: de melding noemt geen tijdstip meer, dus een aparte
       // wijzigingsstempel heeft geen lezer.
-      const nu = clubsVingerafdruk();
-      if (nu !== storage.getItem('golf_clubs_fingerprint')) {
+      // Alleen als het wegschrijven lukte: anders hoort de vingerafdruk bij gegevens
+      // die niet in de opslag staan, en klopt de melding over de clubbackup niet meer.
+      const nu = gelukt ? clubsVingerafdruk() : null;
+      if (nu !== null && nu !== storage.getItem('golf_clubs_fingerprint')) {
         storage.setItem('golf_clubs_fingerprint', nu);
       }
     } catch (e) { /* opslag niet beschikbaar: dan gewoon geen stempel */ }
@@ -1521,6 +1641,14 @@ function saveClubsToStorage() {
 }
 
 let clubsOnleesbaar = false;
+let _clubsApart = 0;   // aantal clubs dat bij het laden apart is gezet (zie kanClubZijn)
+// Het minimum om zonder vastlopen getoond te kunnen worden; geen inhoudelijke keuring
+// (die doet validateImportedClubData bij het inlezen van een bestand).
+function kanClubZijn(c) {
+  const ding = x => !!x && typeof x === 'object' && !Array.isArray(x);
+  return ding(c) && typeof c.club === 'string' && ding(c.courses)
+    && Object.values(c.courses).every(b => ding(b) && (b.tees === undefined || ding(b.tees)));
+}
 // Wordt gezet zodra een ander tabblad de clubgegevens wijzigt; de baaneditor vraagt
 // dan eerst om bevestiging voordat hij eroverheen schrijft.
 let clubsGewijzigdElders = false;
@@ -1530,9 +1658,23 @@ function loadClubsFromStorage() {
     const saved = storage.getItem('golf_clubs');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && Object.keys(parsed).length) {
+      // Leesbaar maar geen verzameling clubs (een lijst, een getal): behandelen als
+      // onleesbaar. Voorheen viel de app dan stil terug op een lege clublijst en schreef
+      // die er bij de eerste wijziging overheen.
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('geen verzameling clubs');
+      if (Object.keys(parsed).length) {
         Object.keys(CLUBS).forEach(k => delete CLUBS[k]);
-        Object.assign(CLUBS, parsed);
+        // Een element dat geen club kan zijn, blijft buiten de schermen (anders loopt het
+        // opstarten erop vast) maar wel in de opslag: de rem hieronder voorkomt dat er
+        // overheen wordt geschreven tot je een backup terugzet.
+        let apart = 0;
+        Object.keys(parsed).forEach(k => {
+          // Achtergebleven van een eerdere versie: een naamloze nieuwe club zonder banen.
+          // Die verdwijnt hier uit het geheugen en bij de eerstvolgende opslag uit de opslag.
+          if (parsed[k] && typeof parsed[k] === 'object' && isLegeNieuweClub(k, parsed[k])) return;
+          if (kanClubZijn(parsed[k])) CLUBS[k] = parsed[k]; else apart++;
+        });
+        if (apart && !clubsOnleesbaar) { clubsOnleesbaar = true; _clubsApart = apart; meldOnleesbaar('clubs', apart); }
       }
     }
     // Verwijder banen zonder holes
@@ -1568,17 +1710,25 @@ function escapeHtml(s) {
 
 // Voorkomt dat user-controlled tekst uit een JS-string-literal binnen een
 // inline onclick="..." attribuut kan breken (bijv. clubnamen met quotes).
+// Voor een waarde binnen een tekst tussen enkele aanhalingstekens in een klik-opdracht
+// (een onclick-attribuut). Zo'n opdracht staat in een HTML-attribuut, en de browser vertaalt
+// HTML-codes daarin terug VOORDAT hij de opdracht leest. Daarom gaat ook & mee: anders
+// werd &#39; in een naam weer een apostrof en brak de naam uit de tekst.
 function escapeJsString(s) {
   if (s == null) return '';
   return String(s)
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r/g, '\\r')
     .replace(/\n/g, '\\n');
 }
 
 function whsRound(x) {
-  return Math.floor((x + Number.EPSILON) * 1 + 0.5); // round to 0 decimals
+  return Math.floor(Math.round(x * 1e9) / 1e9 + 0.5); // heel getal, een exacte ,5 naar boven; eerst de rekenruis eraf (19,4999… is 19,5)
 }
 
 // NGF richtlijn voor tee-advies op basis van handicap en geslacht (bron: NGF tabel)
@@ -1669,6 +1819,17 @@ function stbFor(h) {
   return Math.max(0, h.par + h.phcp + 2 - h.score);
 }
 
+// Afgeleide waarden worden bij het tonen uitgerekend uit de holes, niet overgenomen uit
+// wat er is opgeslagen: totalStb ontbreekt in een backup en kan verouderd zijn, en ppar
+// ontbreekt in sommige bestanden van elders. De opgeslagen velden blijven bestaan (het
+// opslagformaat verandert niet), maar het scherm vertrouwt er niet meer op.
+function stbTotaal(r) {
+  return (r && Array.isArray(r.holes) ? r.holes : []).reduce((s, h) => s + (h ? stbFor(h) : 0), 0);
+}
+function pparVan(h) {
+  return h.par + h.phcp;
+}
+
 // Aangepaste Bruto Score (AGS) per hole: min(str, par + phcp + 2)
 function agsFor(h) {
   if (h.score === null) return 0;
@@ -1754,13 +1915,13 @@ function computeSD(round) {
 
   if (holes.length === 18) {
     const sd = (113 / sr) * (ags - cr - pcc);
-    return { value: Math.round(sd * 10) / 10, approx: false };
+    return { value: Math.round(Math.round(sd * 1e9) / 1e8) / 10, approx: false }; // eerst de rekenruis eraf, dan pas op tienden
   }
   if (holes.length === 9) {
     if (!isFinite(hi)) return null;
     const sd9 = (113 / sr) * (ags - cr - pcc);
     const sd18 = sd9 + expectedSD9(hi);
-    return { value: Math.round(sd18 * 10) / 10, approx: true };
+    return { value: Math.round(Math.round(sd18 * 1e9) / 1e8) / 10, approx: true };
   }
   return null;
 }
@@ -1780,8 +1941,13 @@ function effectiveSD(round) {
 // Officiële WHS-afronding van de handicapindex: rekenkundig afronden op 1 decimaal.
 // (De Score Differentials zelf zijn al op 1 decimaal afgerond.)
 // Let op: whsRound() hierboven rondt op 0 decimalen af voor de course handicap.
+// Afronden op één decimaal; een exacte ,x5 gaat naar boven (richting plus), ook bij een
+// plushandicap. Eerst op duizendsten: dat haalt de rekenruis van kommagetallen weg.
+// Nagerekend voor gemiddelden van 1 tot en met 8 dagresultaten (test-afronding.js): die
+// stap kan de uitkomst niet verschuiven. Zonder die stap werd 12,65 (bewaard als
+// 12,649999…) 12,6 in plaats van 12,7.
 function whsIndexRound(v) {
-  return Math.round(v * 10) / 10;
+  return Math.round(Math.round(v * 1000) / 100) / 10;
 }
 
 function whsStaffel(n) {
@@ -1809,7 +1975,10 @@ function applyHandicapCaps(rawValue, lowHi) {
   if (lowHi == null || !isFinite(lowHi)) {
     return { value: Math.min(rawValue, HANDICAP_INDEX_LIMIT), type: null };
   }
-  const increase = rawValue - lowHi;
+  // Handicap en Low HI zijn tienden; het verschil dus ook. Afronden haalt de rekenruis
+  // weg: zonder dat gaf precies 3,0 erboven soms 3,0000000000000004 en dus ten onrechte
+  // het label 'soft'.
+  const increase = whsIndexRound(rawValue - lowHi);
   if (increase <= 3.0) {
     return { value: Math.min(rawValue, HANDICAP_INDEX_LIMIT), type: null };
   }
@@ -1817,7 +1986,8 @@ function applyHandicapCaps(rawValue, lowHi) {
   let capped = lowHi + 3.0 + (increase - 3.0) * 0.5;
   // Hard cap: nooit meer dan 5.0 boven low HI
   const hardLimit = lowHi + 5.0;
-  const type = capped > hardLimit ? 'hard' : 'soft';
+  // Vergelijken in hele honderdsten, om dezelfde reden: precies op de harde grens is 'soft'.
+  const type = Math.round(capped * 100) > Math.round(hardLimit * 100) ? 'hard' : 'soft';
   capped = Math.min(capped, hardLimit, HANDICAP_INDEX_LIMIT);
   return { value: whsIndexRound(capped), type };
 }
@@ -1954,8 +2124,7 @@ function whsHandicap(rounds, lowHi = null, esrMap = null) {
   const sorted = [...withSd].sort((a, b) => (a.sd - b.sd) || (a.t - b.t));
   const used = sorted.slice(0, staffel.count);
   const avg = used.reduce((s, x) => s + x.sd, 0) / used.length;
-  let rawValue = whsIndexRound(avg + staffel.adj);
-  rawValue = Math.round(rawValue * 10) / 10;
+  const rawValue = whsIndexRound(avg + staffel.adj);
   // Of ESR daadwerkelijk invloed had op déze berekening: alleen relevant als een van de
   // meetellende rondes zelf een esr-aanpassing draagt. Ter vergelijking ook de waarde
   // zónder ESR (zelfde selectie/staffel, maar de onaangepaste dagresultaten) — dit is een
@@ -2148,6 +2317,15 @@ const storage = (() => {
   return { getItem: k => k in mem ? mem[k] : null, setItem: (k,v) => { mem[k]=String(v); if (k === 'golf_default_club') rebuildCourseLookup(false); return true; }, removeItem: k => { delete mem[k]; if (k === 'golf_default_club') rebuildCourseLookup(false); } };
 })();
 
+// Kan de browser niets bewaren (privévenster, geblokkeerde opslag), dan draait de app in
+// het geheugen en is alles weg zodra je hem sluit. Dat hoor je bij het opstarten
+// (controleerOpslagKenmerk), vóór het starten van een ronde (startRound) en je ziet het
+// op de scorekaart. Is de opslag er gewoon, dan gebeurt hier niets.
+const GEEN_OPSLAG_TEKST = 'Deze browser kan niets bewaren. Alles wat je invoert wordt niet bewaard en is weg zodra je de app sluit. '
+  + 'Controleer of je in een privévenster zit, of dat opslag in de browser is geblokkeerd.';
+let _zonderOpslagAkkoord = false;
+if (!storageIsPersistent) document.getElementById('nietBewaardRegel')?.classList.remove('hidden');
+
 // Veilig opgeslagen rondes inladen: valt terug op een lege lijst bij corrupte data,
 // in plaats van de hele app te laten crashen op een kapotte JSON.parse.
 // Staat op true zodra de opgeslagen rondes onleesbaar bleken. Zolang dat zo is, mag
@@ -2186,20 +2364,45 @@ function leesRondes() {
 }
 
 let _rondesCacheRuw = null, _rondesCache = null;
+let _rondesApart = 0;  // aantal elementen dat bij het laden apart is gezet; 0 bij een onontleedbare tekst
+// Het minimum om zonder vastlopen getoond en doorgerekend te kunnen worden.
+// Ook de velden waarmee gerekend of getekst wordt: een speler die geen tekst is liet
+// het opstarten vastlopen, en een par of score die geen getal is gaf 'NaN'. Een
+// ontbrekende slagverdeling (phcp) zet de ronde NIET apart: zo'n ronde kan uit een
+// ouder bestand komen en heeft verder goede scores; weghalen zou ze verloren laten gaan.
+// Het Stableford-totaal is dan niet te bepalen en wordt niet getoond.
+function kanRondeZijn(r) {
+  const getal = v => typeof v === 'number' && isFinite(v);
+  return !!r && typeof r === 'object' && !Array.isArray(r) && typeof r.date === 'string'
+    && (r.date === '' || /^\d{4}-\d{2}-\d{2}$/.test(r.date))   // JJJJ-MM-DD; een lege datum blijft toegestaan (zie test-restpaden, deel 5)
+    && (r.player == null || typeof r.player === 'string')
+    && Array.isArray(r.holes) && r.holes.every(h => !!h && typeof h === 'object'
+      && getal(h.par) && getal(h.si) && (h.phcp == null || getal(h.phcp)) && (h.score == null || getal(h.score)));
+}
 function loadSavedRounds() {
   try {
     const ruw = storage.getItem('golf_rounds');
     if (_rondesCache && ruw === _rondesCacheRuw) return kopieRondes(_rondesCache);
     const parsed = JSON.parse(ruw || '[]');
     if (!Array.isArray(parsed)) throw new Error('geen lijst');
-    rondesOnleesbaar = false;
+    // Een element dat geen ronde kan zijn (null, een getal, zonder holes) blijft buiten
+    // de schermen: één zo'n element maakte anders alle goede rondes onbereikbaar. Het
+    // blijft wel in de opslag staan, en de rem op schrijven gaat aan tot je een backup
+    // terugzet. Dit loopt alleen als de opgeslagen tekst verandert, net als het ontleden.
+    const goed = parsed.filter(kanRondeZijn);
+    const apart = parsed.length - goed.length;
+    if (apart) {
+      if (!rondesOnleesbaar || _rondesApart !== apart) meldOnleesbaar('rondes', apart);
+      rondesOnleesbaar = true;
+    } else rondesOnleesbaar = false;
+    _rondesApart = apart;
     _rondesCacheRuw = ruw;
-    _rondesCache = parsed;
-    return kopieRondes(parsed);
+    _rondesCache = goed;
+    return kopieRondes(goed);
   } catch(e) {
     console.error('Opgeslagen rondes konden niet worden gelezen (corrupte data):', e);
     if (!rondesOnleesbaar) {
-      rondesOnleesbaar = true;
+      rondesOnleesbaar = true; _rondesApart = 0;
       meldOnleesbaar('rondes');
     }
     return [];
@@ -2208,11 +2411,26 @@ function loadSavedRounds() {
 
 // Eén melding per keer, en pas als het scherm er is (bij het opstarten kan dit vóór
 // de eerste tekening vallen).
-function meldOnleesbaar(wat) {
+function meldOnleesbaar(wat, apart = 0) {
   const toon = () => {
+    // Een paar beschadigde elementen naast goede gegevens: die weghalen is het herstel.
+    // NIET 'backup maken en terugzetten': een backup bevat alleen afgeronde rondes, dus
+    // terugzetten zou lopende, geplande en ingelezen rondes wegvagen.
+    if (apart) {
+      const een = apart === 1;
+      const ding = wat === 'rondes' ? (een ? 'ronde' : 'rondes') : (een ? 'club' : 'clubs');
+      toonKeuzeModal(`Beschadigde ${wat}`, 'red',
+        `${apart} van je opgeslagen ${wat} ${een ? 'is' : 'zijn'} beschadigd en apart gezet. Je andere ${wat} zie je gewoon. `
+        + `Zolang de beschadigde ${ding} er ${een ? 'staat' : 'staan'}, slaat de app ${wat === 'rondes' ? 'niets' : 'geen wijzigingen aan clubs'} op. `
+        + `Haal ${een ? 'hem' : 'ze'} weg; je andere ${wat} blijven staan.`,
+        [{ tekst: 'Bewaar eerst als bestand en haal weg', hoofd: true, actie: () => haalBeschadigdeWeg(wat, true) },
+         { tekst: 'Weghalen', actie: () => haalBeschadigdeWeg(wat, false) },
+         { tekst: 'Later', actie: () => {} }]);
+      return;
+    }
     const tekst = wat === 'rondes'
       ? 'Je opgeslagen rondes zijn niet leesbaar. De app toont daarom een lege lijst, maar schrijft niets weg: je gegevens staan nog in het geheugen van de browser. Herstel ze via Instellingen \u2192 Gegevens \u2192 Importeren met je laatste backup.'
-      : 'Je clubgegevens zijn niet leesbaar. De app gebruikt tijdelijk de standaardbanen en slaat geen wijzigingen op. Herstel ze via Instellingen \u2192 Gegevens met je laatste backup.';
+      : 'Je clubgegevens zijn niet leesbaar. De app toont tijdelijk geen clubs en slaat geen wijzigingen op. Herstel ze via Instellingen \u2192 Gegevens met je laatste backup.';
     showInfoModal('Gegevens niet leesbaar', tekst, 'red');
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', toon, { once: true });
@@ -2323,7 +2541,19 @@ function isLusRonde(r) {
 
 // CR en SR van een wedstrijdlus zijn geschat, dus de ronde begint als niet-qualifying —
 // of je de lus nu aantikt of de app hem kiest. Je kunt het daarna zelf weer aanzetten.
+// Jouw keuze van vóór de lus wordt onthouden en teruggezet zodra je weer een gewone baan
+// kiest (herstelQualifyingNaLus); zet je op de lus zelf de schakelaar om, dan geldt dat.
+let _qualVoorLus = null;
+function herstelQualifyingNaLus() {
+  if (!_qualVoorLus) return;
+  sel.qualifying = _qualVoorLus[0]; sel2.qualifying = _qualVoorLus[1];
+  _qualVoorLus = null;
+  const t1 = document.getElementById('qualifyToggle1'), t2 = document.getElementById('qualifyToggle2');
+  if (t1) t1.checked = !!sel.qualifying;
+  if (t2) t2.checked = !!sel2.qualifying;
+}
 function zetQualifyingUitVoorLus() {
+  if (!_qualVoorLus) _qualVoorLus = [!!sel.qualifying, !!sel2.qualifying];
   sel.qualifying = false;
   sel2.qualifying = false;
   ['qualifyToggle1', 'qualifyToggle2'].forEach(id => { const t = document.getElementById(id); if (t) t.checked = false; });
@@ -2552,14 +2782,16 @@ function buildTeeButtons2() {
     else if (!teeNames.includes(sel2.tee) && teeNames.length) sel2.tee = teeNames[0];
   } else if (!teeNames.includes(sel2.tee) && teeNames.length) sel2.tee = teeNames[0];
   el.innerHTML = teeNames.map(t =>
-    `<button class="tee-btn tee-${t}${sel2.tee === t ? ' active' : ''}" onclick="sel2.tee='${t}';sel2._teeUserSelected=true;buildTeeButtons2();updateChcp2()">${t}</button>`
+    // De naam staat als data-attribuut op de knop en niet in de handler: een naam met
+    // een apostrof (Men's) brak anders de handler, en de knop deed dan niets.
+    `<button class="tee-btn tee-${escapeHtml(t)}${sel2.tee === t ? ' active' : ''}" data-tee="${escapeHtml(t)}" onclick="sel2.tee=this.dataset.tee;sel2._teeUserSelected=true;buildTeeButtons2();updateChcp2()">${escapeHtml(t)}</button>`
   ).join('');
   // Toon NGF advies
   const el2 = document.getElementById('teeAdvice2');
   if (el2) {
     const advised2 = ngfAdvised(hcp2, sel2.gender);
     if (advised2 && teeNames.includes(advised2)) {
-      el2.innerHTML = `NGF advies: <span class="tee-badge tee-${advised2}" style="vertical-align:middle">${advised2}</span>`;
+      el2.innerHTML = `NGF advies: <span class="tee-badge tee-${escapeHtml(advised2)}" style="vertical-align:middle">${escapeHtml(advised2)}</span>`;
       el2.style.display = '';
     } else {
       el2.style.display = 'none';
@@ -2713,16 +2945,28 @@ function updatePlayerSwitchBar() {
   if (btn2) { btn2.style.background = !isP1Active ? 'var(--gold)' : inactiveBg; btn2.style.color = !isP1Active ? 'var(--green-deep)' : 'var(--white)'; btn2.style.fontWeight = !isP1Active ? '800' : '700'; }
 }
 
+// Een score- of puttswijziging die nog op bevestiging wacht hoort bij de hole van de
+// speler die nu in beeld is. Wordt `game` vervangen of leeggemaakt terwijl hij nog
+// loopt, dan schreef de afloop (na twee seconden) naar dezelfde hole van de ANDERE
+// speler, of naar een spel dat er niet meer was. Daarom eerst afhandelen: de wijziging
+// vervalt, precies zoals hij zonder bevestiging vanzelf zou vervallen.
+function handelWachtendeTikAf() {
+  if (scoreTapHole !== null) clearScoreTap(true);
+  if (puttTapHole !== null) clearPuttTap(true);
+}
+
 function switchToPlayer(n) {
   if (n === activePlayer) return;
+  handelWachtendeTikAf();
   if (navigator.vibrate) navigator.vibrate(20);
   const saved = loadSavedRounds();
   const r2 = saved.find(r => r.id === game2Id);
   if (!r2) return;
 
   if (n === 2) {
-    // Sla huidige staat op en laad speler 2
-    saveActiveRound(true);
+    // Sla huidige staat op en laad speler 2. Lukt het opslaan niet, dan niet wisselen:
+    // het spel van speler 1 zou worden vervangen terwijl zijn scores nergens staan.
+    if (saveActiveRound(true) === false) { meldNietOpgeslagen('Wisselen van speler'); return; }
     activePlayer = 2;
     gameFromRound(r2);
     setHeaderInfo(game.track, game.tee, game.chcp);
@@ -2737,7 +2981,10 @@ function switchToPlayer(n) {
       const p2Entry = buildRoundEntry();
       const idx = saved.findIndex(r => r.id === game2Id);
       if (idx >= 0) saved[idx] = p2Entry;
-      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
+      // Zelfde regel als hierboven: mislukt het opslaan, dan blijft speler 2 in beeld.
+      if (metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved)))) === false) {
+        meldNietOpgeslagen('Wisselen van speler'); return;
+      }
     } else {
       console.warn('Wissel naar speler 1: het geladen spel is niet de ronde van speler 2 — niet weggeschreven.');
     }
@@ -2769,7 +3016,6 @@ function buildRoundEntry() {
   const entry = {
     ...game,
     total: played.reduce((s, h) => s + h.score, 0),
-    totalStb: game.holes.reduce((s, h) => s + stbFor(h), 0),
     holesCount: game.holes.length,
     currentHole, started: true,
     pcc: game.pcc ?? null, sdFinal: game.sdFinal ?? null, qualifying: !!game.qualifying,
@@ -2781,6 +3027,9 @@ function buildRoundEntry() {
   if (!entry.lus) delete entry.lus;
   // Afgeleid uit de holes en hier niet bijgehouden; een meegekomen waarde zou verouderen.
   delete entry.playedCount;
+  // Het Stableford-totaal wordt niet opgeslagen: het scherm rekent het altijd uit de
+  // holes (stbTotaal). Een ronde die het nog van vroeger meedraagt, verliest het hier.
+  delete entry.totalStb;
   delete entry._justImported;
   return entry;
 }
@@ -2927,7 +3176,7 @@ function buildTrackList() {
   if (visibleNames.length && !visibleNames.includes(sel.track)) {
     sel.track = visibleNames[0];
     sel.chcpOverride = null;
-    if (COURSES[sel.track].lus) zetQualifyingUitVoorLus();
+    if (COURSES[sel.track].lus) zetQualifyingUitVoorLus(); else herstelQualifyingNaLus();
   }
 
   const baanKnop = name => {
@@ -2937,7 +3186,7 @@ function buildTrackList() {
     btn.innerHTML = `<span class="track-name">${escapeHtml(name)}</span><span class="track-sub">${n}h</span>`;
     btn.onclick = () => {
       sel.track = name; sel.chcpOverride = null; sel._teeUserSelected = false; sel._holeCountUserCleared = false;
-      if (COURSES[name].lus) zetQualifyingUitVoorLus();
+      if (COURSES[name].lus) zetQualifyingUitVoorLus(); else herstelQualifyingNaLus();
       rebuildStartScreen(); updateHeaderClubName();
     };
     el.appendChild(btn);
@@ -2994,7 +3243,7 @@ function updateTeeAdvice() {
   const available = Object.keys(course.tees[sel.gender] || {});
   if (!available.includes(advised)) { el.style.display = 'none'; return; }
 
-  el.innerHTML = `NGF advies: <span class="tee-badge tee-${advised}" style="vertical-align:middle">${advised}</span>`;
+  el.innerHTML = `NGF advies: <span class="tee-badge tee-${escapeHtml(advised)}" style="vertical-align:middle">${escapeHtml(advised)}</span>`;
   el.style.display = '';
 }
 
@@ -3356,7 +3605,8 @@ function setDateTimeNow(btn) {
 }
 
 function formatRoundDate(iso) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  // Geen geldige datum: als tekst teruggeven, want de uitkomst gaat ook in HTML.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return escapeHtml(iso || '');
   const d = new Date(iso + 'T00:00:00');
   const today = new Date(); today.setHours(0,0,0,0);
   const diffDays = Math.round((d - today) / 86400000);
@@ -3382,7 +3632,7 @@ function formatRoundDateWithDay(iso) {
 
 // Altijd de volledige datum, zonder "Vandaag"/"Gisteren"/"Morgen"
 function formatFullDate(iso) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return escapeHtml(iso || '');   // zie formatRoundDate
   const d = new Date(iso + 'T00:00:00');
   return `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
 }
@@ -3453,7 +3703,12 @@ function controleerNaamswijziging(el) {
       [{ tekst: 'Alles aanpassen', hoofd: true, actie: () => {
            const lijst = loadSavedRounds();
            lijst.forEach(r => { if ((r.player || '') === oud) r.player = nieuw; });
-           setRoundsAndMark(JSON.stringify(lijst));
+           // Mislukt het opslaan, dan blijft alles bij de oude naam, ook het profiel: anders
+           // staan je rondes op een naam die niet meer de jouwe is en tellen ze stil niet mee.
+           if (setRoundsAndMark(JSON.stringify(lijst)) === false) { meldSchrijvenMislukt('De nieuwe naam in je bestaande rondes'); terug(); return; }
+           // De lopende ronde staat ook in het geheugen: zonder dit schrijft de volgende
+           // score de oude naam terug en telt die ronde stil niet meer mee.
+           if (game.started && (game.player || '') === oud) game.player = nieuw;
            savePlayerProfile();
            loadSaved();
          } },
@@ -3554,6 +3809,11 @@ function showStartError(msg) {
 }
 
 function startRound(vervangenBevestigd) {
+  if (!storageIsPersistent && !_zonderOpslagAkkoord) {
+    showConfirmModal('Niet bewaard', GEEN_OPSLAG_TEKST + ' Wil je toch een ronde starten?',
+      () => { _zonderOpslagAkkoord = true; closeConfirmModal(); startRound(vervangenBevestigd); }, 'Annuleren', null, 'Toch starten', 'red');
+    return;
+  }
   controleerHerplan();
   ververstCorrigeerScores();
   // Opnieuw plannen blijft staan als je het startscherm verlaat. Dat voorkomt dat je
@@ -3569,7 +3829,7 @@ function startRound(vervangenBevestigd) {
       + (_corrigeerScores ? ' De scores gaan mee.' : ''),
       [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
        { tekst: 'Vervangen', actie: () => startRound(true) },
-       { tekst: 'Oude ronde laten staan', actie: () => { const n1 = leesStartNote(1), n2 = leesStartNote(2); annuleerHerplan(); zetStartNote(1, n1); zetStartNote(2, n2); zetNoteLezen(1, false); zetNoteLezen(2, false); } }]);
+       { tekst: 'Oude ronde laten staan', actie: () => { const n1 = leesStartNote(1), n2 = leesStartNote(2); annuleerHerplan(false); zetStartNote(1, n1); zetStartNote(2, n2); zetNoteLezen(1, false); zetNoteLezen(2, false); } }]);
     return;
   }
   const name = document.getElementById('iName').value.trim();
@@ -3719,6 +3979,7 @@ function showDangerModal(title, msg, confirmText, onConfirm, cancelText = 'Annul
 
 // Bouwt het actieve game-object op uit een opgeslagen ronde en zet currentHole correct.
 function gameFromRound(r) {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
   game = { ...r, started: true, holes: r.holes.map(h => ({ ...h })) };
   delete game._justImported;
   currentHole = game.holes.findIndex(h => h.score === null);
@@ -3825,6 +4086,11 @@ let _herplanOnderbroken = false;
 // baanhandicap, persoonlijke par, stableford, dagresultaat — wordt opnieuw berekend,
 // precies zoals bij het starten van een gewone ronde.
 let _corrigeerScores = null;
+// Wat er bovenin Start stond toen je Corrigeren of Herplannen aantikte. Die velden
+// bepalen wiens handicap en statistieken de app toont; herplanRonde zet er de speler en
+// de handicap van de te vervangen ronde neer. Na annuleren én na het afronden van de
+// correctie komt dit terug — anders hield de app je voor de gast, ook na herladen.
+let _herplanVorigeSpeler = null;
 
 // Corrigeren = herplannen mét behoud van de scores. Bedoeld voor het geval dat je de
 // ronde goed hebt gespeeld maar verkeerd hebt opgezet (verkeerde tee, baan of datum).
@@ -3849,6 +4115,7 @@ function corrigeerRonde(id) {
 }
 
 function herplanRonde(id, metScores = false) {
+  _qualVoorLus = null;   // de qualifying-keuze van de herplande ronde geldt, niet die van vóór een lus
   const saved = loadSavedRounds();
   let r = saved.find(x => String(x.id) === String(id));
   if (!r) return;
@@ -3934,8 +4201,14 @@ function herplanRonde(id, metScores = false) {
   sel.qualifying = !!r.qualifying;
   sel.chcpOverride = null;
   const naam = document.getElementById('iName');
-  if (naam && r.player) naam.value = r.player;
   const hcpVeld = document.getElementById('iHcp');
+  // Eén keer vastleggen: tik je achter elkaar op twee rondes, dan telt de stand van
+  // vóór de eerste.
+  if (!_herplanVorigeSpeler) {
+    _herplanVorigeSpeler = { naam: naam ? naam.value : null, hcp: hcpVeld ? hcpVeld.value : null,
+      profielNaam: storage.getItem('golf_profile_name'), profielHcp: storage.getItem('golf_profile_hcp') };
+  }
+  if (naam && r.player) naam.value = r.player;
   if (hcpVeld && r.hcp != null) hcpVeld.value = r.hcp;
 
   // Speler 2 meenemen als die er was.
@@ -3992,10 +4265,25 @@ function toonHerplanBanner(r, maat, kwijt) {
   el.classList.remove('hidden');
 }
 
-function annuleerHerplan() {
+// herstelSpeler = false: de velden blijven staan zoals ze nu zijn. Alleen voor 'Oude ronde
+// laten staan': daar ga je bewust verder met wat er op het scherm staat.
+function annuleerHerplan(herstelSpeler = true) {
   _herplanIds = null;
   _herplanOnderbroken = false;
   _corrigeerScores = null;
+  const vorige = _herplanVorigeSpeler;
+  _herplanVorigeSpeler = null;
+  if (vorige && herstelSpeler) {
+    const naam = document.getElementById('iName'), hcpVeld = document.getElementById('iHcp');
+    if (naam && vorige.naam != null) naam.value = vorige.naam;
+    if (hcpVeld && vorige.hcp != null) hcpVeld.value = vorige.hcp;
+    // Het bewaarde profiel: bij het afronden van een correctie is daar de speler van die
+    // ronde in gezet (startRoundConfirmed).
+    [['golf_profile_name', vorige.profielNaam], ['golf_profile_hcp', vorige.profielHcp]].forEach(([k, v]) => {
+      if (v == null) storage.removeItem(k); else if (storage.getItem(k) !== v) storage.setItem(k, v);
+    });
+    rebuildAll();
+  }
   const el = document.getElementById('herplanBanner');
   if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
   // Ook de notitievelden leegmaken: anders lekt de notitie van de geannuleerde
@@ -4032,9 +4320,11 @@ function ververstCorrigeerScores() {
 }
 
 // Wordt aangeroepen zodra de nieuwe ronde is vastgelegd: pas dán verdwijnt de oude.
-function ruimHerplanOp() {
+// behoudSpeler2: de nieuwe ronde van speler 2 kon niet worden opgeslagen; zijn oude
+// ronde blijft dan staan. Een oude ronde verdwijnt alleen als zijn vervanger er staat.
+function ruimHerplanOp(behoudSpeler2 = false) {
   if (!_herplanIds) return;
-  const weg = new Set(_herplanIds);
+  const weg = new Set(behoudSpeler2 ? _herplanIds.slice(0, 1) : _herplanIds);
   const saved = loadSavedRounds();
   // De nieuwe ronde moet er echt staan voordat de oude planning verdwijnt: is het
   // opslaan mislukt (volle opslag), dan zou verwijderen je zonder ronde achterlaten.
@@ -4045,22 +4335,14 @@ function ruimHerplanOp() {
 }
 
 function startRoundConfirmed() {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
   const course = COURSES[sel.track];
   if (!course) return;
 
-  // Sla eventuele actieve ronde op voordat we beginnen
-  if (game.started) {
-    storage.removeItem('golf_active_id');
-    if (game2Id) { storage.removeItem('golf_game2_id'); game2Id = null; }
-    activePlayer = 1;
-  }
-
   const name = document.getElementById('iName').value.trim() || 'Speler';
   const hcp  = getHcp();
-
-  storage.setItem('golf_profile_name', name);
-  if (!isNaN(hcp)) storage.setItem('golf_profile_hcp', hcp.toString());
-  storage.setItem('golf_gender', sel.gender);
+  // Profiel en geslacht worden pas bewaard als de nieuwe ronde is opgeslagen (zie onder):
+  // een start die niet doorgaat, verandert niets in de opslag.
 
   const genderKey = Object.keys(course.tees).find(g => g === sel.gender) ||
                     Object.keys(course.tees)[0];
@@ -4072,7 +4354,7 @@ function startRoundConfirmed() {
   // gegevens die op een andere manier beschadigd zijn geraakt — anders zou de ronde
   // halverwege stukbreken in plaats van hier een duidelijke melding te geven.
   if ((teeData.holes || []).length !== n) {
-    showStartError(`Tee ${sel.tee} heeft geen volledige par/SI-gegevens — controleer de baan bij Clubs`);
+    showStartError(`Tee ${escapeHtml(sel.tee)} heeft geen volledige par/SI-gegevens — controleer de baan bij Clubs`);
     return;
   }
   const parTee    = teePar(teeData);
@@ -4090,6 +4372,17 @@ function startRoundConfirmed() {
   const existingIds = new Set(loadSavedRounds().map(r => r.id));
   let newId1 = Date.now();
   while (existingIds.has(newId1)) newId1++;
+
+  // Sla eventuele actieve ronde op voordat we beginnen, pas hier (na de controles): een
+  // start die niet doorgaat laat de lopende ronde dan ongemoeid. Lukt het opslaan niet,
+  // dan niet starten: de nieuwe ronde zou de lopende vervangen terwijl haar laatste scores
+  // nergens staan. Een ronde die je herplant of corrigeert, wordt hieronder vervangen en
+  // hoeft niet eerst bewaard te worden.
+  if (lopendeRondeBewaren() === false) { meldNietOpgeslagen('Een nieuwe ronde starten'); return; }
+  // De toestand van vóór de start, om terug te zetten als de nieuwe ronde niet kan worden
+  // opgeslagen. De opslag zelf wordt pas gewijzigd na een gelukte opslag (zie onder).
+  const vorig = { game, currentHole, activePlayer, game2Id, player2Visible };
+  activePlayer = 1;
   game = {
     id: newId1, date: startDate || todayISO(), time: startTime || null,
     player: name, hcp: isNaN(hcp) ? null : hcp,
@@ -4123,11 +4416,27 @@ function startRoundConfirmed() {
   currentHole = 0;
   game.holes[0]._initScore = game.holes[0].score;
 
+  // Kan de nieuwe ronde niet worden opgeslagen (opslag vol of geblokkeerd), dan start
+  // hij niet: alles blijft zoals het was, in beeld, in het geheugen en in de opslag. Een
+  // herplanning of correctie blijft klaarstaan.
+  if (saveActiveRound(true) === false) {
+    ({ game, currentHole, activePlayer, game2Id, player2Visible } = vorig);
+    if (game.started) { setHeaderInfo(game.track, game.tee, game.chcp ?? '\u2014'); updateHeader(); updateHeaderScore(); }
+    else resetHeader();
+    updatePlayerSwitchBar();
+    meldNietOpgeslagen('Een nieuwe ronde starten');
+    return;
+  }
+  if (vorig.game.started && vorig.game2Id) storage.removeItem('golf_game2_id');
+  game2Id = null;
+  storage.setItem('golf_profile_name', name);
+  if (!isNaN(hcp)) storage.setItem('golf_profile_hcp', hcp.toString());
+  storage.setItem('golf_gender', sel.gender);
   setHeaderInfo(sel.track, sel.tee, chcp);
   updateHeader();
-  saveActiveRound(true);
 
   // Speler 2 ronde aanmaken als ingevuld
+  let speler2Mislukt = false;
   if (player2Visible) {
     const name2 = document.getElementById('iName2').value.trim();
     if (name2) {
@@ -4154,7 +4463,7 @@ function startRoundConfirmed() {
         club: startClubName, clubShort: CLUBS[startClubName]?.shortName || startClubName,
         CR: teeData2.CR, SR: teeData2.SR, PAR: parTee2, chcp: chcp2,
         qualifying: !!sel2.qualifying,
-        total: 0, totalStb: 0, holesCount: n,
+        total: 0, holesCount: n,
         currentHole: 0, started: true,
         holes: buildRoundHoles(course, teeData2, phcps2),
       };
@@ -4168,22 +4477,34 @@ function startRoundConfirmed() {
           if (oud.score != null) h.score = oud.score;
           if (oud.putts != null) h.putts = oud.putts;
         });
-        round2.playedCount = round2.holes.filter(h => h.score != null).length;
+        // Het bruto totaal uit de holes (het Stableford-totaal wordt niet opgeslagen).
         round2.total = round2.holes.reduce((s, h) => s + (h.score || 0), 0);
       }
       game2Id = round2.id;
       const saved2 = loadSavedRounds();
       saved2.unshift(round2);
-      metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved2))));
+      const gelukt2 = metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved2)))) !== false;
       activePlayer = 1;
-      storage.setItem('golf_game2_id', String(game2Id));
+      if (gelukt2) storage.setItem('golf_game2_id', String(game2Id));
+      else {
+        // De ronde van speler 2 staat nergens: geen verwijzing naar een ronde die niet
+        // bestaat, en bij corrigeren blijft zijn OUDE ronde staan (zie ruimHerplanOp).
+        game2Id = null;
+        storage.removeItem('golf_game2_id');
+        speler2Mislukt = true;
+      }
     }
   } else {
     game2Id = null;
     storage.removeItem('golf_game2_id');
   }
 
-  ruimHerplanOp();
+  const oudeVanSpeler2 = !!(_herplanIds && _herplanIds[1]);
+  ruimHerplanOp(speler2Mislukt);
+  if (speler2Mislukt) {
+    showInfoModal('Niet opgeslagen', 'De ronde van speler 2 kon niet worden opgeslagen.'
+      + (oudeVanSpeler2 ? ' Zijn oude ronde is blijven staan.' : ''), 'red');
+  }
   wisStartNotes();          // de notitie zit nu in de ronde; het veld weer leeg
   updatePlayerSwitchBar();
   loadSaved();
@@ -4247,7 +4568,7 @@ function armScoreChange(i, newValue) {
   updateHeader();
   updateHeaderScore();
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 
 // Korte tik tijdens het 2-seconden venster => bevestig
@@ -4411,7 +4732,7 @@ function clearScoreTap(revert) {
     if (volgende >= 0) setCurrentHole(volgende);
   }
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 
 // Maakt hole i de actieve hole en onthoudt de score op dat moment als referentie.
@@ -4460,7 +4781,7 @@ function stepScore(i, d) {
   updateHeader();
   updateHeaderScore();
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 
 // Tik op de score (tweemaal): hole weer als niet-gespeeld markeren
@@ -4471,7 +4792,7 @@ function setDoubleBogey(i) {
   if (i !== currentHole) return;
   const h   = game.holes[i];
   beginEdit(i);
-  h.score = h.ppar + 2;
+  h.score = pparVan(h) + 2;
   // Net als bij plus, min en ongedaan maken: lege putts worden 2. Ontbrak hier, waardoor
   // een met lang indrukken ingevulde hole zonder putts bleef en uit de puttcijfers viel.
   syncPuttsWithScore(i);
@@ -4480,7 +4801,7 @@ function setDoubleBogey(i) {
   updateHeader();
   updateHeaderScore();
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 
 
@@ -4588,33 +4909,36 @@ function renderScoreInfo(played, total, totalAgs, totalStb, rawFmt, rparPlayed, 
   const clubName  = game.club || 'Onbekende club';
   const clubShort = game.clubShort || clubName;
 
+  // Labels in deze lijst bevatten soms bewust HTML (een icoon); de WAARDEN die van de
+  // gebruiker of uit een bestand komen niet. Die gaan daarom als tekst de pagina in.
+  const tekst = escapeHtml;
   const sections = [
     ['Ronde', [
-      ['Datum',    formatFullDate(game.date)],
-      ['Tijd',     game.time || '—'],
+      ['Datum',    tekst(formatFullDate(game.date))],
+      ['Tijd',     tekst(game.time || '—')],
     ]],
     ['Speler', [
-      ['Speler',   game.player],
-      ['Hcp',      game.hcp != null ? game.hcp : '—'],
+      ['Speler',   tekst(game.player)],
+      ['Hcp',      tekst(game.hcp != null ? game.hcp : '—')],
       // Geen 'Verwachte/Nieuwe WHS-hcp' meer bij de open ronde (13527DA-10E): er wordt
       // gerekend met wat afgerond is en niet meer actief (zie meetelFilter). De nieuwe
       // handicap staat na het afronden op Start, op de rondekaart en in Statistiek.
     ]],
     ['Club & Baan', [
-      ['Club',     clubName],
-      ['ClubKort', clubShort],
-      [game.lus ? 'Lus' : 'Baan', game.track],
+      ['Club',     tekst(clubName)],
+      ['ClubKort', tekst(clubShort)],
+      [game.lus ? 'Lus' : 'Baan', tekst(game.track)],
       ['Holes',    game.holes.length],
       ['PAR',      game.holes.reduce((s, h) => s + h.par, 0)],
-      ['Geslacht', game.gender],
-      ['Tee',      game.tee],
-      ['Course Rating (CR)', game.CR ?? '—'],
-      ['Slope Rating (SR)',  game.SR ?? '—'],
+      ['Geslacht', tekst(game.gender)],
+      ['Tee',      tekst(game.tee)],
+      ['Course Rating (CR)', tekst(game.CR ?? '—')],
+      ['Slope Rating (SR)',  tekst(game.SR ?? '—')],
       ['Qualifying', game.qualifying ? 'Ja' : 'Nee'],
     ]],
     ['Resultaat', [
       ['Holes',    played.length + ' / ' + game.holes.length + ' gespeeld'],
-      ['Baanhandicap (Chcp)', game.chcp],
+      ['Baanhandicap (Chcp)', tekst(game.chcp)],
       ['Stableford (STB)',    played.length ? totalStb : '—'],
       ['Score', null],
       ['Bruto (STR)',         total + ' (' + rawFmt(dRaw) + ' vs par)'],
@@ -4872,7 +5196,7 @@ function renderScoreTable() {
         ? ` oncontextmenu="return false" onclick="event.stopPropagation(); tikOpScore(${i})"`
         : ` onclick="event.stopPropagation(); selectScoreRow(${i})"`}>${s == null ? '—' : s}</span></div>`;
     const showBtns = i === currentHole && scoreButtonsRow === i;
-    const isHiddenPparDouble = s !== null && d !== 2 && (s - h.ppar) === 2;
+    const isHiddenPparDouble = s !== null && d !== 2 && (s - pparVan(h)) === 2;
     const stbColor = 'var(--white)';
     const stbDisplay = (s !== null && isHiddenPparDouble) ? '—' : (s !== null ? stbFor(h) : '—');
     const row = document.createElement('div');
@@ -4889,7 +5213,7 @@ function renderScoreTable() {
     };
     row.innerHTML = `
       <span class="sum-spacer"></span>
-      <span style="font-size:24px;font-weight:700">${h.id}<sup class="hole-si-lab" style="font-size:13px;font-weight:900;color:var(--green-light);margin-left:4px">${h.si < 10 ? h.si + '<span style="color:transparent">0</span>' : h.si}</sup></span>
+      <span style="font-size:24px;font-weight:700">${escapeHtml(h.id)}<sup class="hole-si-lab" style="font-size:13px;font-weight:900;color:var(--green-light);margin-left:4px">${h.si < 10 ? escapeHtml(h.si) + '<span style="color:transparent">0</span>' : escapeHtml(h.si)}</sup></span>
       <span class="sum-spacer"></span>
       <span style="font-weight:700">${h.par}${h.phcp !== 0
         ? `<sup style="margin-left:4px;display:inline-flex;gap:3px;vertical-align:super">${h.phcp > 0 ? '<span class="ppar-dot"></span>'.repeat(Math.min(h.phcp, maxDots)) + '<span class="ppar-dot-red"></span>'.repeat(Math.max(0, maxDots - h.phcp)) : '<span class="ppar-dot-neg"></span>'.repeat(Math.min(Math.abs(h.phcp), maxDots)) + '<span class="ppar-dot" style="visibility:hidden"></span>'.repeat(Math.max(0, maxDots - Math.abs(h.phcp)))}</sup>`
@@ -5806,9 +6130,13 @@ function renderPlayerStats() {
   //
   // Volledige esrChrono en de ESR-aanpassingen ÉÉN KEER berekenen, vóór de lus (O(n)
   // i.p.v. per punt binnen de lus opnieuw de hele geschiedenis herberekenen).
+  // Het tijdstip van elke ronde ÉÉN KEER omzetten. Eerder gebeurde dat in de lus hieronder
+  // voor elke ronde opnieuw voor alle eerdere rondes: bij 1000 rondes een half miljoen
+  // datumomzettingen, en daarmee het grootste deel van de tijd van dit scherm.
+  const tijden = rounds.map(rr => new Date(`${rr.date || '1970-01-01'}T${rr.time || '00:00'}`).getTime());
   const esrChronoFull = rounds.map((rr, i) => {
     const rsd = sdSeries[i];
-    return rsd == null ? null : { id: rr.id, sd: rsd, t: new Date(`${rr.date || '1970-01-01'}T${rr.time || '00:00'}`).getTime() };
+    return rsd == null ? null : { id: rr.id, sd: rsd, t: tijden[i] };
   }).filter(Boolean);
   const esrAtOwnStep = computeEsrAdjustmentsIncremental(esrChronoFull);
   const esrAdjById = new Map(esrChronoFull.map((x, i) => [x.id, esrAtOwnStep[i]]));
@@ -5818,18 +6146,18 @@ function renderPlayerStats() {
   const esrAppliedSeries = [];
   rounds.forEach((r, idx) => {
     if (hiSeries[idx] == null) { capSeries.push(null); capTypeSeries.push(null); esrAppliedSeries.push(false); return; }
-    const t = new Date(`${r.date || '1970-01-01'}T${r.time || '00:00'}`).getTime();
+    const t = tijden[idx];
     const cutoff = isFinite(t) ? t - 365 * 24 * 60 * 60 * 1000 : -Infinity;
     let lowHi = null;
     for (let j = 0; j <= idx; j++) {
       if (hiSeries[j] == null) continue;
-      const tj = new Date(`${rounds[j].date || '1970-01-01'}T${rounds[j].time || '00:00'}`).getTime();
+      const tj = tijden[j];
       if (!isFinite(tj) || tj < cutoff) continue;
       if (lowHi == null || hiSeries[j] < lowHi) lowHi = hiSeries[j];
     }
     const esrAdjHere = esrAdjById.get(r.id) || 0;
     esrAppliedSeries.push(esrAdjHere !== 0);
-    const rawAfterEsr = Math.round((hiSeries[idx] + esrAdjHere) * 10) / 10;
+    const rawAfterEsr = whsIndexRound(hiSeries[idx] + esrAdjHere);
     const capResult = applyHandicapCaps(rawAfterEsr, lowHi);
     capSeries.push(capResult.value);
     capTypeSeries.push(capResult.type);
@@ -5902,7 +6230,7 @@ function renderPlayerStats() {
     return gespeeld.reduce((s, h) => s + h.putts, 0);
   }).filter(v => v != null);
   const avgPutts = puttTotals.length ? puttTotals.reduce((s, x) => s + x, 0) / puttTotals.length : null;
-  const stbVals = rounds.map(r => r.totalStb).filter(v => v != null && isFinite(v));
+  const stbVals = rounds.map(stbTotaal).filter(v => isFinite(v));
   const avgStb = stbVals.length ? stbVals.reduce((s, x) => s + x, 0) / stbVals.length : null;
 
   // Periode-gefilterde Sd-reeks, voor Trend/Consistentie in Vorm & consistentie (deze
@@ -7063,11 +7391,14 @@ async function exportDagresultaten() {
   } catch (e) {
     if (e && e.name === 'AbortError') return;
   }
-  const url = URL.createObjectURL(new Blob([tekst], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = bestandsnaam;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  try {
+    const url = URL.createObjectURL(new Blob([tekst], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = bestandsnaam;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    meldExportmapTerugval();
+  } catch (e) { meldExportMislukt(e, 'Dagresultaten exporteren'); }
 }
 
 // ── App-badge (Badging API): cijfertje op het app-icoon met het aantal geplande
@@ -7709,7 +8040,7 @@ async function copyAnalysisForAi() {
     tekst += 'datum | tijd | club | baan | tee | holes | par | CR | SR | Sd | Stb' + (heeftPutts ? ' | putts' : '') + ' | telt mee\n';
     ruw.forEach(r => {
       const e = effectiveSD(r);
-      const stb = r.totalStb != null ? r.totalStb : (r.holes || []).reduce((s, h) => s + stbFor(h), 0);
+      const stb = stbTotaal(r);
       tekst += [
         r.date || '?',
         r.time || '-',
@@ -7756,12 +8087,31 @@ async function copyAnalysisForAi() {
 async function updateBannerKlik() {
   const b = document.getElementById('updateBanner');
   if (b && b.dataset.ouder === '1') {
+    // De verouderde kopie wordt VERVANGEN, niet weggegooid: eerst de actuele versie
+    // volledig ophalen en controleren, en pas dan de oude kopie in de eigen caches
+    // (golf-score-…) overschrijven. De rest van de cache (pictogrammen, manifest) blijft
+    // staan, dus er is op elk moment een complete, werkende offline-kopie. Lukt het
+    // ophalen niet (geen of wegvallend bereik), dan verandert er niets. Caches van andere
+    // apps op dezelfde origin worden niet aangeraakt.
     try {
-      const namen = await caches.keys();
-      await Promise.all(namen.map(n => caches.delete(n)));
-      const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
-      await Promise.all(regs.map(r => r.update()));
-    } catch (e) { /* lukt het niet, dan is herladen alsnog de beste zet */ }
+      // Met een vaste toevoeging aan het adres: zonder die toevoeging beantwoordt de
+      // service worker de vraag uit zijn eigen cache, en 'haal je' de oude kopie op.
+      const res = await fetch('./golf-score.html?verversen', { cache: 'reload' });
+      const tekst = res.ok ? await res.text() : '';
+      if (!/Versie [0-9A-F]+-[0-9A-F]+/.test(tekst) || !/<\/html>\s*$/i.test(tekst)) throw new Error('onvolledig');
+      const namen = (await caches.keys()).filter(n => n.startsWith('golf-score-'));
+      for (const naam of namen) {
+        const c = await caches.open(naam);
+        for (const req of await c.keys()) {
+          if (new URL(req.url).pathname.endsWith('/golf-score.html')) {
+            await c.put(req, new Response(tekst, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+          }
+        }
+      }
+    } catch (e) {
+      showInfoModal('Geen verbinding', 'De actuele versie kon niet worden opgehaald. Er is niets gewijzigd; probeer het later opnieuw met bereik.', 'orange');
+      return;
+    }
   }
   location.reload();
 }
@@ -7849,6 +8199,12 @@ function controleerOpslagKenmerk() {
       setTimeout(controleerOpslagKenmerk, 500);
       return;
     }
+  }
+  // Zonder blijvende opslag is 'Geen gegevens gevonden — je eerste keer?' de verkeerde
+  // boodschap: er is niets te vinden omdat er niets bewaard kan worden.
+  if (!storageIsPersistent) {
+    if (!storage.getItem('golf_kenmerk_gevraagd')) { storage.setItem('golf_kenmerk_gevraagd', '1'); showInfoModal('Niet bewaard', GEEN_OPSLAG_TEKST, 'red'); }
+    return;
   }
   if (storage.getItem('golf_kenmerk_gevraagd')) return;
   const leeg = loadSavedRounds().length === 0 && Object.keys(CLUBS || {}).length === 0;
@@ -8255,7 +8611,7 @@ async function exportRoundIcs(roundId) {
     + String(d.getUTCDate()).padStart(2, '0') + 'T'
     + String(d.getUTCHours()).padStart(2, '0')
     + String(d.getUTCMinutes()).padStart(2, '0') + '00Z';
-  const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
   // Eventtitel: korte clubnaam (indien ingesteld); LOCATION houdt de volledige naam
   const clubKort = (typeof CLUBS === 'object' && r.club && CLUBS[r.club] && CLUBS[r.club].shortName) ? CLUBS[r.club].shortName : (r.club || '');
   const titel = 'Golf - ' + clubKort + (r.track ? ' - ' + r.track : '');
@@ -8463,7 +8819,7 @@ function buildScoreText(round) {
   lines.push('');
   round.holes.forEach((h) => {
     const s = h.score;
-    lines.push(h.id + ': Par: ' + h.par + ', PPar: ' + h.ppar + ', Score: ' + (s ?? '-') + ', Stb: ' + stbFor(h));
+    lines.push(h.id + ': Par: ' + h.par + ', PPar: ' + pparVan(h) + ', Score: ' + (s ?? '-') + ', Stb: ' + stbFor(h));
   });
   if (round.note) { lines.push(''); lines.push('Notitie: ' + round.note); }
   return lines.join('\n');
@@ -8863,24 +9219,92 @@ function confirmExportModal() {
   setTimeout(() => status.classList.add('hidden'), 2000);
 }
 
-// Beoordeelt één ronde uit een importbestand. Bewust een KORTE lijst: alleen waarden
-// die de app zelf nooit kan maken en die, als ze binnenkomen, ongemerkt doorwerken in je
-// handicap. Elke extra regel is een kans om een geldige ronde ten onrechte te weigeren.
-// Geeft null terug als de ronde deugt, anders de reden.
-function keurRonde(r) {
-  if (!r || typeof r !== 'object') return 'geen ronde';
-  if (!r.date) return 'geen datum';
-  if (!r.player) return 'geen speler';
-  if (!Array.isArray(r.holes) || !r.holes.length) return 'geen holes';
+// ── KEURING VAN EEN RONDE UIT EEN BESTAND ────────────────────────────────────────────
+// Een bestand is invoer van buiten, ook als deze app het zelf heeft gemaakt: het kan met
+// de hand zijn bewerkt, beschadigd zijn of uit een andere versie komen. De volgorde is
+// altijd: rechtzetten → keuren → pas dan opslaan. Beide importroutes (één ronde, of een
+// backup met meerdere) gebruiken deze twee functies. Het model dat hier wordt
+// afgedwongen staat beschreven in DATAMODEL.md in de werkmap.
 
-  const getal = (v) => (v == null || v === '') ? null : Number(v);
+// Rechtzetten: wat alleen slordig is opgeschreven wordt hersteld, op een KOPIE.
+//  - een getal dat als tekst staat wordt een getal, ook met een komma ("12,3");
+//  - een hole zonder score geldt als niet gespeeld (score null);
+//  - een holenaam die als getal staat wordt tekst.
+// Velden die deze versie niet kent blijven ongemoeid staan.
+function zetRondeRecht(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return r;
+  const getal = v => {
+    if (typeof v !== 'string') return v;
+    const t = v.trim().replace(',', '.');
+    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : v;
+  };
+  const uit = { ...r };
+  ['hcp', 'CR', 'SR', 'PAR', 'chcp', 'pcc', 'sdFinal', 'sd', 'holesCount'].forEach(k => { if (k in uit) uit[k] = getal(uit[k]); });
+  if (Array.isArray(uit.holes)) {
+    uit.holes = uit.holes.map(h => {
+      if (!h || typeof h !== 'object' || Array.isArray(h)) return h;
+      const n = { ...h };
+      ['par', 'si', 'phcp', 'ppar', 'score', 'putts'].forEach(k => { if (k in n) n[k] = getal(n[k]); });
+      if (n.score === undefined || n.score === '') n.score = null;
+      if (typeof n.id === 'number' && isFinite(n.id)) n.id = String(n.id);
+      return n;
+    });
+  }
+  // Een bestand zonder slagverdeling per hole: afleiden uit de baanhandicap en de SI,
+  // precies zoals de app ze bij het starten van een ronde verdeelt. Alleen als ze bij
+  // ALLE holes ontbreekt; een enkele ontbrekende is een fout en wordt bij de keuring
+  // geweigerd.
+  if (Array.isArray(uit.holes) && uit.holes.length && Number.isInteger(uit.chcp)
+      && uit.holes.every(h => h && typeof h === 'object' && h.phcp == null && Number.isInteger(h.si))) {
+    const phcps = distributeChcp(uit.chcp, uit.holes.length, uit.holes);
+    uit.holes = uit.holes.map((h, i) => ({ ...h, phcp: phcps[i] }));
+  }
+  return uit;
+}
+
+// Keuren: geeft de reden terug waarom een (rechtgezette) ronde niet kan kloppen, of null.
+function keurRonde(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return 'geen ronde';
+
+  // Tekstvelden: het soort waarde moet kloppen. Een datum als getal brak anders de tab
+  // Rondes voorgoed, op de eerste functie die er tekst van verwachtte.
+  if (r.date == null || r.date === '') return 'geen datum';
+  const dm = typeof r.date === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.date) : null;
+  if (!dm) return 'datum is geen JJJJ-MM-DD';
+  const dd = new Date(+dm[1], +dm[2] - 1, +dm[3]);
+  if (dd.getFullYear() !== +dm[1] || dd.getMonth() !== +dm[2] - 1 || dd.getDate() !== +dm[3]) return 'datum bestaat niet';
+  if (r.time != null && r.time !== '') {
+    const tm = typeof r.time === 'string' ? /^(\d{1,2}):(\d{2})$/.exec(r.time) : null;
+    if (!tm || +tm[1] > 23 || +tm[2] > 59) return 'tijd is geen UU:MM';
+  }
+  if (r.player == null || r.player === '') return 'geen speler';
+  if (typeof r.player !== 'string' || !r.player.trim()) return 'speler is geen tekst';
+  for (const [veld, naam, max] of [['player', 'speler', 200], ['club', 'club', 200], ['clubShort', 'korte clubnaam', 200],
+       ['track', 'baan', 200], ['gender', 'geslacht', 50], ['tee', 'tee', 200], ['note', 'notitie', 5000]]) {
+    const v = r[veld];
+    if (v == null) continue;
+    if (typeof v !== 'string') return `${naam} is geen tekst`;
+    if (v.length > max) return `${naam} is te lang`;
+  }
+  if (!Array.isArray(r.holes) || !r.holes.length) return 'geen holes';
+  if (r.holes.length > 18) return 'meer dan 18 holes';
+
+  // Getallen: leeg mag, maar wat er staat moet een getal zijn. Number() zou hier 'true'
+  // en '[5]' ook goedkeuren; daarom eerst het soort waarde.
+  const getal = (v) => (v == null || v === '') ? null : (typeof v === 'number' ? v : NaN);
   const buiten = (v, min, max) => v !== null && (!isFinite(v) || v < min || v > max);
+  const geenHeel = (v) => v !== null && !Number.isInteger(v);
 
   if (buiten(getal(r.hcp), -10, 54)) return 'handicap buiten -10 tot 54';
   if (buiten(getal(r.sdFinal), -10, 60)) return 'dagresultaat buiten -10 tot 60';
   if (buiten(getal(r.sd), -10, 60)) return 'dagresultaat buiten -10 tot 60';
-  if (buiten(getal(r.CR), 20, 90)) return 'course rating buiten 20 tot 90';
+  // Ondergrens 1 en niet 20: een ronde op een lus van een paar holes heeft een lage CR.
+  // Met 20 werd zo'n ronde bij het terugzetten van een backup overgeslagen.
+  if (buiten(getal(r.CR), 1, 90)) return 'course rating buiten 1 tot 90';
   if (buiten(getal(r.SR), 55, 155)) return 'slope rating buiten 55 tot 155';
+  if (buiten(getal(r.chcp), -15, 90)) return 'baanhandicap buiten -15 tot 90';
+  if (buiten(getal(r.PAR), r.holes.length * 3, r.holes.length * 6)) return 'par van de baan klopt niet met het aantal holes';
+  if (r.pcc != null && r.pcc !== '' && !isFinite(parseFloat(String(r.pcc).replace(',', '.')))) return 'pcc is geen getal';
 
   // Het aantal holes moet kloppen met de lijst: anders geldt een ronde als niet
   // afgerond (of juist wel) op grond van een getal dat nergens op slaat.
@@ -8888,29 +9312,102 @@ function keurRonde(r) {
   if (aantal !== null && aantal !== r.holes.length) return 'holesCount klopt niet met de holes';
 
   for (const h of r.holes) {
-    if (!h || typeof h !== 'object') return 'onleesbare hole';
-    if (buiten(getal(h.par), 3, 6)) return 'par buiten 3 tot 6';
-    if (buiten(getal(h.score), 1, 20)) return 'score buiten 1 tot 20';
-    if (buiten(getal(h.putts), 0, 20)) return 'putts buiten 0 tot 20';
+    if (!h || typeof h !== 'object' || Array.isArray(h)) return 'onleesbare hole';
+    if (h.id != null && typeof h.id !== 'string') return 'holenaam is geen tekst';
+    if (typeof h.id === 'string' && h.id.length > 50) return 'holenaam is te lang';
+    const par = getal(h.par), si = getal(h.si), score = getal(h.score), putts = getal(h.putts), phcp = getal(h.phcp);
+    if (par === null) return 'hole zonder par';
+    if (phcp === null) return 'hole zonder slagverdeling';   // kon niet worden afgeleid (zie zetRondeRecht)
+    if (geenHeel(par) || buiten(par, 3, 6)) return 'par buiten 3 tot 6';
+    if (si === null) return 'hole zonder stroke index';
+    if (geenHeel(si) || buiten(si, 1, 18)) return 'stroke index buiten 1 tot 18';
+    if (geenHeel(score) || buiten(score, 1, 20)) return 'score buiten 1 tot 20';
+    if (geenHeel(putts) || buiten(putts, 0, 20)) return 'putts buiten 0 tot 20';
+    if (geenHeel(phcp) || buiten(phcp, -3, 5)) return 'slagen per hole buiten -3 tot 5';
   }
   return null;
 }
-
-// Splitst een lijst rondes in de goede en de overgeslagen, met reden.
 function schiftRondes(lijst) {
   const goed = [], over = [];
-  lijst.forEach(r => {
+  lijst.forEach(ruw => {
+    const r = zetRondeRecht(ruw);
     const reden = keurRonde(r);
     if (reden) over.push({ r, reden }); else goed.push(r);
   });
   return { goed, over };
 }
-
-// Korte melding onder een importresultaat, als er iets is overgeslagen.
 function overgeslagenTekst(over, totaal) {
   if (!over.length) return '';
   const redenen = [...new Set(over.map(x => x.reden))].slice(0, 3).join(', ');
   return ` ${over.length} ronde${over.length !== 1 ? 's' : ''} niet ingelezen (${redenen}).`;
+}
+
+// Melding na een import. Stond eerder als lokale functie binnen importRound, terwijl
+// doAdditiveImport en doFullRestoreImport hem ook aanroepen — daar bestond hij niet, en
+// een mislukte import gaf dan een fout in plaats van een melding.
+function showStatus(msg, isError) {
+  showInfoModal(isError ? 'Import mislukt' : 'Import voltooid', msg, isError ? 'red' : null);
+}
+
+// ── HERSTEL NA ONLEESBARE GEGEVENS ───────────────────────────────────────────────────
+// Zijn de opgeslagen rondes of clubs onleesbaar, dan schrijft de app niets meer weg
+// (rondesOnleesbaar / clubsOnleesbaar). Eén ding moet dan wél kunnen: je backup
+// terugzetten. Dat vervangt de onleesbare gegevens, dus het vraagt een uitdrukkelijke
+// bevestiging, met de mogelijkheid om de beschadigde tekst eerst als bestand te bewaren.
+const ONLEESBAAR_BESTAND = 'Dit bestand is niet leesbaar. Het is beschadigd, of het is geen bestand uit Golf Score.';
+const ONLEESBAAR_EERST_TERUGZETTEN = 'Dat kan nu niet: je opgeslagen rondes zijn niet leesbaar. '
+  + 'Zet eerst je backup terug (het bestand met al je rondes).';
+
+function bewaarOnleesbaar(sleutel) {
+  try {
+    const tekst = localStorage.getItem(sleutel) || '';
+    const naam = `${sleutel}_onleesbaar_${todayISO()}.txt`;
+    const url = URL.createObjectURL(new Blob([tekst], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = naam;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return true;
+  } catch (e) {
+    console.error('Bewaren van de onleesbare gegevens is mislukt:', e);
+    showInfoModal('Bewaren mislukt', 'De onleesbare gegevens konden niet als bestand worden opgeslagen.', 'red');
+    return false;
+  }
+}
+
+// Alleen de beschadigde elementen weghalen; de goede rondes of clubs blijven precies
+// zoals ze zijn. Eerst desgewenst de volledige opgeslagen tekst als bestand bewaren.
+function haalBeschadigdeWeg(wat, eerstBewaren) {
+  const sleutel = wat === 'rondes' ? 'golf_rounds' : 'golf_clubs';
+  if (eerstBewaren && !bewaarOnleesbaar(sleutel)) return;
+  if (wat === 'rondes') {
+    loadSavedRounds();                                  // de bewaarde lijst is actueel
+    if (!rondesOnleesbaar || !_rondesApart) return;
+    const json = JSON.stringify(_rondesCache);          // alleen de goede rondes
+    if (metVerwijderen(() => setRoundsAndMark(json, true)) === false) { meldSchrijvenMislukt('Het weghalen'); return; }
+    loadSavedRounds();                                  // zet de rem weer uit
+    loadSaved();
+    // De lopende ronde werd bij het opstarten niet hervat (de rem stond aan): nu wel.
+    if (!game.started) restoreActiveRound();
+  } else {
+    if (!clubsOnleesbaar || !_clubsApart) return;
+    if (saveClubsToStorage(true) === false) { meldSchrijvenMislukt('Het weghalen', 'clubs'); return; }
+    clubsOnleesbaar = false; _clubsApart = 0;
+    rebuildCourseLookup(false); rebuildAll();
+  }
+  showInfoModal('Weggehaald', `De beschadigde ${wat} zijn weggehaald. Je andere ${wat} staan er nog en de app slaat weer gewoon op.`);
+}
+
+// wat: 'rondes' of 'clubs'. Annuleren laat alles zoals het is.
+function vraagHerstelNaOnleesbaar(wat, omschrijving, terugzetten) {
+  const sleutel = wat === 'rondes' ? 'golf_rounds' : 'golf_clubs';
+  toonKeuzeModal('Backup terugzetten', 'orange',
+    `Je opgeslagen ${wat} zijn niet${(wat === 'rondes' ? _rondesApart : _clubsApart) ? ' allemaal' : ''} leesbaar. Terugzetten vervangt ze door ${omschrijving}. `
+    + 'De onleesbare gegevens zijn daarna weg; bewaar ze eerst als bestand als je ze nog wilt laten nakijken.',
+    [{ tekst: 'Annuleren', hoofd: true, actie: () => {} },
+     { tekst: 'Terugzetten', actie: terugzetten },
+     { tekst: 'Bewaar eerst de onleesbare gegevens',
+       actie: () => { bewaarOnleesbaar(sleutel); vraagHerstelNaOnleesbaar(wat, omschrijving, terugzetten); } }]);
 }
 
 function importRound(input) {
@@ -8924,14 +9421,36 @@ function importRound(input) {
   const herkomstZin = andereCode
     ? ` Dit bestand komt uit een andere opslaglocatie (code ${andereCode}).` : '';
 
-  const showStatus = (msg, isError) => showInfoModal(isError ? 'Import mislukt' : 'Import voltooid', msg, isError ? 'red' : null);
-
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const raw = (e.target.result || '').trim();
       if (!raw) return showStatus('Leeg bestand — geen gegevens gevonden', true);
-      let parsed = JSON.parse(raw);
+      // Alleen het lezen van het bestand heeft een eigen melding. Een fout verderop zit
+      // in de app, niet in het bestand: die gaat naar de algemene foutvanger (zie de catch
+      // onderaan), zodat hij niet als 'ongeldig bestand' verdwijnt.
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch (fout) { return showStatus(ONLEESBAAR_BESTAND, true); }
+
+      // Onleesbare opslag: alleen een backup (een lijst rondes) terugzetten kan, en
+      // alleen na bevestiging. De app ziet het archief nu als leeg; zonder deze tak
+      // ging een backup zonder vraag het toevoeg-pad in en werd daar geweigerd.
+      loadSavedRounds();                       // zet rondesOnleesbaar als dat zo is
+      if (rondesOnleesbaar) {
+        if (!Array.isArray(parsed)) return showStatus(ONLEESBAAR_EERST_TERUGZETTEN, true);
+        const totaal = parsed.length;
+        const gekeurd = schiftRondes(parsed);
+        const overslag = overgeslagenTekst(gekeurd.over, totaal);
+        if (!gekeurd.goed.length) return showStatus(`Geen bruikbare rondes in dit bestand.${overslag}`, true);
+        const aantal = gekeurd.goed.length;
+        vraagHerstelNaOnleesbaar('rondes', `de ${aantal} ronde${aantal !== 1 ? 's' : ''} uit dit bestand`, () => {
+          if (doFullRestoreImport(gekeurd.goed, true)) {
+            showStatus(`${aantal} ronde${aantal !== 1 ? 's' : ''} teruggezet.${overslag}${herkomstZin}`, false);
+          }
+        });
+        return;
+      }
 
       // Array van meerdere rondes (backup)
       if (Array.isArray(parsed) && parsed.length > 1) {
@@ -8976,8 +9495,9 @@ function importRound(input) {
                  + (andereCode ? ` Dit bestand komt uit een andere opslaglocatie, dus je huidige rondes staan mogelijk nergens anders.` : ''),
                  'Vervangen',
                  () => {
-                   doFullRestoreImport(parsed);
-                   showStatus(`${meervoud(n)} geïmporteerd, je vorige rondes zijn vervangen.${overslagTekst}`, false);
+                   if (doFullRestoreImport(parsed)) {
+                     showStatus(`${meervoud(n)} geïmporteerd, je vorige rondes zijn vervangen.${overslagTekst}`, false);
+                   }
                  }
                );
              } },
@@ -8986,8 +9506,11 @@ function importRound(input) {
         return;
       }
 
-      // Enkel object of array van 1 ronde
-      const r = Array.isArray(parsed) ? parsed[0] : parsed;
+      // Enkel object of array van 1 ronde. Zelfde rechtzetten en keuren als een backup;
+      // eerder sloeg deze route de keuring over en kwam een handicap van 999 erdoor.
+      const r = zetRondeRecht(Array.isArray(parsed) ? parsed[0] : parsed);
+      if (!r || typeof r !== 'object' || Array.isArray(r))
+        return showStatus('Ongeldig bestand — geen ronde gevonden', true);
 
       // Validatie
       const missing = [];
@@ -8999,10 +9522,14 @@ function importRound(input) {
       // Datumformaat check
       if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date))
         return showStatus('Ongeldig bestand — datumformaat onjuist (verwacht YYYY-MM-DD)', true);
-      if (!r.holes.every(h => h.par != null && h.si != null))
-        return showStatus('Ongeldig bestand — hole-data onvolledig (par of SI ontbreekt)', true);
+      {
+        const mist = r.holes.findIndex(h => !h || typeof h !== 'object' || h.par == null || h.si == null);
+        if (mist >= 0) return showStatus(`Ongeldig bestand — hole ${mist + 1} ontbreekt of is onvolledig (par of SI)`, true);
+      }
       if (!r.holes.every(h => h.par >= 3 && h.par <= 6))
         return showStatus('Ongeldig bestand — ongeldige par waarde (verwacht 3-6)', true);
+      const reden = keurRonde(r);
+      if (reden) return showStatus(`Ronde niet ingelezen: ${reden}.`, true);
 
       // Max 2 rondes op dezelfde datum/tijd toegestaan
       const saved = loadSavedRounds();
@@ -9031,7 +9558,7 @@ function importRound(input) {
             // (13527DA-10J): je hebt het overschrijven hier al bevestigd. Anders was de
             // oude ronde weg terwijl de nieuwe nog niet meetelde voor handicap en backup,
             // en moest je voor hetzelfde besluit nog een keer op 'Sla op' tikken.
-            metVerwijderen(() => doImportRound(r, saved, true));
+            if (metVerwijderen(() => doImportRound(r, saved, true)) === false) { meldSchrijvenMislukt('De ronde'); return; }
             if (isActive) { storage.removeItem('golf_active_id'); restoreActiveRound(); }
             if (isP2) { game2Id = null; storage.removeItem('golf_game2_id'); updatePlayerSwitchBar(); }
             showStatus('Ronde overschreven', false);
@@ -9045,15 +9572,15 @@ function importRound(input) {
 
       if (sameSlot.length === 1) {
         const partner = sameSlot[0];
-        doImportRound(r, saved);
+        if (doImportRound(r, saved) === false) { meldSchrijvenMislukt('De ronde'); return; }
         showInfoModal('Import voltooid', `Ronde geïmporteerd. Deze kan gekoppeld worden aan de bestaande ronde van ${partner.player} op dezelfde datum en tijd.`);
         return;
       }
 
-      doImportRound(r, saved);
+      if (doImportRound(r, saved) === false) { meldSchrijvenMislukt('De ronde'); return; }
       showStatus(`Ronde geïmporteerd.${herkomstZin}`, false);
     } catch(e) {
-      showStatus('Ongeldig JSON-bestand', true);
+      meldOnverwachteFout(`${e && e.name ? e.name + ': ' : ''}${(e && e.message) || e} (bij het inlezen van rondes)`);
     }
   };
   reader.onerror = () => showStatus('Kon het bestand niet lezen', true);
@@ -9081,12 +9608,12 @@ function buildImportEntry(r, existingIds, skipImportFlag) {
     qualifying: r.qualifying === true,
     _justImported: skipImportFlag ? undefined : true,
     total:       played.reduce((s, h) => s + h.score, 0),
-    totalStb:    r.holes.reduce((s, h) => s + stbFor(h), 0),
     holesCount:  r.holes.length,
     currentHole: r.holes.findIndex(h => h.score === null),
     started:     true,
   };
   delete entry.sd; // informatief in bestand; altijd opnieuw afgeleid
+  delete entry.totalStb; // wordt niet opgeslagen; het scherm rekent het uit de holes
   if (skipImportFlag) delete entry._justImported;
   return entry;
 }
@@ -9101,9 +9628,10 @@ function doImportRound(r, saved, skipImportFlag = false, deferSave = false) {
   saved.splice(insertAt, 0, entry);
   // deferSave (batch-import): de aanroeper slaat na de hele batch één keer op en
   // rendert één keer — per ronde opslaan + volledig renderen maakte grote imports traag.
-  if (deferSave) return;
-  metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
+  if (deferSave) return true;
+  const gelukt = metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved)))) !== false;
   loadSaved();
+  return gelukt;
 }
 
 // 'Toevoegen': verwerkt elke ronde apart. Eén probleemronde blokkeert niet meer de hele
@@ -9127,7 +9655,7 @@ function doAdditiveImport(parsed, overslagTekst = '') {
   });
   if (imported > 0) {
     if (metVerwijderen(() => setRoundsAndMark(JSON.stringify(trimRondes(current)))) === false) {
-      showStatus('Importeren mislukt — er is niet genoeg opslagruimte.', true);
+      showStatus(rondesOnleesbaar ? ONLEESBAAR_EERST_TERUGZETTEN : 'Importeren mislukt — er is niet genoeg opslagruimte.', true);
       return;
     }
     loadSaved();
@@ -9164,7 +9692,10 @@ function doAdditiveImport(parsed, overslagTekst = '') {
 
 // 'Volledig herstellen': vervangt het hele archief in één keer door de inhoud van het
 // bestand. Een eventuele actieve ronde hoorde bij de oude data en wordt losgelaten.
-function doFullRestoreImport(parsed) {
+// herstel: terugzetten na onleesbare gegevens; mag dan door de rem in setRoundsAndMark.
+// Geeft terug of het gelukt is, zodat de aanroeper geen succes meldt na een mislukking.
+function doFullRestoreImport(parsed, herstel = false) {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
   annuleerHerplan();   // de rondes worden vervangen; een lopende herplanning hoort bij de oude
   const existingIds = new Set();
   const entries = parsed.map(r => buildImportEntry(r, existingIds, true));
@@ -9172,9 +9703,10 @@ function doFullRestoreImport(parsed) {
   // Bij een volle opslag mislukt juist de grote schrijfactie, terwijl het wissen van de
   // actieve ronde en het bijwerken van de backupstand daarna wél zouden slagen — dan
   // sta je met je oude archief én een verkeerde backupstand.
-  if (metVerwijderen(() => setRoundsAndMark(JSON.stringify(trimRondes(entries)))) === false) {
-    showStatus('Herstellen mislukt — er is niet genoeg opslagruimte. Je bestaande rondes zijn ongewijzigd.', true);
-    return;
+  if (metVerwijderen(() => setRoundsAndMark(JSON.stringify(trimRondes(entries)), herstel)) === false) {
+    showStatus(rondesOnleesbaar && !herstel ? ONLEESBAAR_EERST_TERUGZETTEN
+      : 'Herstellen mislukt — er is niet genoeg opslagruimte. Je bestaande rondes zijn ongewijzigd.', true);
+    return false;
   }
   // Een volledige herstel-import ís zelf een complete backup-momentopname — ongeacht of er
   // al eerder een backup-datum bekend was. Anders zou de app direct na een schone import
@@ -9199,6 +9731,7 @@ function doFullRestoreImport(parsed) {
   updateStorageSettingsUI();
   updateLastBackupDisplay();
   updateLowHiInput();
+  return true;
 }
 
 function archiveImportedRound(idx, btn) {
@@ -9227,7 +9760,7 @@ function archiveImportedRound(idx, btn) {
   const round = saved[idx];
   if (!round) return;
   delete round._justImported;
-  setRoundsAndMark( JSON.stringify(saved));
+  if (setRoundsAndMark( JSON.stringify(saved)) === false) meldSchrijvenMislukt('De ronde');
   loadSaved();
 }
 
@@ -9267,8 +9800,9 @@ async function exportBackup(idx, btn) {
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     }
+    meldExportmapTerugval();
   } catch(e) {
-    console.error('Backup exporteren mislukt:', e);
+    meldExportMislukt(e, 'Backup exporteren');
   }
 }
 
@@ -9287,19 +9821,23 @@ function exportCsv(round, btn) {
   const clubShort = round.clubShort || CLUBS[clubName]?.shortName || clubName;
 
   const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+  // Namen uit de gegevens (ook uit een geïmporteerde ronde van een ander): begint er een
+  // met = + - of @, dan voert een rekenblad hem bij het openen uit als formule. Een '
+  // ervoor maakt er gewone tekst van. Getallen en de teksten van de app zelf blijven gelijk.
+  const naam = v => { const t = String(v); return esc(/^[=+\-@\t\r]/.test(t) ? "'" + t : t); };
 
   const lines = [];
   // Metadata
   lines.push(['Datum', formatFullDate(round.date)].map(esc).join(','));
   lines.push(['Tijd', round.time || '—'].map(esc).join(','));
-  lines.push(['Speler', round.player].map(esc).join(','));
+  lines.push([esc('Speler'), naam(round.player)].join(','));
   lines.push([esc('Hcp'), esc(round.hcp ?? '—')].join(','));
-  lines.push(['Club', clubName].map(esc).join(','));
-  lines.push(['ClubKort', clubShort].map(esc).join(','));
-  lines.push(['Baan', round.track].map(esc).join(','));
+  lines.push([esc('Club'), naam(clubName)].join(','));
+  lines.push([esc('ClubKort'), naam(clubShort)].join(','));
+  lines.push([esc('Baan'), naam(round.track)].join(','));
   lines.push(['Holes', round.holes.length].map(esc).join(','));
-  lines.push(['Geslacht', round.gender].map(esc).join(','));
-  lines.push(['Tee', round.tee].map(esc).join(','));
+  lines.push([esc('Geslacht'), naam(round.gender)].join(','));
+  lines.push([esc('Tee'), naam(round.tee)].join(','));
   lines.push([esc('CR'), esc(round.CR ?? '—')].join(','));
   lines.push([esc('SR'), esc(round.SR ?? '—')].join(','));
   lines.push(['Chcp', round.chcp].map(esc).join(','));
@@ -9329,12 +9867,12 @@ function exportCsv(round, btn) {
     const s = h.score;
     const d = s !== null ? s - h.par : null;
     let res = s === null ? '—' : d <= -2 ? 'Eagle+' : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Dubbel' : '+' + d;
-    lines.push([
-      h.id, h.si, h.par, h.ppar,
+    lines.push([naam(h.id)].concat([
+      h.si, h.par, pparVan(h),
       s ?? '—', h.putts != null ? h.putts : '—',
       s !== null ? stbFor(h) : '—',
       s !== null ? agsFor(h) : '—', res
-    ].map(esc).join(','));
+    ].map(esc)).join(','));
   });
 
   const csv = '\uFEFF' + lines.map(l => Array.isArray(l) ? l.join(',') : l).join('\r\n');
@@ -9354,8 +9892,15 @@ function exportCsv(round, btn) {
 
 
 // ══ AUTOMATISCH ARCHIVEREN VAN RONDES ════════════════════════════════════
+// Geeft false terug als het wegschrijven mislukte (volle of geblokkeerde opslag). Wie
+// daarna het spel uit het geheugen haalt of vervangt — afronden, wisselen van speler —
+// moet dat eerst controleren: de scores staan dan alleen nog in `game`.
+// Geeft true na een geslaagde opslag en false als de opslag mislukt of geweigerd is;
+// aanroepers stoppen bij false (afronden, wisselen, starten, laden). Zonder lopende ronde
+// is er niets op te slaan: dat is geen fout en geeft true, zoals voorheen (undefined
+// werd door alle aanroepers als 'gelukt' behandeld).
 function saveActiveRound(skipLoadSaved = false) {
-  if (!game.started) return;
+  if (!game.started) return true;
   const entry = buildRoundEntry();
 
   const saved = loadSavedRounds();
@@ -9370,17 +9915,77 @@ function saveActiveRound(skipLoadSaved = false) {
     const nuHoles = (entry.holes || []).length;
     if (bestaandeHoles > 0 && nuHoles === 0) {
       console.warn('Opslaan overgeslagen: het spel bevat geen holes, de opgeslagen ronde wel.');
-      return;
+      return false;   // geweigerd: de aanroeper mag niet doorgaan alsof er is opgeslagen
     }
     saved[idx] = entry;
   } else saved.unshift(entry);
-  metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved))));
+  const gelukt = metVerwijderen(() => setRoundsAndMark( JSON.stringify(trimRondes(saved)))) !== false;
 
-  // Alleen golf_active_id zetten voor speler 1
-  if (activePlayer !== 2) {
+  // Alleen golf_active_id zetten voor speler 1, en alleen als de ronde echt is opgeslagen:
+  // anders wees de verwijzing naar een ronde die niet bestaat.
+  if (activePlayer !== 2 && gelukt) {
     storage.setItem('golf_active_id', String(game.id));
   }
   if (!skipLoadSaved) loadSaved();
+  return gelukt;
+}
+
+// Opslaan na een tik op de scorekaart (score of putts). De rondelijst wordt hier NIET
+// opnieuw opgebouwd: die staat niet in beeld, en nav('archive') bouwt hem zelf op. Zo
+// deed de app het al; deze functie bundelt het alleen onder één naam (de vergelijking
+// 113 tegen 12D liet geen verschil in rekentijd zien). De stip op het tabblad Rondes
+// hangt wél van een tik af (bijvoorbeeld een score zonder putts) en wordt daarom direct
+// bijgewerkt.
+function bewaarNaTik() {
+  const gelukt = saveActiveRound(true);
+  refreshTabDot();
+  return gelukt;
+}
+
+// Melding na een handeling waarvan het wegschrijven mislukte. Zonder deze melding sloot
+// het venster of verscheen er "Opgeslagen" terwijl de wijziging na herladen weg was.
+// soort: 'rondes' of 'clubs' — bepaalt welke rem er nagekeken wordt voor de reden.
+function meldSchrijvenMislukt(wat, soort = 'rondes') {
+  // Heeft setRoundsAndMark zelf al 'Opslaan geblokkeerd' getoond (het vangnet tegen het
+  // verdwijnen van ingevulde rondes), dan zegt die melding meer dan deze.
+  if (soort === 'rondes' && _opslagGeblokkeerdGemeld) { _opslagGeblokkeerdGemeld = false; return; }
+  const onleesbaar = soort === 'clubs' ? clubsOnleesbaar : rondesOnleesbaar;
+  showInfoModal('Niet opgeslagen', `${wat} is niet opgeslagen: `
+    + (onleesbaar ? `je opgeslagen ${soort} zijn niet leesbaar. Zet eerst je backup terug.`
+                  : 'er is niet genoeg opslagruimte, of de opslag is geblokkeerd.')
+    + ' Er is niets gewijzigd.', 'red');
+}
+let _opslagGeblokkeerdGemeld = false;
+
+// De clublijst in het geheugen terugzetten naar wat er in de opslag staat, na een
+// wijziging die niet weggeschreven kon worden. Zo toont het scherm wat er werkelijk is.
+function draaiClubsTerug() {
+  loadClubsFromStorage();
+  rebuildCourseLookup(false);
+  rebuildAll();
+}
+
+// Een handeling die het spel uit het geheugen haalt gaat niet door als het opslaan
+// ervóór mislukte: anders zijn de scores die alleen nog in beeld stonden weg.
+// De lopende ronde bewaren voordat een andere haar vervangt. Alleen een ronde die nog in
+// de opslag staat: een ronde die intussen is afgerond, verwijderd of wordt herpland mag
+// hier niet opnieuw worden aangemaakt. Geeft false als het opslaan mislukte.
+function lopendeRondeBewaren() {
+  if (!game.started) return true;
+  if ((_herplanIds || []).includes(String(game.id))) return true;
+  if (!loadSavedRounds().some(r => r.id === game.id)) return true;
+  // Alleen de ronde die echt loopt (speler 1 of de gekoppelde speler 2). Een ronde die
+  // nog in het geheugen staat maar niet meer actief is, kan verouderd zijn ten opzichte
+  // van de opslag; die mag er niet overheen worden geschreven.
+  const actief = storage.getItem('golf_active_id') === String(game.id) || (game2Id != null && game.id === game2Id);
+  if (!actief) return true;
+  return saveActiveRound(true) !== false;
+}
+
+function meldNietOpgeslagen(handeling) {
+  showInfoModal('Niet opgeslagen',
+    `${handeling} kan nu niet: je scores konden niet worden opgeslagen. Ze blijven in beeld staan. `
+    + 'Probeer het opnieuw zodra opslaan weer lukt.', 'red');
 }
 
 
@@ -9422,7 +10027,8 @@ function finishActiveRound(btn) {
   }
   msg?.classList.add('hidden');
   if (btn) unlockSiblingButtons(btn);
-  saveActiveRound(true);
+  handelWachtendeTikAf();
+  if (saveActiveRound(true) === false) { meldNietOpgeslagen('Afronden'); return; }
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
   game = { started: false, holes: [] };
@@ -9440,6 +10046,10 @@ function restoreActiveRound() {
   const activeId = storage.getItem('golf_active_id');
   if (!activeId) return false;
   const saved = loadSavedRounds();
+  // Staat de rem aan (onleesbare of gedeeltelijk beschadigde rondes), dan is het id niet
+  // verouderd maar mogelijk gewoon niet te vinden. Laten staan, zodat de lopende ronde
+  // na het herstel terugkomt (zie haalBeschadigdeWeg).
+  if (rondesOnleesbaar) return false;
   const r = saved.find(x => String(x.id) === activeId);
   if (!r) {
     storage.removeItem('golf_active_id'); // verouderd ID opruimen
@@ -10029,7 +10639,7 @@ function zoekInRondes() {
     window._groupByPlanned = false;
     zetGroepeerKnop(null);
   }
-  loadSaved();
+  loadSaved(true);
 }
 
 // Zoekveld leeg of gesloten: terug naar de weergave van vóór het zoeken.
@@ -10243,13 +10853,18 @@ function handicapTabellen() {
   return _hcpTabellen;
 }
 
-function loadSaved() {
+// alleenLijst: de rondes zelf zijn niet veranderd, alleen wat ervan getoond wordt (zoeken).
+// Dan hoeven de twee onderdelen van Instellingen hieronder niet mee: dat scheelt per
+// toets het opnieuw afleiden van de Low HI uit de hele historie.
+function loadSaved(alleenLijst = false) {
   const saved = loadSavedRounds();
   // Rondedata kan op veel manieren wijzigen (import, koppelen, bewerken, vaststellen) —
   // door dit hier centraal te doen i.p.v. per wijzigingspad, blijft de 'uit historie
   // afgeleide' Low HI-waarde in Instellingen altijd actueel, ongeacht de oorzaak.
-  updateLowHiInput();
-  updateStorageSettingsUI(saved);
+  if (alleenLijst !== true) {
+    updateLowHiInput();
+    updateStorageSettingsUI(saved);
+  }
   const el = document.getElementById('savedList');
   const searchInput = document.getElementById('archiveSearch');
   const rawSearch = searchInput?.value || '';
@@ -10418,7 +11033,7 @@ function loadSaved() {
     const isActive  = (activeId && String(r.id) === activeId) || (game2Id && r.id === game2Id);
     const isPlayer2Active = game2Id && r.id === game2Id;
     const total    = r.total ?? r.holes.filter(h=>h.score!==null).reduce((s,h)=>s+h.score,0);
-    const totalStb = r.totalStb;
+    const totalStb = stbTotaal(r);
     const totalAgs = r.holes.reduce((s, h) => s + agsFor(h), 0);
     const par = r.PAR ?? (r.holes?.length ? r.holes.reduce((s,h)=>s+h.par,0) : null);
     const chcp = r.chcp;
@@ -10446,7 +11061,7 @@ function loadSaved() {
     const dateLineInner = `
       ${importedLabel}
       <div class="saved-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + r.time : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
+        <span style="display:flex;align-items:center;gap:6px">${bezigLabel}${formatRoundDateWithDay(r.date)}${r.time ? ' · ' + escapeHtml(r.time) : ''}${(short || expandedFromShort) ? `<span onclick="event.stopPropagation(); toggleWhsCardExpand(${r.id})" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -3px;cursor:pointer;color:var(--muted)" title="${short ? 'Toon volledige kaart' : 'Toon verkorte kaart'}">${arrowSvg(15, !short)}</span>` : ''}</span>
         <span style="display:flex;align-items:center;gap:6px">
           ${(window._lowHiRoundId != null && window._lowHiRoundId === r.id) ? '<span class="tee-badge badge-lowhi whs-only">L</span>' : ''}
           ${(window._whsUsedIds && window._whsUsedIds.has(r.id)) ? `<span class="tee-badge badge-whs whs-only">${(window._whsUsedOrder && window._whsUsedOrder[r.id]) || 'WHS'}</span>` : ''}
@@ -10493,14 +11108,14 @@ function loadSaved() {
     const puttHoles = (r.holes || []).filter(h => h && h.score != null && h.putts != null);
     const puttTotaal = puttHoles.length ? puttHoles.reduce((s, h) => s + h.putts, 0) : null;
     const puttFrag = puttTotaal ? ` / ${puttTotaal}` : '';
-    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${puttFrag}${sdDeel ? ` · ${sdDeel}` : ''}</div>`;
+    const strLine = `<div class="saved-meta">${done ? '' : `${playedCount}/${holesCount} · `}Str ${total}${(done && Number.isFinite(totalAgs) && totalAgs !== total) ? `${hcpArrowSvg(0, 0, 16)}${totalAgs}` : ''}${puttFrag}${sdDeel ? ` · ${sdDeel}` : ''}</div>`;
     const sdLine = '';
     const stbHcpLine = (() => {
       // Stb + Hcp samen als aparte, laatste regel, direct boven de par-grafiek.
       // Zonder 'Handicap bijhouden' blijft alleen Stb over: het handicapverloop, de caps
       // en het ESR-teken zijn WHS-uitkomsten.
       if (!whsVolgen()) {
-        return totalStb != null ? `<div class="saved-meta">Stb ${totalStb}</div>` : '';
+        return Number.isFinite(totalStb) ? `<div class="saved-meta">Stb ${totalStb}</div>` : '';
       }
       const t = hcpTrendMap[r.id];
       let hcpPart = '';
@@ -10509,7 +11124,7 @@ function loadSaved() {
       if (!t || t.newHcp == null) {
         const geldend = (r.player === startPlayerName()) ? hcpGeldendMap[r.id] : null;
         if (geldend == null && short) return '';
-        const stbDeel = totalStb != null ? `Stb ${totalStb} · ` : '';
+        const stbDeel = Number.isFinite(totalStb) ? `Stb ${totalStb} · ` : '';
         return `<div class="saved-meta">${stbDeel}Whs ${geldend != null ? fmt1(geldend) : '—'}</div>`;
       }
       if (t && t.newHcp != null && r.player === startPlayerName()) {
@@ -10531,7 +11146,7 @@ function loadSaved() {
         hcpPart = `Whs ${t.oldHcp != null ? fmt1(t.oldHcp) : '—'}${hcpArrowSvg(t.oldHcp, t.newHcp, 16)}${fmt1(t.newHcp)}${capFrag}${esrFrag}${diffFrag}`;
       }
       // Stb staat weer op deze regel, vóór het handicapverloop.
-      const line = [totalStb != null ? `Stb ${totalStb}` : '', hcpPart].filter(Boolean).join(' · ');
+      const line = [Number.isFinite(totalStb) ? `Stb ${totalStb}` : '', hcpPart].filter(Boolean).join(' · ');
       return line ? `<div class="saved-meta">${line}</div>` : '';
     })();
     const actionsBlock = `
@@ -10573,7 +11188,7 @@ function loadSaved() {
       })()}
       <div class="saved-meta">${clubSafe}</div>
       <div class="saved-meta">${trackSafe}${par != null ? ` · Par ${par}` : ''} · ${holesCount}h</div>
-      <div class="saved-meta">${(r.gender || '').charAt(0)} · ${r.tee || '—'} · Chcp ${chcp ?? '—'}</div>
+      <div class="saved-meta">${escapeHtml((r.gender || '').charAt(0))} · ${escapeHtml(r.tee || '—')} · Chcp ${escapeHtml(chcp ?? '—')}</div>
       ${planKaart ? '' : strLine}
       ${planKaart ? '' : sdLine}
       ${planKaart ? '' : stbHcpLine}
@@ -11003,6 +11618,10 @@ function loadRoundAsSecondPlayer(i) {
 }
 
 function loadRoundSingle(i) {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
+  // Eerst de lopende ronde bewaren: het laden vervangt haar, ook als haar laatste scores
+  // nog niet in de opslag staan (opslag vol of geblokkeerd). Dan niet laden.
+  if (lopendeRondeBewaren() === false) { meldNietOpgeslagen('Een andere ronde laden'); return; }
   const saved = loadSavedRounds();
   const r = saved[i];
   clearImportedFlag(r.id);
@@ -11024,6 +11643,10 @@ function loadRoundSingle(i) {
 }
 
 function loadRoundAsCouple(i, matchId) {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
+  // Eerst de lopende ronde bewaren: het laden vervangt haar, ook als haar laatste scores
+  // nog niet in de opslag staan (opslag vol of geblokkeerd). Dan niet laden.
+  if (lopendeRondeBewaren() === false) { meldNietOpgeslagen('Een andere ronde laden'); return; }
   const saved = loadSavedRounds();
   const r = saved[i];
   const matchRound = saved.find(x => x.id === matchId);
@@ -11073,6 +11696,7 @@ function saveAndClearPlayer2Round(btn) {
   }
   msg?.classList.add('hidden');
   unlockSiblingButtons(btn);
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
   // Verwijder speler 2 markering
   game2Id = null;
   storage.removeItem('golf_game2_id');
@@ -11123,6 +11747,10 @@ function saveAndClearActiveRound(btn) {
   }
   msg?.classList.add('hidden');
   unlockSiblingButtons(btn);
+  // Normaal is elke score al weggeschreven. Tijdens een opslagstoring niet: dan staan ze
+  // alleen in `game`, en mag dat niet worden leeggemaakt.
+  handelWachtendeTikAf();
+  if (saveActiveRound(true) === false) { meldNietOpgeslagen('Opslaan'); return; }
   storage.removeItem('golf_active_id');
   storage.removeItem('golf_game2_id');
 
@@ -11148,10 +11776,13 @@ function saveAndClearActiveRound(btn) {
 // Kernlogica van het verwijderen van een ronde — losstaand van de UI-bevestiging,
 // zodat deze herbruikbaar is voor de knop in de Ronde bewerken-modal.
 function performDeleteRound(i) {
+  handelWachtendeTikAf();   // een wachtende scorewijziging hoort bij de ronde die nu loopt
   const saved = loadSavedRounds();
   const removed = saved.splice(i, 1)[0];
   if (!removed) return;
-  metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
+  // Lukt het wegschrijven niet, dan staat de ronde er nog: niet verder gaan met het
+  // opruimen van de lopende ronde en zijn verwijzingen.
+  if (metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved))) === false) { meldSchrijvenMislukt('Het verwijderen'); loadSaved(); return; }
 
   const activeId = storage.getItem('golf_active_id');
   const wasActive = removed && activeId && String(removed.id) === activeId;
@@ -11530,7 +12161,7 @@ function kopTik() {
 }
 
 function cleanupTempClub() {
-  if (editorClub && editorClub.startsWith('__nieuw__') && !CLUBS[editorClub]?.club) {
+  if (editorClub && CLUBS[editorClub] && isNieuweClubZonderNaam(editorClub)) {
     delete CLUBS[editorClub];
     rebuildCourseLookup();
     rebuildAll();
@@ -11747,8 +12378,8 @@ function openHoleFieldModal(input, holeNum, fieldLabel) {
   const idVal = row?.querySelector('.hole-id')?.value;
   const parVal = row?.querySelector('.par-cycle-btn')?.dataset.par;
   const context = [`Hole ${holeNum}`];
-  if (fieldLabel !== 'ID' && idVal) context.push(idVal);
-  if (fieldLabel !== 'Par' && parVal) context.push(`Par ${parVal}`);
+  if (fieldLabel !== 'ID' && idVal) context.push(escapeHtml(idVal));
+  if (fieldLabel !== 'Par' && parVal) context.push(`Par ${escapeHtml(parVal)}`);
   openValueEditModal(input, `${context.join(' · ')} · ${fieldLabel}`);
 }
 
@@ -11763,10 +12394,10 @@ function openTeeFieldModal(input, fieldLabel, includeTeeName) {
   const teeName = row?.querySelector('.tee-name-field')?.dataset.value || '';
   let label = fieldLabel;
   if (includeTeeName) {
-    const parts = [gender, teeName].filter(Boolean);
+    const parts = [gender, teeName].filter(Boolean).map(escapeHtml);
     if (parts.length) label = `${parts.join(' · ')} · ${fieldLabel}`;
   } else if (gender) {
-    label = `${gender} · ${fieldLabel}`;
+    label = `${escapeHtml(gender)} · ${fieldLabel}`;
   }
   openValueEditModal(input, label);
 }
@@ -11878,6 +12509,9 @@ function startKeyboardAwarePositioning() {
 }
 
 function formatModalLabel(label) {
+  // De titel mag HTML bevatten (het venster voor het wedstrijdpercentage zet er een
+  // tweede regel in). Wie er een naam in zet, zet die dus zelf eerst om met escapeHtml —
+  // zie openHoleFieldModal en openTeeFieldModal.
   const parts = label.split(' · ');
   if (parts.length === 1) return `<span style="color:var(--green-light)">${parts[0]}</span>`;
   const context = parts.slice(0, -1).join(' · ');
@@ -12010,14 +12644,14 @@ function makeTeeRow(gender, tee, par, cr, sr, holes) {
   tr.innerHTML = `
     <td style="padding:3px 2px">
       <div style="position:relative;display:flex">
-        <button type="button" class="gender-cycle-btn" data-gender="${gender}" style="width:100%;min-width:0;box-sizing:border-box;padding:6px 2px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none;-webkit-user-select:none;touch-action:manipulation">${gender.charAt(0)}</button>
+        <button type="button" class="gender-cycle-btn" data-gender="${escapeHtml(gender)}" style="width:100%;min-width:0;box-sizing:border-box;padding:6px 2px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none;-webkit-user-select:none;touch-action:manipulation">${escapeHtml(gender.charAt(0))}</button>
         <button type="button" class="tee-move-down-btn hidden" title="Verplaats naar beneden" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;color:var(--white);background:rgba(36,113,163,.9);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></button>
       </div>
     </td>
-    <td style="padding:3px 2px"><div class="tee-name-field" data-value="${tee}" onclick="openTeeFieldModal(this, 'Tee', false)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;overflow-wrap:break-word;cursor:pointer;text-align:center">${tee}</div></td>
-    <td style="padding:3px 2px"><div class="par-name-field" data-value="${parDisp}" data-numeric="1" title="Wordt automatisch berekend uit de hole-pars" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:transparent;color:var(--muted);border:1px solid transparent;font-size:17px;text-align:center;cursor:default">${parDisp}</div></td>
-    <td style="padding:3px 2px"><div class="cr-name-field" data-value="${crDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'CR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${crDisp}</div></td>
-    <td style="padding:3px 2px"><div class="sr-name-field" data-value="${srDisp}" data-numeric="1" onclick="openTeeFieldModal(this, 'SR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${srDisp}</div></td>`;
+    <td style="padding:3px 2px"><div class="tee-name-field" data-value="${escapeHtml(tee)}" onclick="openTeeFieldModal(this, 'Tee', false)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;overflow-wrap:break-word;cursor:pointer;text-align:center">${escapeHtml(tee)}</div></td>
+    <td style="padding:3px 2px"><div class="par-name-field" data-value="${escapeHtml(parDisp)}" data-numeric="1" title="Wordt automatisch berekend uit de hole-pars" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:transparent;color:var(--muted);border:1px solid transparent;font-size:17px;text-align:center;cursor:default">${escapeHtml(parDisp)}</div></td>
+    <td style="padding:3px 2px"><div class="cr-name-field" data-value="${escapeHtml(crDisp)}" data-numeric="1" onclick="openTeeFieldModal(this, 'CR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${escapeHtml(crDisp)}</div></td>
+    <td style="padding:3px 2px"><div class="sr-name-field" data-value="${escapeHtml(srDisp)}" data-numeric="1" onclick="openTeeFieldModal(this, 'SR', true)" style="width:100%;box-sizing:border-box;padding:6px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center;cursor:pointer">${escapeHtml(srDisp)}</div></td>`;
   bindGenderLongPress(tr.querySelector('.gender-cycle-btn'));
   bindArrowLongPress(tr.querySelector('.tee-move-down-btn'));
   tr._holes = (holes || []).map(h => ({ par: h.par, si: h.si }));
@@ -12600,7 +13234,7 @@ function makeHoleRow(h, i) {
   tr.className = 'hole-editor-row';
   tr.innerHTML = `
     <td style="padding:3px 2px;text-align:center;font-size:20px;color:var(--muted)">${i+1}</td>
-    <td style="padding:3px 2px"><input value="${h.id}" placeholder="H${i+1}" class="hole-id" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'ID')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>
+    <td style="padding:3px 2px"><input value="${escapeHtml(h.id)}" placeholder="H${i+1}" class="hole-id" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'ID')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>
     <td style="padding:3px 2px"><button type="button" class="par-cycle-btn" data-par="${h.par}" data-hole="${i+1}" onclick="editParBtn(this)" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;cursor:pointer">${h.par}</button></td>
     <td style="padding:3px 2px"><input type="number" value="${h.si ?? ''}" placeholder="${i+1}" min="1" max="18" class="hole-si" readonly onfocus="this.blur(); openHoleFieldModal(this, ${i+1}, 'SI')" style="width:100%;min-width:0;box-sizing:border-box;padding:5px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--white);border:1px solid rgba(255,255,255,.2);font-size:17px;text-align:center"></td>`;
   return tr;
@@ -12758,6 +13392,10 @@ function applyClubChanges({ newClubName, newShortName }) {
   if (newClubName !== editorClub) {
     CLUBS[newClubName] = { club: newClubName, shortName: newShortName, courses: { ...oldClub.courses } };
     delete CLUBS[editorClub];
+    // Eerst de clubs opslaan; pas als dat lukt de verwijzingen omzetten (zie hieronder).
+    // Mislukte het opslaan, dan wezen thuisclub en gekozen club al naar een club die er
+    // niet is, en toonde Start na herladen geen enkele baan.
+    if (saveClubsToStorage() === false) { draaiClubsTerug(); return false; }
     // De gekozen club, de thuisclub en de favorieten staan op NAAM in de opslag. Zonder
     // dit wees de app na het hernoemen naar een club die niet meer bestaat: het
     // startscherm toonde dan geen enkele baan, en je thuisclub was je kwijt.
@@ -12770,15 +13408,16 @@ function applyClubChanges({ newClubName, newShortName }) {
   } else {
     oldClub.club = newClubName;
     oldClub.shortName = newShortName;
+    if (saveClubsToStorage() === false) { draaiClubsTerug(); return false; }
   }
-  rebuildCourseLookup();
+  rebuildCourseLookup(false);   // al opgeslagen hierboven; niet nog een keer wegschrijven
   if (!COURSES[sel.track]) {
     const fallback = Object.keys(COURSES)[0];
     if (fallback) sel.track = fallback;
   }
   updateHeaderClubName();
   rebuildAll();
-  saveClubsToStorage();
+  return true;
 }
 
 // Rondes die nog de oude clubnaam of korte naam dragen. Speler 2 zit in dezelfde
@@ -12830,7 +13469,7 @@ function naamWijzigingKeuze(alles) {
     const saved = loadSavedRounds();
     let n = 0;
     saved.forEach(r => { if (w.pasAan(r)) n++; });
-    if (n) setRoundsAndMark(JSON.stringify(saved));
+    if (n && setRoundsAndMark(JSON.stringify(saved)) === false) meldSchrijvenMislukt('De nieuwe naam in je bestaande rondes');
     if (game && game.started && w.pasAan(game)) { saveActiveRound(); updateHeaderClubName(); }
     rebuildAll();
   }
@@ -12854,7 +13493,7 @@ function clubRenameKeuze(alles) {
       if (ren.oud.kort && r.clubShort === ren.oud.kort) { r.clubShort = ren.nieuw.kort; raak = true; }
       if (raak) n++;
     });
-    if (n) setRoundsAndMark(JSON.stringify(saved));
+    if (n && setRoundsAndMark(JSON.stringify(saved)) === false) meldSchrijvenMislukt('De nieuwe clubnaam in je bestaande rondes');
     // Actieve ronde spiegelt de opgeslagen gegevens, dus die apart bijwerken.
     if (game && game.started) {
       if (ren.oud.club && game.club === ren.oud.club) game.club = ren.nieuw.club;
@@ -12875,7 +13514,8 @@ function saveClubFromEditor() {
     // vinden die nog de oude naam dragen.
     const oudeNaam = CLUBS[editorClub] ? CLUBS[editorClub].club : editorClub;
     const oudeKort = CLUBS[editorClub] ? CLUBS[editorClub].shortName : '';
-    applyClubChanges(validated);
+    // Zelfde regel als de baaneditor: geen "Opgeslagen" als het wegschrijven mislukte.
+    if (applyClubChanges(validated) === false) throw new Error(clubsOnleesbaar ? 'Niet opgeslagen — je opgeslagen clubs zijn niet leesbaar' : 'Opslaan mislukt — geheugen vol of geblokkeerd');
     const naamGewijzigd = oudeNaam && oudeNaam !== validated.newClubName;
     const kortGewijzigd = oudeKort && oudeKort !== validated.newShortName;
     if (naamGewijzigd || kortGewijzigd) {
@@ -12912,7 +13552,7 @@ function deleteClubFromEditor(btn) {
   const club = editorClub;
   if (!club || !CLUBS[club]) return;
   const msg = document.getElementById('clubDeleteMsg');
-  const isUnsavedNewClub = club.startsWith('__nieuw__') && !CLUBS[club].club;
+  const isUnsavedNewClub = isNieuweClubZonderNaam(club);
   if (isUnsavedNewClub) {
     // Nog geen opgeslagen club — er is niets te verwijderen uit de opslag. Is er niets
     // ingevuld, dan meteen sluiten; is er wel al iets getypt, dan alsnog tik-tweemaal
@@ -12983,12 +13623,14 @@ function deleteClubFromEditor(btn) {
     'Verwijderen',
     () => {
       delete CLUBS[club];
+      // Eerst wegschrijven. Lukt dat niet, dan komt de club terug in beeld en blijven
+      // thuisclub, standaardclub en favorieten zoals ze waren.
+      if (saveClubsToStorage() === false) { draaiClubsTerug(); meldSchrijvenMislukt('Het verwijderen van de club', 'clubs'); return; }
       if (storage.getItem('golf_default_club') === club) storage.removeItem('golf_default_club');
       if (storage.getItem('golf_home_club') === club) storage.removeItem('golf_home_club');
       const favs = getFavClubs();
       storage.setItem('golf_fav_clubs', JSON.stringify(favs.filter(f => f !== club)));
-      saveClubsToStorage();
-      rebuildCourseLookup();
+      rebuildCourseLookup(false);
       rebuildAll();
       document.getElementById('clubEditorOverlay').classList.add('hidden');
       editorClub = null;
@@ -13518,8 +14160,8 @@ function deleteCourseFromEditor(btn) {
     () => {
       if (!CLUBS[editorClub]?.courses) return;
       delete CLUBS[editorClub].courses[courseName];
-      saveClubsToStorage();
-      rebuildCourseLookup();
+      if (saveClubsToStorage() === false) { draaiClubsTerug(); meldSchrijvenMislukt('Het verwijderen', 'clubs'); return; }
+      rebuildCourseLookup(false);
       buildTrackList();
       buildTeeButtons();
       buildClubList();
@@ -13545,6 +14187,7 @@ let _editCalcSd = null;
 function toggleQualifying(who) {
   const t1 = document.getElementById('qualifyToggle1');
   const t2 = document.getElementById('qualifyToggle2');
+  _qualVoorLus = null;   // je eigen keuze geldt; er wordt niets meer teruggezet na een lus
   if (who === 1) {
     sel.qualifying = t1.checked;
     if (t1.checked && t2 && !t2.checked) { t2.checked = true; sel2.qualifying = true; }
@@ -13897,7 +14540,8 @@ function applyRoundInfo(saved, round, date, time) {
   const noteVal = document.getElementById('editNoteInput').value.trim();
   if (noteVal) round.note = noteVal; else delete round.note;
   const activeId = storage.getItem('golf_active_id');
-  setRoundsAndMark( JSON.stringify(saved));
+  // Het venster blijft open als het wegschrijven mislukt: je invoer staat er dan nog.
+  if (setRoundsAndMark( JSON.stringify(saved)) === false) { meldSchrijvenMislukt('De wijziging'); return; }
   if (staatInGeheugen(round)) {
     game.date = date;
     game.time = time;
@@ -13957,7 +14601,7 @@ function confirmRoundResult() {
     game.sdFinal = round.sdFinal;
     game.note = round.note;
   }
-  setRoundsAndMark( JSON.stringify(saved));
+  if (setRoundsAndMark( JSON.stringify(saved)) === false) { meldSchrijvenMislukt('Het dagresultaat'); return; }
   if (inGeheugen) {
     saveActiveRound(false);
   }
@@ -14138,7 +14782,7 @@ function confirmResetAll(btn) {
 
 async function doResetAll() {
   ['golf_rounds','golf_clubs','golf_active_id','golf_game2_id','golf_default_club',
-   'golf_fav_clubs','golf_player2_visible','golf_profile_name','golf_profile_hcp',
+   'golf_fav_clubs','golf_player2_visible','golf_profile_name','golf_profile_hcp','golf_fouten',
    'golf_gender','golf_profile_name2','golf_profile_hcp2','golf_fav_player2_name',
    'golf_fav_player2_hcp','golf_default_player2_name','golf_default_player2_hcp',
    'golf_setup_date_day','golf_setup_date','golf_setup_time',
@@ -14516,13 +15160,30 @@ async function updateExportFolderUI() {
 // Probeert een bestand rechtstreeks in de gekozen map te schrijven. Geeft true terug
 // bij succes, false als er geen (bruikbare) map is ingesteld — de aanroeper valt dan
 // terug op de gewone download-methode (die naar Downloads gaat).
+// Was de exportmap ingesteld maar lukte het schrijven niet, dan valt de export terug op
+// een gewone download. Dat mag niet stil gebeuren: je zoekt het bestand dan op de
+// verkeerde plek. De export meldt het na de download (meldExportmapTerugval).
+let _exportmapMislukt = false;
+function meldExportmapTerugval() {
+  if (!_exportmapMislukt) return;
+  _exportmapMislukt = false;
+  showInfoModal('Exportmap niet bereikbaar', 'Het bestand staat in Downloads, niet in je exportmap. Controleer de map onder Instellingen \u2192 Gegevens.', 'orange');
+}
+// Een export die aantoonbaar mislukt (de download kon niet starten). Of je een download
+// daarna zelf annuleert, kan een browser niet doorgeven; dat blijft dus ongemeld.
+function meldExportMislukt(e, wat) {
+  console.error(`${wat} mislukt:`, e);
+  _exportmapMislukt = false;
+  showInfoModal('Exporteren mislukt', 'Er is geen bestand gemaakt; je backupstand is niet gewijzigd.', 'red');
+}
 async function tryWriteToExportFolder(filename, content) {
+  _exportmapMislukt = false;
   if (!exportFolderSupported()) return false;
   const handle = await getStoredExportFolderHandle();
   if (!handle) return false;
   try {
     if ((await handle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-      if ((await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') return false;
+      if ((await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') { _exportmapMislukt = true; return false; }
     }
     const fileHandle = await handle.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();
@@ -14531,6 +15192,7 @@ async function tryWriteToExportFolder(filename, content) {
     return true;
   } catch (e) {
     console.error('Schrijven naar exportmap mislukt, terugvallen op Downloads:', e);
+    _exportmapMislukt = true;
     return false;
   }
 }
@@ -14590,7 +15252,8 @@ async function exportAllRounds() {
     legBackupInhoudVast();
     naBackupBijwerken();
     updateLastBackupDisplay();
-  } catch(e) { console.error('Backup rondes mislukt:', e); }
+    meldExportmapTerugval();
+  } catch(e) { meldExportMislukt(e, 'Backup rondes'); }
 }
 
 // ── Backupmelding ─────────────────────────────────────────────────────────────────
@@ -14765,10 +15428,14 @@ function metVerwijderen(fn) {
   try { return fn(); } finally { _verwijderenToegestaan = false; }
 }
 
-function setRoundsAndMark(json) {
+function setRoundsAndMark(json, herstel = false) {
+  _opslagGeblokkeerdGemeld = false;
   // Rem bij onleesbare gegevens: niet over iets heen schrijven wat mogelijk nog te
   // redden is. De aanroeper krijgt false terug en meldt dat het niet gelukt is.
-  if (rondesOnleesbaar) {
+  // Enige uitzondering: een backup terugzetten (herstel), na uitdrukkelijke bevestiging
+  // — zie vraagHerstelNaOnleesbaar. Na een geslaagde schrijfactie is de lijst weer
+  // leesbaar en zet loadSavedRounds de vlag vanzelf terug.
+  if (rondesOnleesbaar && herstel !== true) {
     console.warn('Opslaan geweigerd: de opgeslagen rondes zijn niet leesbaar.');
     return false;
   }
@@ -14782,6 +15449,7 @@ function setRoundsAndMark(json) {
       if (kwijt.length) {
         console.error('Opslaan geweigerd: dit zou ingevulde ronde(s) laten verdwijnen:',
                       kwijt.map(r => `${r.player} ${r.date} ${r.time || ''}`).join(' | '));
+        _opslagGeblokkeerdGemeld = true;
         showInfoModal('Opslaan geblokkeerd',
           `Er ging iets mis: deze actie zou ${kwijt.length === 1 ? 'een ingevulde ronde' : kwijt.length + ' ingevulde rondes'} laten verdwijnen. Er is niets gewijzigd. Maak voor de zekerheid een backup.`,
           'red');
@@ -15041,7 +15709,8 @@ async function exportAllClubs() {
       clearTimeout(successMsg._hideTimer);
       successMsg._hideTimer = setTimeout(() => successMsg.classList.add('hidden'), 2000);
     });
-  } catch(e) { console.error('Backup clubs mislukt:', e); }
+    meldExportmapTerugval();
+  } catch(e) { meldExportMislukt(e, 'Backup clubs'); }
 }
 
 async function exportClub(club, btn) {
@@ -15090,6 +15759,7 @@ async function exportClub(club, btn) {
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     }
+    meldExportmapTerugval();
     if (msg) {
       msg.textContent = 'Geëxporteerd';
       msg.style.color = 'var(--green-light)';
@@ -15102,6 +15772,7 @@ async function exportClub(club, btn) {
       }, 2000);
     }
   } catch(e) {
+    meldExportMislukt(e, 'Club exporteren');
     if (msg) {
       msg.textContent = 'Exporteren mislukt';
       msg.style.color = 'var(--red)';
@@ -15118,12 +15789,20 @@ async function exportClub(club, btn) {
 
 
 function validateImportedClubData(data) {
-  if (!data || typeof data !== 'object') return 'Ongeldig bestand — geen geldig JSON-object';
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return 'Dit is geen clubbestand.';
   if (!data.club || typeof data.club !== 'string') return 'Ontbrekend of ongeldig veld "club"';
-  if (!data.courses || typeof data.courses !== 'object' || !Object.keys(data.courses).length) {
+  // Clubs, banen, geslachten en tees zijn sleutels in een gewoon object. Deze drie namen
+  // hebben daar een eigen betekenis: een club die zo heet gaf een valse "bestaat al" en
+  // verstoorde de clublijst tot het herladen.
+  const verboden = n => n === '__proto__' || n === 'constructor' || n === 'prototype';
+  const teLang = n => typeof n === 'string' && n.length > 200;
+  if (verboden(data.club) || teLang(data.club)) return 'Ongeldige clubnaam';
+  if (data.shortName != null && (typeof data.shortName !== 'string' || teLang(data.shortName))) return 'Ongeldige korte naam';
+  if (!data.courses || typeof data.courses !== 'object' || Array.isArray(data.courses) || !Object.keys(data.courses).length) {
     return 'Ontbrekend of leeg veld "courses"';
   }
   for (const [courseName, course] of Object.entries(data.courses)) {
+    if (verboden(courseName) || teLang(courseName)) return 'Ongeldige baannaam';
     if (!course || typeof course !== 'object') return `Baan "${courseName}": ongeldige structuur`;
     // De baan bewaart alleen de holenamen; par en SI staan per tee (zie teePar hierboven).
     if (!Array.isArray(course.holeIds) || !course.holeIds.length) {
@@ -15140,13 +15819,18 @@ function validateImportedClubData(data) {
       return `Baan "${courseName}": ontbrekende of lege "tees"`;
     }
     for (const [gender, teemap] of Object.entries(course.tees)) {
+      if (verboden(gender) || teLang(gender)) return `Baan "${courseName}": ongeldig geslacht`;
       if (!teemap || typeof teemap !== 'object' || !Object.keys(teemap).length) {
         return `Baan "${courseName}", "${gender}": geen tees gevonden`;
       }
       for (const [teeName, vals] of Object.entries(teemap)) {
+        if (verboden(teeName) || teLang(teeName)) return `Baan "${courseName}": ongeldige teenaam`;
         const label = `Baan "${courseName}", tee "${teeName}"`;
-        if (typeof vals?.CR !== 'number') return `${label}: ongeldige CR`;
-        if (typeof vals?.SR !== 'number') return `${label}: ongeldige SR`;
+        // Zelfde grenzen als bij een ronde (keurRonde). De ondergrens van de CR is bewust
+        // laag: een lus van een paar holes heeft een CR ver onder die van een 9-holesbaan,
+        // en het venster Nieuwe lus keurt zijn resultaat met deze functie.
+        if (typeof vals?.CR !== 'number' || !isFinite(vals.CR) || vals.CR < 1 || vals.CR > 90) return `${label}: ongeldige CR`;
+        if (typeof vals?.SR !== 'number' || !isFinite(vals.SR) || vals.SR < 55 || vals.SR > 155) return `${label}: ongeldige SR`;
         if (!Array.isArray(vals.holes) || vals.holes.length !== course.holeIds.length) {
           return `${label}: "holes" ontbreekt of telt niet ${course.holeIds.length} holes`;
         }
@@ -15189,7 +15873,42 @@ function importCourseData(input) {
         input.value = '';
         return;
       }
-      const parsed = JSON.parse(raw);
+      // Zelfde opzet als bij de rondes: alleen het lezen heeft een eigen melding.
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch (fout) { showInfoModal('Import mislukt', ONLEESBAAR_BESTAND, 'red'); input.value = ''; return; }
+
+      // Onleesbare clubgegevens: de app draait zonder clubs en slaat niets op.
+      // Terugzetten kan, na bevestiging; de vraag noemt hoeveel clubs het bestand bevat,
+      // zodat je niet per ongeluk een bestand met één club gebruikt.
+      if (clubsOnleesbaar) {
+        const lijst = Array.isArray(parsed) ? parsed : [parsed];
+        if (lijst.length && lijst.every(x => x && typeof x === 'object' && Array.isArray(x.holes) && !x.courses)) {
+          showInfoModal('Import mislukt', 'Dit is een bestand met rondes, geen clubbestand. Lees het in bij Rondes.', 'red');
+          input.value = ''; return;
+        }
+        const goed = lijst.filter(d => !validateImportedClubData(d));
+        if (!goed.length) {
+          showInfoModal('Import mislukt', 'Geen bruikbare clubs in dit bestand.', 'red');
+          input.value = ''; return;
+        }
+        const namen = goed.map(d => d.club).join(', ');
+        vraagHerstelNaOnleesbaar('clubs',
+          `${_clubsApart ? 'je goede clubs plus de' : 'de'} ${goed.length} club${goed.length !== 1 ? 's' : ''} uit dit bestand (${namen})`, () => {
+          goed.forEach(d => { CLUBS[d.club] = d; });
+          if (saveClubsToStorage(true) === false) {
+            showInfoModal('Terugzetten mislukt', 'De clubs konden niet worden opgeslagen — er is niet genoeg opslagruimte. Er is niets gewijzigd.', 'red');
+            return;
+          }
+          clubsOnleesbaar = false; _clubsApart = 0;
+          rebuildCourseLookup(false);   // al opgeslagen hierboven
+          rebuildAll();
+          const overgeslagen = lijst.length - goed.length;
+          showInfoModal('Import voltooid', `${goed.length} club${goed.length !== 1 ? 's' : ''} teruggezet${overgeslagen ? `, ${overgeslagen} overgeslagen` : ''}.${herkomstZin}`);
+        });
+        input.value = '';
+        return;
+      }
 
       // Array van clubs (backup)
       if (Array.isArray(parsed)) {
@@ -15222,9 +15941,13 @@ function importCourseData(input) {
         const doBulkImport = (overwriteExisting) => {
           const toImport = overwriteExisting ? valid : newOnes;
           toImport.forEach(data => { CLUBS[data.club] = data; });
-          rebuildCourseLookup();
+          if (saveClubsToStorage() === false) {
+            draaiClubsTerug(); input.value = '';
+            showInfoModal('Import mislukt', 'De clubs konden niet worden opgeslagen: er is niet genoeg opslagruimte, of de opslag is geblokkeerd. Er is niets gewijzigd.', 'red');
+            return;
+          }
+          rebuildCourseLookup(false);
           rebuildAll();
-          saveClubsToStorage();
           const skippedCount = invalid.length + (overwriteExisting ? 0 : existing.length);
           showInfoModal('Import voltooid', `${toImport.length} club${toImport.length !== 1 ? 's' : ''} geïmporteerd${skippedCount ? `, ${skippedCount} overgeslagen` : ''}.${herkomstZin}`);
           input.value = '';
@@ -15247,16 +15970,21 @@ function importCourseData(input) {
 
       const data = parsed;
       if (data && typeof data === 'object' && Array.isArray(data.holes) && !data.courses) {
-        throw new Error('dit is een bestand met een ronde, geen clubbestand. Lees het in bij Rondes.');
+        showInfoModal('Import mislukt', 'Dit is een bestand met een ronde, geen clubbestand. Lees het in bij Rondes.', 'red');
+        input.value = ''; return;
       }
       const validationError = validateImportedClubData(data);
-      if (validationError) throw new Error(validationError);
+      if (validationError) { showInfoModal('Import mislukt', validationError, 'red'); input.value = ''; return; }
 
       const doImport = () => {
         CLUBS[data.club] = data;
-        rebuildCourseLookup();
+        if (saveClubsToStorage() === false) {
+          draaiClubsTerug();
+          showInfoModal('Import mislukt', 'De club kon niet worden opgeslagen: er is niet genoeg opslagruimte, of de opslag is geblokkeerd. Er is niets gewijzigd.', 'red');
+          return;
+        }
+        rebuildCourseLookup(false);
         rebuildAll();
-        saveClubsToStorage();
         const n = Object.keys(data.courses).length;
         showInfoModal('Import voltooid', `"${data.club}" geïmporteerd (${n} baan${n !== 1 ? 'en' : ''}).${herkomstZin}`);
       };
@@ -15278,7 +16006,7 @@ function importCourseData(input) {
         doImport();
       }
     } catch(err) {
-      showInfoModal('Import mislukt', 'Fout: ' + err.message, 'red');
+      meldOnverwachteFout(`${err && err.name ? err.name + ': ' : ''}${(err && err.message) || err} (bij het inlezen van clubs)`);
     }
     input.value = '';
   };
@@ -15607,7 +16335,7 @@ function confirmPurgeNonQ(btn) {
       // Een lopende ronde is standaard niet-qualifying en werd hier meegewist; de ronde
       // van speler 2 was dan definitief weg.
       const saved = loadSavedRounds().filter(r => r.qualifying || isLopendeRonde(r));
-      metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
+      if (metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved))) === false) meldSchrijvenMislukt('Het opschonen');
       loadSaved();
       updateStorageSettingsUI();
     }
@@ -15689,7 +16417,7 @@ function confirmDeleteOtherPlayers(btn) {
     'Verwijderen',
     () => {
       const saved = loadSavedRounds().filter(r => (r.player || '').trim().toLowerCase() === main.toLowerCase() || isLopendeRonde(r));
-      metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved)));
+      if (metVerwijderen(() => setRoundsAndMark( JSON.stringify(saved))) === false) meldSchrijvenMislukt('Het verwijderen');
       loadSaved();
       updateStorageSettingsUI();
       updateOtherPlayerCleanupUI();
@@ -15929,6 +16657,7 @@ function pasWhsWeergaveToe() {
     // De WHS-groepering in het archief: die knop is weg, dus de weergave ook.
     if (window._groupByWhs) { window._groupByWhs = false; zetGroepeerKnop(null); }
     // Nieuwe rondes zijn niet qualifying: wat je niet ziet, vult de app niet in.
+    _qualVoorLus = null;
     sel.qualifying = false;
     if (typeof sel2 === 'object' && sel2) sel2.qualifying = false;
     const t1 = document.getElementById('qualifyToggle1');
@@ -16120,7 +16849,7 @@ function stepPutts(i, d) {
   }
   if (navigator.vibrate) navigator.vibrate(20);
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 // Lang indrukken (500 ms) op de puttwaarde wist hem, maar net als bij de score is dat
 // een VOORLOPIGE wijziging: bevestig je hem niet binnen 2 seconden met een tik op de
@@ -16136,7 +16865,7 @@ function clearPuttTap(revert) {
   puttTapHole = null;
   puttTapOld = null;
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 function clearPutts(i) {
   const h = game.holes[i];
@@ -16148,7 +16877,7 @@ function clearPutts(i) {
   if (navigator.vibrate) navigator.vibrate(20);
   puttTapTimeout = setTimeout(() => clearPuttTap(true), 2000);
   renderScore();
-  saveActiveRound();
+  bewaarNaTik();
 }
 // Tik op de waarde binnen die 2 seconden: wissen bevestigen.
 function puttValTap(i) {
@@ -16322,7 +17051,7 @@ function kopieerVersie() {
     setTimeout(() => { el.textContent = oud; }, 2000);   // gelijk aan de rest
   };
   const delen = () => {
-    if (navigator.share) navigator.share({ text: tekst, title: 'Versie Golf Score' });
+    if (navigator.share) navigator.share({ text: tekst, title: 'Versie Golf Score' }).catch(() => {});   // afbreken is geen fout
   };
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(tekst).then(gelukt).catch(delen);
@@ -16597,6 +17326,9 @@ document.addEventListener('focusin', (e) => {
       buildClubList();
     }
     if (e.key === 'golf_rounds' && e.newValue !== e.oldValue) {
+      // De knoppen op de rondekaarten verwijzen naar een plaats in de lijst. Die lijst is
+      // nu anders, dus opnieuw opbouwen: anders raakt een knop een andere ronde.
+      loadSaved();
       showInfoModal('Bijgewerkt in ander tabblad',
         'De rondes zijn in een ander tabblad gewijzigd. Ververs deze pagina om de laatste versie te zien; anders kun je wijzigingen overschrijven.');
     }
