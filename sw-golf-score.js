@@ -13,7 +13,7 @@
 //   - er een bestand is toegevoegd/verwijderd uit APP_FILES hieronder, of
 //   - je een directe, volledige refresh wilt forceren i.p.v. de geleidelijke
 //     achtergrond-verversing.
-const CACHE_VERSION = 'golf-score-e021887739c0';
+const CACHE_VERSION = 'golf-score-43d27717a4b3';
 
 // Bestanden die offline beschikbaar moeten zijn.
 const APP_FILES = [
@@ -80,8 +80,11 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
 
+  // Een pagina openen: een toevoeging achter het vraagteken (bijv. van een gedeelde link)
+  // negeren, zodat de bewaarde app direct opent. Anders wacht hij bij slecht bereik op
+  // een netwerk dat niet antwoordt. Gewone ophaalverzoeken (zoals ?verversen) blijven exact.
   e.respondWith(
-    caches.match(req).then(cached => {
+    caches.match(req, req.mode === 'navigate' ? { ignoreSearch: true } : undefined).then(cached => {
       const network = fetch(req).then(res => {
         // Vernieuw de cache op de achtergrond (alleen geldige, same-origin responses).
         if (res && res.ok && res.type === 'basic') {
