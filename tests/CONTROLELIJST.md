@@ -53,6 +53,7 @@ Dit zijn de regels die over de hele app gelden. Een nieuwe functie mag er geen b
 | De cache bevat alleen de appbestanden, elk één keer (ook na adressen met een toevoeging); een vers verzoek (?verversen) gaat naar het netwerk en wordt niet bewaard; nergens eindeloos wachten (eigen pagina 3 s met bewaarde app, anders 10 s); zonder netwerk en cache altijd een geldig antwoord; de achtergrondverversing komt in de cache | `test-sw-eigen-bestanden.py` (slecht bereik: server die niet antwoordt; geen bereik; ontbrekende bestanden in de cache) |
 | Een update installeert altijd haar eigen app, ook binnen de 10 minuten dat GitHub Pages een bestand laat bewaren; een mislukte update laat geen halve cache achter en de vorige kopie blijft werken | `test-sw-verse-installatie.py` (server met Cache-Control: max-age=600; update direct na openen; update waarbij golf-score.html niet binnenkomt; daarna offline) |
 | Bij slecht of geen bereik opent de geïnstalleerde app direct uit de opslag, ook via een adres met een toevoeging achter het vraagteken en na verversen; een nieuwe versie ophalen blijft via het netwerk gaan | `test-sw-slecht-bereik.py` (server die niet antwoordt en server die weg is) |
+| Golf Score, Trends en Events doen hetzelfde (apps-basis/conventies.md, §3): de cachenaam is een teller (`golf-score-v` + CACHE_VERSION) die omhoog gaat zodra de service worker wijzigt; staat er een verse kopie van de pagina, dan krijgt de app meteen het bericht `kopieVernieuwd` en toont ze de melding; de achtergrondverversing van de pagina gaat met no-cache, ook binnen de 10 minuten van GitHub Pages; een installatie op een verbinding die blijft hangen loopt binnen 45 s af en laat de vorige versie staan | `test-sw-gelijk-met-buren.py` (echte webserver; cachenaam en script, bericht en melding in een tweede venster, max-age=600, installatie op een server die niet antwoordt) |
 | Wat je ziet, wordt uitgerekend uit de holes: het Stableford-totaal en de netto par per hole worden niet overgenomen uit een opgeslagen (mogelijk ontbrekend of verouderd) veld | `test-afgeleide-waarden.py` (rondekaart, Gem. Stb, CSV-export, netto dubbel bogey op een ronde zonder ppar) |
 | Een mislukte import zegt waarom, in gewone taal: een onleesbaar bestand, of wat er aan de inhoud mankeert. Een fout in de app tijdens het inlezen wordt niet als 'ongeldig bestand' gemeld maar gaat naar de foutvanger | `test-importmeldingen.py` (11 rondebestanden en 4 clubbestanden via de knoppen; nagebootste fout in de keuring) |
 | Mislukt het opslaan midden in een handeling, dan blijft alles zoals het was: geen nieuwe of andere ronde zolang de lopende niet is bewaard, geen nieuwe naam in het profiel, geen verwijzing naar een club die niet is opgeslagen | `test-mislukt-opslaan-terugdraaien.py` (nieuwe ronde starten, andere ronde laden, 'Alles aanpassen', club hernoemen; en een start die niet kan worden opgeslagen laat scherm, geheugen en opslag ongewijzigd bij één speler, twee spelers, corrigeren en herplannen) |
@@ -168,6 +169,11 @@ controleren wel. Daarom vraag 1.
   golf-score.html zit en een afgebroken download niet in de cache komt. Kosten: zo'n
   280 KB per opening met bereik. Het alternatief (alleen via de wachtende update) is
   besproken en niet gekozen; zie ook de toelichting bovenin sw-golf-score.js.
+
+- **Drie pogingen bij het installeren** (16-10-2026). Golf Score probeert elk bestand bij een
+  update tot drie keer, elk met een grens van 10 s; Trends en Events één keer. Op de baan
+  wisselt het bereik, en een update die halverwege mislukt krijgt anders pas bij de
+  volgende opening een nieuwe kans. Zie apps-basis/conventies.md, 'Bewust verschillend'.
 
 ## Wat hier niet te testen is
 

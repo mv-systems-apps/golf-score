@@ -52,6 +52,7 @@ BROWSER = [
     ('test-sw-verse-installatie.py', 'een update installeert altijd de nieuwe app (niet uit de browsercache) en laat bij mislukken niets half achter', []),
     ('test-sw-slecht-bereik.py', 'bij slecht bereik opent de app direct uit de opslag, ook via een adres met een toevoeging', []),
     ('test-sw-ronde-en-update.py', 'andere apps houden hun cache; een update of opruimactie tijdens een ronde laat de app offline bruikbaar', []),
+    ('test-sw-gelijk-met-buren.py', 'wat Golf Score, Trends en Events gelijk doen: cachenaam als teller, meteen melden, no-cache, grens bij installeren', []),
     ('test-afgeleide-waarden.py', 'Stableford-totaal en netto par worden uit de holes berekend, niet overgenomen', []),
     ('test-wachtende-tik.py',   'een wachtende scorewijziging blijft bij haar eigen ronde, ook als een andere ronde wordt geladen', []),
     ('test-lege-ronde-overschrijft-niet.py', 'een lege ronde overschrijft nooit een ronde met scores; de weigering komt als false terug', []),

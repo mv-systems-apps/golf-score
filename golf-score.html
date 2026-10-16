@@ -1414,7 +1414,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 1352896-001</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 1352898-001</div>
     <div id="laatsteFouten" class="hidden" style="margin:6px 0 12px">
       <div style="font-size:17px;color:var(--red);font-weight:700">Laatste fouten</div>
       <div id="laatsteFoutenTekst" style="font-size:14px;color:var(--muted);white-space:pre-wrap;word-break:break-word;margin:4px 0 8px"></div>
@@ -8377,6 +8377,15 @@ async function checkAppUpdate() {
     b.dataset.ouder = cacheVersie[1] > eigen[1] ? '' : '1';
     b.classList.remove('hidden');
   } catch (e) { /* stil: puur informatief */ }
+}
+// De service worker meldt het zodra er een verse kopie van golf-score.html in de cache staat.
+// Op mobiel bereik is die verversing na 4 s vaak nog onderweg, en zonder dit bericht kwam de
+// melding pas bij het wegschakelen en terughalen. De controle na 4 s en bij terugkeer blijft
+// als vangnet, ook voor een service worker van een vorige versie die dit bericht niet kent.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'kopieVernieuwd') checkAppUpdate();
+  });
 }
 setTimeout(checkAppUpdate, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(checkAppUpdate, 2500); });

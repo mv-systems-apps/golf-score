@@ -5,7 +5,7 @@ Ze gaan uit van verzonnen rondes; jouw eigen gegevens staan hier bewust niet in.
 Wil je tegen je eigen backup testen, zet die dan naast deze map als
 'rondes_backup.json' — ijk-echt.py pakt hem dan op.
 """
-import json, os, shutil, sys, tempfile
+import json, os, re, shutil, sys, tempfile
 
 # Par en SI horen bij de tee (zie teePar in de app): de baan bewaart alleen holeIds.
 HOLES_A = [{"par": [4,3,5,4,4,3,4,5,4][i], "si": i + 1} for i in range(9)]
@@ -17,6 +17,22 @@ HOLES_C = [{"par": [4,4,4,3,5,4,4,3,5][i], "si": i + 1} for i in range(9)]
 # Standaard: golf-score.html één map hoger. Anders: APP=... meegeven.
 HIER = os.path.dirname(os.path.abspath(__file__))
 APP = os.environ.get('APP') or os.path.join(os.path.dirname(HIER), 'golf-score.html')
+
+def zet_cachenaam(sw, naam):
+    """Geeft de tekst van sw-golf-score.js terug met een vaste cachenaam, voor proeven met
+    twee of meer versies. Sinds de drie apps gelijk zijn getrokken is de naam afgeleid van
+    een teller (CACHE_NAME = 'golf-score-v' + CACHE_VERSION); de oude schrijfwijze met de
+    naam zelf in CACHE_VERSION wordt ook herkend, zodat een proef tegen de vorige versie
+    van de app kan draaien. Grijpt geen van beide aan, dan is dat een fout in de proef."""
+    # Ook een naam die een eerdere aanroep al vast zette: een proef stelt vaak meerdere
+    # versies na elkaar in.
+    nieuw, n = re.subn(r"const CACHE_NAME = (?:'golf-score-v' \+ CACHE_VERSION|'[^']*');", f"const CACHE_NAME = '{naam}';", sw)
+    if not n:
+        nieuw, n = re.subn(r"const CACHE_VERSION = '[^']*';", f"const CACHE_VERSION = '{naam}';", sw)
+    if not n:
+        raise RuntimeError('cachenaam niet gevonden in sw-golf-score.js')
+    return nieuw
+
 
 def app_map():
     """De map met de app-bestanden zoals ze online komen (html, service worker, pictogrammen).

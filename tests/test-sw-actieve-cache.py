@@ -19,7 +19,7 @@ from functools import partial
 from playwright.async_api import async_playwright
 HIER = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HIER)
 
-sys.path.insert(0, HIER); from testdata import app_map
+sys.path.insert(0, HIER); from testdata import app_map, zet_cachenaam
 BRON = app_map()  # werkmap: 'uit'; in de repository: de app naast tests/
 fouten = []
 def check(naam, gekregen, verwacht):
@@ -33,7 +33,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 def zet_versie(wortel, cache, label):
     p = os.path.join(wortel, 'golf-score', 'sw-golf-score.js'); s = open(p, encoding='utf-8').read()
-    open(p, 'w', encoding='utf-8').write(re.sub(r"const CACHE_VERSION = '[^']*';", f"const CACHE_VERSION = '{cache}';", s))
+    open(p, 'w', encoding='utf-8').write(zet_cachenaam(s, cache))
     p = os.path.join(wortel, 'golf-score', 'golf-score.html'); s = open(p, encoding='utf-8').read()
     open(p, 'w', encoding='utf-8').write(re.sub(r'Versie [0-9A-Z]+-[0-9A-F]+', f'Versie {label}', s))
 
