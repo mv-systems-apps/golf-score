@@ -1,38 +1,27 @@
-// Service worker voor de Golf Score PWA.
-// Plaats dit bestand als sw-golf-score.js naast golf-score.html in de GitHub
-// Pages-repo. De bestandsnaam bevat de app, zodat de service workers van de drie apps
-// elkaar niet overschrijven zodra ze bij elkaar komen te staan.
+// Service worker voor Golf Score: stale-while-revalidate. Meteen uit de eigen
+// cache bedienen en op de achtergrond verversen; of er een nieuwe versie is,
+// beslist de app zelf (checkAppUpdate, met het versiestempel).
 //
-// Dezelfde opzet als sw-trends.js en sw-events.js: de drie werken hetzelfde, alleen in
-// de schrijfstijl van hun eigen app. Wat ze gemeen hebben staat in
-// apps-basis/conventies.md, paragraaf 3; wijzig je hier iets wezenlijks, doe het dan
-// ook daar en in de andere twee. Eén bewust verschil: Golf Score probeert een bestand
-// bij de installatie tot drie keer, omdat een update op de baan bij wisselend bereik
+// De drie service workers doen hetzelfde, elk in de schrijfstijl van de eigen
+// app; de gedeelde regels staan in apps-basis/conventies.md, paragraaf 3.
+// Wijzig je hier iets wezenlijks, doe het dan ook daar en in de andere twee.
+// Bewust verschil (conventies, paragraaf 4): Golf Score probeert elk bestand bij
+// de installatie tot drie keer, omdat een update op de baan bij wisselend bereik
 // anders pas bij de volgende opening een nieuwe kans krijgt.
 //
-// CACHE_VERSION bepaalt de naam van de cache en gaat met update_cache_version.py omhoog
-// zodra DIT bestand wijzigt (of als APP_FILES verandert). Doe je dat niet, dan
-// installeert de nieuwe service worker in dezelfde cache waaruit de oude nog bedient.
-// Voor een wijziging aan alleen golf-score.html is het niet nodig: de fetch-handler
-// hieronder ververst de cache bij elk bezoek op de achtergrond (stale-while-revalidate).
-// Het stempel waaraan de app een nieuwe versie herkent, staat in golf-score.html en
-// gaat met de hand omhoog. Tot 16-10-2026 was de naam een hash van de appbestanden;
-// daar zat dit bestand zelf niet in, dus juist bij een wijziging hier bleef hij gelijk.
+// CACHE_VERSION is de naam van de cache. update_cache_version.py verhoogt hem,
+// en dat hoort zodra dit bestand of de lijst met appbestanden wijzigt: anders
+// installeert de nieuwe worker in dezelfde cache waaruit de oude nog bedient.
+// Het versiestempel in golf-score.html is een eigen teller en gaat met de hand
+// omhoog.
 //
-// BEWUSTE KEUZE (12-10-2026, versie 13527DA-13C): stale-while-revalidate blijft.
-// Gevolg, geaccepteerd: de app zelf (golf-score.html) komt via de achtergrondverversing
-// bij de volgende opening binnen, ook zonder tik op de updatemelding. 'Jij bepaalt
-// wanneer' geldt alleen voor de service worker. Afgewogen:
-//   - scores staan in de opslag, niet in de app; elke versie leest die van de vorige
-//     (test-backup-overstap.py), dus een nieuwe app tijdens een ronde kost niets;
-//   - de app herlaadt nooit midden in gebruik, alleen bij het openen;
-//   - een nieuwe pagina met de oude service worker of oude pictogrammen botst in de
-//     praktijk niet: alle logica zit in golf-score.html;
-//   - een afgebroken download komt niet in de cache;
-//   - kosten: zo'n 280 KB per opening met bereik.
-// Het alternatief (geen achtergrondverversing; de app alleen via de wachtende update)
-// is besproken en bewust niet gekozen.
-const CACHE_VERSION = 1;
+// Bewuste keuze: de app zelf komt via de achtergrondverversing bij de volgende
+// opening binnen, ook zonder tik op de updatemelding; 'jij bepaalt wanneer' geldt
+// alleen voor de service worker. Dat kan omdat de scores in de opslag staan en
+// elke versie die van de vorige leest (test-backup-overstap.py), de app nooit
+// midden in gebruik herlaadt, alle logica in golf-score.html zit en een
+// afgebroken download niet in de cache komt.
+const CACHE_VERSION = 2;
 const CACHE_NAME = 'golf-score-v' + CACHE_VERSION;
 
 // Bestanden die offline beschikbaar moeten zijn.
@@ -45,38 +34,37 @@ const APP_FILES = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
-  // Maskeerbare varianten: randvullend, zonder eigen afronding. Android legt daar zijn
-  // eigen vorm overheen. Zonder deze twee toonde het opstartscherm het gewone pictogram
-  // ongemaskeerd, met witte hoekjes eromheen.
+  // Maskeerbare varianten: randvullend, zonder eigen afronding; Android legt daar zijn
+  // eigen vorm overheen. Zonder deze twee toont het opstartscherm het gewone pictogram
+  // met witte hoekjes eromheen.
   './icon-maskable-192.png',
   './icon-maskable-512.png',
 ];
 
-// Zonder deze bestanden opent de app niet. Lukt het ophalen daarvan niet, dan wordt de
-// update afgebroken: de vorige versie en haar kopie blijven staan, en de browser probeert
-// het later vanzelf opnieuw. Voorheen ging de update toch door en verdween de oude
-// kopie; bij slecht bereik op de baan opende de app daarna offline niet meer.
+// Zonder dit bestand is er niets om offline te openen, dus dit moet slagen. Lukt het
+// niet, dan wordt de update afgebroken: de vorige versie en haar kopie blijven staan,
+// en de browser probeert het later vanzelf opnieuw.
 const VERPLICHT = ['./golf-score.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
-    // Bestond deze cache al (zelfde versie opnieuw geïnstalleerd), dan wordt hij bij een
-    // mislukking niet weggegooid: dan is het de kopie waar de app op draait.
+    // Bestond deze cache al, dan is CACHE_VERSION niet verhoogd en bedient de draaiende
+    // worker er nog uit: een mislukte installatie wist hem dan niet.
     const bestond = await caches.has(CACHE_NAME);
     const c = await caches.open(CACHE_NAME);
-    // Per bestand toevoegen is robuuster dan addAll (dat faalt als één bestand ontbreekt).
-    // Bij falen een paar keer opnieuw proberen.
+    // Per bestand toevoegen, niet met addAll (dat faalt als één bestand ontbreekt), elk
+    // met tot drie pogingen.
     const gelukt = await Promise.all(APP_FILES.map(url => addWithRetry(c, url)));
     const mist = APP_FILES.filter((url, i) => !gelukt[i]);
     if (mist.some(url => VERPLICHT.includes(url))) {
-      // Geen half gevulde cache achterlaten: die gaat anders tot de volgende geslaagde
-      // update door voor een kopie van de nieuwe versie.
+      // Een cache die hier zelf is aangemaakt, opruimen: anders gaat hij door voor een
+      // kopie van de nieuwe versie.
       if (!bestond) await caches.delete(CACHE_NAME).catch(() => {});
       throw new Error('Update afgebroken: ' + mist.join(', ') + ' niet opgehaald');
     }
-    // Een pictogram of ander bijbestand dat niet lukte: overnemen uit een vorige kopie van
-    // Golf Score (de nieuwste eerst), zodat het niet ontbreekt. Uitdrukkelijk alleen uit
-    // eigen caches: caches.match() zou ook in die van Events en Trends zoeken.
+    // Een bijbestand dat niet binnenkwam, overnemen uit de nieuwste vorige eigen cache,
+    // zodat het niet ontbreekt. Alleen eigen caches: caches.match() zou ook in die van
+    // Events en Trends zoeken.
     if (mist.length) {
       const vorige = (await caches.keys()).filter(k => k.startsWith('golf-score-') && k !== CACHE_NAME).reverse();
       for (const url of mist) {
@@ -88,9 +76,9 @@ self.addEventListener('install', e => {
       }
     }
     // Geen skipWaiting: een nieuwe versie neemt een open app niet vanzelf over. De app
-    // meldt dat er een nieuwe versie klaarstaat en vraagt pas om de overname als je op
-    // die melding tikt (zie de message-handler hieronder). Is de app helemaal gesloten,
-    // dan neemt de browser de nieuwe versie bij de volgende start zelf in gebruik.
+    // meldt de wachtende versie en vraagt pas om de overname als je op die melding tikt;
+    // zie de message-handler. Is de app helemaal gesloten, dan neemt de browser de
+    // nieuwe versie bij de volgende start zelf in gebruik.
   })());
 });
 
@@ -104,11 +92,11 @@ self.addEventListener('message', e => {
 async function addWithRetry(cache, url, attempts = 3) {
   const adres = new URL(url, self.location.href).href;
   for (let i = 0; i < attempts; i++) {
-    // cache: 'reload' slaat de browsercache over. GitHub Pages laat een bestand 10 minuten
-    // bewaren; zonder dit kreeg een update binnen die tijd de vorige golf-score.html mee.
-    // Elke poging heeft een grens van 10 s en wordt dan echt afgebroken: een verbinding die
-    // bleef hangen hield de installatie anders eindeloos vast, en zolang die liep deed
-    // registration.update() niets. Drie pogingen zijn dus hooguit zo'n 30 s.
+    // cache: 'reload' zodat de installatie geen verouderde kopie uit de browsercache
+    // overneemt: GitHub Pages laat een bestand 10 minuten bewaren. Elke poging heeft de
+    // grens van 10 s, zodat een hangende verbinding de installatie niet eindeloos ophoudt;
+    // zolang die loopt, doet registration.update() niets. Drie pogingen zijn hooguit
+    // zo'n 30 s.
     try {
       const h = haalMetStop(adres, { cache: 'reload' });
       const res = await metGrens(h.belofte, GRENS, h.stop);
@@ -122,10 +110,9 @@ async function addWithRetry(cache, url, attempts = 3) {
 }
 
 // ── Welke verzoeken zijn van deze app ──────────────────────────────────────
-// Alleen de bestanden uit APP_FILES worden uit de cache beantwoord en bewaard, en altijd
-// onder hun pad ZONDER toevoeging achter het vraagteken. Voorheen kreeg elk adres met een
-// toevoeging (een gedeelde link, ?verversen) een eigen kopie van de hele app in de cache,
-// telkens zo'n 1 MB, die daarna verouderde.
+// Alleen de bestanden uit APP_FILES worden uit de cache beantwoord en bewaard, altijd onder
+// hun pad zonder zoekstring: anders krijgt elk adres met een zoekstring (een gedeelde link,
+// ?verversen) een eigen kopie van de hele app, die daarna veroudert.
 const EIGEN_PADEN = new Set(APP_FILES.map(u => new URL(u, self.location.href).pathname));
 const APP_SLEUTEL = new URL('./golf-score.html', self.location.href).href;
 function sleutel(url) { return url.origin + url.pathname; }
@@ -136,17 +123,23 @@ function uitEigenCache(adres) {
   return caches.open(CACHE_NAME).then(c => c.match(adres)).catch(() => undefined);
 }
 
-// Hoe lang er op het netwerk gewacht wordt als de cache een bestand niet heeft. Bij een
-// treffer wordt nooit gewacht. Een pagina wacht korter als de bewaarde app klaarstaat.
+// Drie uiterste wachttijden, naar de rol van het verzoek; bij de grens wordt het verzoek
+// echt afgebroken (zie metGrens).
+// - GRENS: een cachemisser; dan is dit verzoek het antwoord. Ook elke ophaalpoging van de
+//   installatie.
+// - GRENS_MET_APP: een paginaverzoek mist de cache terwijl de app wel bewaard is. Lang
+//   wachten koopt dan niets: liever na 3 s de bewaarde app.
 const GRENS = 10000;
 const GRENS_MET_APP = 3000;
-// Een verversing op de achtergrond mag langer duren (een trage maar werkende verbinding),
-// maar niet eindeloos: een verbinding die blijft hangen houdt anders een van de weinige
-// verbindingen per server bezet, en dan wachten ook latere verzoeken.
+// - GRENS_ACHTERGROND: een cachetreffer. Het antwoord is al gegeven en dit verzoek ververst
+//   alleen de kopie, dus die mag ruim, maar niet eindeloos: een hangende verbinding houdt
+//   anders een van de weinige verbindingen per server bezet, en dan wachten ook latere
+//   verzoeken.
 const GRENS_ACHTERGROND = 60000;
 
-// Ophalen met een stopknop: bij het verstrijken van een grens wordt het verzoek echt
-// afgebroken, zodat de verbinding vrijkomt.
+// Het netwerk met een uiterste grens. Bij de grens wordt het verzoek echt afgebroken en
+// niet alleen losgelaten; anders houdt het een verbinding bezet terwijl niemand meer op
+// het antwoord wacht.
 function haalMetStop(invoer, opties = {}) {
   const stop = new AbortController();
   return { stop, belofte: fetch(invoer, Object.assign({}, opties, { signal: stop.signal })) };
@@ -159,8 +152,8 @@ function metGrens(belofte, ms, stop) {
 }
 
 // Een geldig antwoord als netwerk en cache allebei niets hebben: voor een pagina een korte
-// uitleg, voor de rest een lege foutcode. Voorheen kreeg de browser niets terug en toonde
-// hij een netwerkfout zonder uitleg.
+// uitleg, voor de rest een lege foutcode. Anders toont de browser een netwerkfout zonder
+// uitleg.
 function offlineAntwoord(navigatie) {
   if (!navigatie) return new Response('', { status: 503, statusText: 'offline' });
   return new Response('<!doctype html><html lang="nl"><meta charset="utf-8">'
@@ -172,9 +165,9 @@ function offlineAntwoord(navigatie) {
     { status: 503, statusText: 'offline', headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
-// Zeggen dat er een verse kopie van de pagina in de cache staat. De app controleert 4 s na
-// de start, maar op mobiel bereik is de verversing dan vaak nog onderweg; zonder dit
-// bericht kwam de updatemelding pas bij het wegschakelen en terughalen van de app.
+// Zeggen dat er een verse kopie van de pagina in de cache staat. De app kijkt ook zelf
+// (4 s na de start), maar dan is de verversing op mobiel bereik vaak nog onderweg; zonder
+// dit bericht komt de melding pas bij het wegschakelen en terughalen van de app.
 function meldVerversing() {
   if (!self.clients || typeof self.clients.matchAll !== 'function') return;
   self.clients.matchAll({ type: 'window' }).then(lijst => {
@@ -184,11 +177,12 @@ function meldVerversing() {
 
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
-    // Alleen eigen oude caches: andere apps op dezelfde origin (GitHub Pages:
-    // mv-systems-apps.github.io/<app>/) delen dezelfde cacheopslag.
+    // Alle apps op deze origin (mv-systems-apps.github.io/<app>/) delen dezelfde
+    // cacheopslag: alleen eigen oude caches opruimen. Pas bij activeren, zodat de vorige
+    // cache blijft staan tot de nieuwe versie het werkelijk overneemt.
     const keys = await caches.keys();
     await Promise.all(keys.filter(k => k.startsWith('golf-score-') && k !== CACHE_NAME).map(k => caches.delete(k)));
-    // Kopieën onder een adres met toevoeging (uit eerdere versies) opruimen.
+    // Kopieën onder een adres met zoekstring opruimen; die kunnen van oudere versies zijn.
     try {
       const c = await caches.open(CACHE_NAME);
       for (const req of await c.keys()) if (new URL(req.url).search) await c.delete(req);
@@ -205,26 +199,25 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;
   const navigatie = req.mode === 'navigate';
   // Alleen de eigen bestanden van Golf Score, ook bij een navigatie. Al het andere
-  // (een andere pagina, een andere app) gaat ongemoeid naar het netwerk.
+  // (een andere pagina, een andere app): laten gaan alsof er geen service worker is.
   if (!EIGEN_PADEN.has(url.pathname)) return;
 
   // Een verzoek dat uitdrukkelijk vers wil (de app haalt zo een actuele kopie op met
   // ?verversen): altijd het netwerk, nooit de cache, niets bewaren. Wel met een grens,
-  // zodat de app bij slecht bereik na 10 seconden 'Geen verbinding' kan melden.
+  // zodat de app bij slecht bereik na 10 s 'Geen verbinding' kan melden, en zonder
+  // netwerk een foutcode in plaats van de oude kopie.
   if (!navigatie && (req.cache === 'reload' || req.cache === 'no-store')) {
     const v = haalMetStop(req);
     e.respondWith(metGrens(v.belofte, GRENS, v.stop).catch(() => offlineAntwoord(false)));
     return;
   }
-  // Eerst in de eigen cache kijken, dan pas het netwerk, zoals bij Trends en Events: zo
-  // weet het verzoek welke rol het heeft. Bij een treffer is het alleen de verversing op de
-  // achtergrond (ruime grens, en de pagina met no-cache); bij een misser is het het antwoord
-  // zelf (10 s, of 3 s als de bewaarde app klaarstaat). Tot 16-10-2026 begon het netwerk
-  // vóór het opzoeken, wat een paar milliseconden scheelde maar twee klokken vroeg.
+  // Eerst de eigen cache, dan het netwerk: zo weet het verzoek welke rol het heeft. Bij een
+  // treffer is het alleen de achtergrondverversing (ruime grens, de pagina met no-cache);
+  // bij een misser het antwoord zelf (10 s, of 3 s als de bewaarde app klaarstaat).
   //
-  // De achtergrondverversing loopt via waitUntil, zodat de browser de service worker niet
-  // stopt voordat de nieuwe kopie in de cache staat. Die waitUntil moet nu al, tijdens het
-  // afhandelen van het event, worden aangemeld; de belofte wordt later ingevuld.
+  // Deze waitUntil moet nu al, tijdens het afhandelen van het event, worden aangemeld; de
+  // belofte wordt later ingevuld. Hij omvat het ophalen en het wegschrijven, zodat de
+  // browser de worker niet stopt voordat de nieuwe kopie in de cache staat.
   let achtergrondKlaar;
   e.waitUntil(new Promise(r => { achtergrondKlaar = r; }));
 
@@ -233,10 +226,11 @@ self.addEventListener('fetch', e => {
       const cached = await uitEigenCache(sleutel(url));
       const app = (!cached && navigatie) ? await uitEigenCache(APP_SLEUTEL) : undefined;
       const grens = cached ? GRENS_ACHTERGROND : (app ? GRENS_MET_APP : GRENS);
-      // Altijd het adres zonder toevoeging, zodat er geen tweede kopie onder een ander adres
-      // komt. De pagina bij een treffer met no-cache: GitHub Pages laat een bestand 10 minuten
-      // bewaren, en een gewoon verzoek kon dan dezelfde oude golf-score.html terugschrijven;
-      // vlak na een push bleef de updatemelding zo uit. Alleen de pagina: daar staat het stempel.
+      // Altijd het adres zonder zoekstring, zodat er geen tweede kopie onder een ander adres
+      // komt. Bij een cachetreffer op de pagina met no-cache: GitHub Pages laat een bestand
+      // 10 minuten bewaren, en een gewoon verzoek kan dan dezelfde oude bytes terugschrijven,
+      // waardoor de melding van een nieuwe versie vlak na een push uitblijft. Alleen de
+      // pagina: daar staat het stempel.
       const h = haalMetStop(sleutel(url), (cached && navigatie) ? { cache: 'no-cache' } : {});
       let kopie = null;
       const netwerk = metGrens(h.belofte, grens, h.stop).then(res => {
