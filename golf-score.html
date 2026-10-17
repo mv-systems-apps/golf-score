@@ -815,7 +815,6 @@
         <input id="iTime" type="time" aria-label="Starttijd van de ronde" onchange="onDateTimeChange()" />
       </div>
     </div>
-    <input id="iDateTime" type="datetime-local" style="display:none" />
   </div>
 
 
@@ -1414,7 +1413,7 @@
     <!-- Dit is HET versiestempel van de app: checkAppUpdate leest 'Versie X-Y' hier
      uit om te zien of er een nieuwere versie in de cache staat. Niet hernoemen
      of weghalen zonder die functie aan te passen. -->
-    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 1352898-004</div>
+    <div id="appVersionStamp" onclick="kopieerVersie()" style="font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px;cursor:pointer" title="Tik om te kopiëren">Versie 1352898-005</div>
     <div id="laatsteFouten" class="hidden" style="margin:6px 0 12px">
       <div style="font-size:17px;color:var(--red);font-weight:700">Laatste fouten</div>
       <div id="laatsteFoutenTekst" style="font-size:14px;color:var(--muted);white-space:pre-wrap;word-break:break-word;margin:4px 0 8px"></div>
@@ -3651,9 +3650,6 @@ function onDateTimeChange() {
   if (!time && sel.time) {
     timeEl.value = sel.time;
   }
-  // Verborgen datetime-local-veld meehouden, voor achterwaartse compatibiliteit.
-  const hidden = document.getElementById('iDateTime');
-  if (hidden) hidden.value = date + 'T' + (timeEl.value || '00:00');
   sel.date = date;
   sel.time = timeEl.value;
   sel.dateTimeEdited = true;
@@ -17373,7 +17369,6 @@ document.addEventListener('focusin', (e) => {
     const savedTime = storage.getItem('golf_setup_time') || '00:00';
     document.getElementById('iDate').value = savedDate;
     document.getElementById('iTime').value = savedTime;
-    document.getElementById('iDateTime').value = savedDate + 'T' + savedTime;
     sel.date = savedDate;
     sel.time = savedTime;
     sel.dateTimeEdited = true;
@@ -17384,7 +17379,6 @@ document.addEventListener('focusin', (e) => {
     const [initDate, initTime] = dt.split('T');
     document.getElementById('iDate').value = initDate;
     document.getElementById('iTime').value = initTime;
-    document.getElementById('iDateTime').value = dt;
     sel.date = initDate;
     sel.time = initTime;
     sel.dateTimeEdited = true;
