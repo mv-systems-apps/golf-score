@@ -8,9 +8,14 @@ controles missen — fouten in het samenspel tussen functies.
 ## Draaien
 
 ```bash
-python3 tests/run-alles.py                          # tegen ../golf-score.html
+python3 tests/run-alles.py --snel                   # na elke wijziging: zonder de zware tests
+python3 tests/run-alles.py                          # vóór elke push: alles (~50 min)
 APP=/pad/naar/golf-score.html python3 tests/run-alles.py
 ```
+
+De zware tests (lijst ZWAAR in run-alles.py) proberen alles in elke stand: alles
+aantikken, elke knop, honderden rondes. Ze nemen samen meer dan de helft van de tijd.
+Ze slaan over in de snelle run, maar gaan altijd mee vóór een push.
 
 Eén onderdeel apart:
 

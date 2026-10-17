@@ -2,8 +2,11 @@
 """Draait alle controles en tests en geeft één samenvatting.
 
 Gebruik:
-    python3 tests/run-alles.py                 # tegen ../golf-score.html
+    python3 tests/run-alles.py                 # alles, tegen ../golf-score.html (~50 min)
+    python3 tests/run-alles.py --snel          # zonder de zware tests (~20 min)
     APP=/pad/naar/golf-score.html python3 tests/run-alles.py
+
+De snelle run is voor na elke wijziging; de volledige run vóór elke push.
 
 Eerst de snelle statische controles (node), dan de browsertests (playwright).
 Stopt nergens: je krijgt altijd het volledige beeld.
@@ -11,6 +14,16 @@ Stopt nergens: je krijgt altijd het volledige beeld.
 import os, re, subprocess, sys, time
 
 HIER = os.path.dirname(os.path.abspath(__file__))
+
+# De zware tests: elk ruim een minuut, samen meer dan de helft van de looptijd. Ze
+# proberen alles in elke stand (alles aantikken, elke knop, honderden rondes). In de
+# snelle run slaan ze over; vóór een push draaien ze altijd mee.
+ZWAAR = {
+    'test-een-tik-wist-niets.py', 'test-score-en-putts.py', 'test-importkeuring.py',
+    'test-velden-als-tekst.py', 'test-honderden-rondes.py', 'test-instelling-wist-niets.py',
+    'test-backup-scenarios.py', 'test-misvormde-opslag.py',
+}
+SNEL = '--snel' in sys.argv[1:]
 APP = os.environ.get('APP') or os.path.join(os.path.dirname(HIER), 'golf-score.html')
 
 STATISCH = [
@@ -231,9 +244,12 @@ def main():
         if os.path.exists(os.path.join(HIER, naam)):
             goed.append(draai(['node', naam], naam, oms, meting))
 
-    kop('BROWSERTESTS')
+    kop('BROWSERTESTS' + (' (snel: zonder de zware)' if SNEL else ''))
+    overgeslagen = []
     for regel in BROWSER:
         naam, oms, extra = regel[0], regel[1], regel[2]
+        if SNEL and naam in ZWAAR:
+            overgeslagen.append(naam); continue
         meting = len(regel) > 3 and regel[3]
         if os.path.exists(os.path.join(HIER, naam)):
             goed.append(draai(['python3', naam] + ([APP] + extra if extra else []), naam, oms, meting))
@@ -250,6 +266,9 @@ def main():
         print('  Kijk hierboven bij de regels met !! of ?')
     else:
         print('  Alles in orde.')
+    if SNEL:
+        print(f'  SNELLE RUN: {len(overgeslagen)} zware tests overgeslagen ({", ".join(overgeslagen)}).')
+        print('  Vóór een push de volledige run: python3 tests/run-alles.py')
     # De doorloop zegt of de bestaande regels nog gelden. Of de WIJZIGING goed is afgedekt
     # staat er niet in: daarvoor zijn de zes vragen.
     print()
