@@ -21,7 +21,7 @@
 // elke versie die van de vorige leest (test-backup-overstap.py), de app nooit
 // midden in gebruik herlaadt, alle logica in golf-score.html zit en een
 // afgebroken download niet in de cache komt.
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_NAME = 'golf-score-v' + CACHE_VERSION;
 
 // Bestanden die offline beschikbaar moeten zijn.
@@ -48,19 +48,31 @@ const VERPLICHT = ['./golf-score.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
+    // Eerst alles ophalen (per bestand, elk met tot drie pogingen; niet met addAll, dat
+    // faalt als één bestand ontbreekt), en pas wegschrijven als het verplichte bestand
+    // binnen is. Anders staan bij een afgebroken update de bijbestanden van de nieuwe
+    // versie al in de cache, en is CACHE_VERSION niet verhoogd, dan is dat de cache
+    // waaruit de draaiende versie bedient. Zo doen Events en Trends het ook.
+    const opgehaald = await Promise.all(APP_FILES.map(url => haalMetPogingen(url)));
+    const mist = APP_FILES.filter((url, i) => !opgehaald[i]);
+    if (mist.some(url => VERPLICHT.includes(url))) {
+      throw new Error('Update afgebroken: ' + mist.join(', ') + ' niet opgehaald');
+    }
     // Bestond deze cache al, dan is CACHE_VERSION niet verhoogd en bedient de draaiende
     // worker er nog uit: een mislukte installatie wist hem dan niet.
     const bestond = await caches.has(CACHE_NAME);
     const c = await caches.open(CACHE_NAME);
-    // Per bestand toevoegen, niet met addAll (dat faalt als één bestand ontbreekt), elk
-    // met tot drie pogingen.
-    const gelukt = await Promise.all(APP_FILES.map(url => addWithRetry(c, url)));
-    const mist = APP_FILES.filter((url, i) => !gelukt[i]);
-    if (mist.some(url => VERPLICHT.includes(url))) {
+    const zet = (url, res) => c.put(new URL(url, self.location.href).href, res);
+    try {
+      // Een bijbestand mag ook bij het wegschrijven mislukken (volle opslag); het
+      // verplichte bestand niet.
+      await Promise.all(APP_FILES.map((url, i) => !opgehaald[i] ? null
+        : VERPLICHT.includes(url) ? zet(url, opgehaald[i]) : zet(url, opgehaald[i]).catch(() => null)));
+    } catch (fout) {
       // Een cache die hier zelf is aangemaakt, opruimen: anders gaat hij door voor een
       // kopie van de nieuwe versie.
       if (!bestond) await caches.delete(CACHE_NAME).catch(() => {});
-      throw new Error('Update afgebroken: ' + mist.join(', ') + ' niet opgehaald');
+      throw fout;
     }
     // Een bijbestand dat niet binnenkwam, overnemen uit de nieuwste vorige eigen cache,
     // zodat het niet ontbreekt. Alleen eigen caches: caches.match() zou ook in die van
@@ -89,7 +101,7 @@ self.addEventListener('message', e => {
   if (e.data && e.data.type === 'welkeCache' && e.ports && e.ports[0]) e.ports[0].postMessage({ cache: CACHE_NAME });
 });
 
-async function addWithRetry(cache, url, attempts = 3) {
+async function haalMetPogingen(url, attempts = 3) {
   const adres = new URL(url, self.location.href).href;
   for (let i = 0; i < attempts; i++) {
     // cache: 'reload' zodat de installatie geen verouderde kopie uit de browsercache
@@ -99,14 +111,19 @@ async function addWithRetry(cache, url, attempts = 3) {
     // zo'n 30 s.
     try {
       const h = haalMetStop(adres, { cache: 'reload' });
-      const res = await metGrens(h.belofte, GRENS, h.stop);
+      // De inhoud meteen helemaal lezen, binnen dezelfde grens: er wordt pas
+      // weggeschreven als alles binnen is, en een antwoord waarvan de inhoud nog niet
+      // gelezen is houdt een verbinding bezet. De browser opent er maar een paar per
+      // server, dus de laatste bestanden zouden dan op de grens wachten.
+      const res = await metGrens(h.belofte.then(async r => (!r || !r.ok) ? r
+        : new Response(await r.blob(), { status: r.status, statusText: r.statusText, headers: r.headers })),
+        GRENS, h.stop);
       if (!res || !res.ok) throw new Error('status ' + (res && res.status));
-      await cache.put(adres, res);
-      return true;
+      return res;
     }
     catch (e) { /* opnieuw proberen; na de laatste poging beslist de installatie */ }
   }
-  return false;
+  return null;
 }
 
 // ── Welke verzoeken zijn van deze app ──────────────────────────────────────
