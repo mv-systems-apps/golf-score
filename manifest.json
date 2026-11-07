@@ -1,0 +1,105 @@
+{
+  "name": "Golf Score",
+  "short_name": "Golf Score",
+  "description": "Golf score app",
+  "start_url": "./golf-score.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1a3a2a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nieuwe ronde",
+      "short_name": "Nieuwe ronde",
+      "description": "Het startscherm",
+      "url": "./golf-score.html?snel=start",
+      "icons": [
+        {
+          "src": "./snelkoppelingen/start.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        },
+        {
+          "src": "./snelkoppelingen/start.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "maskable"
+        }
+      ]
+    },
+    {
+      "name": "Score",
+      "short_name": "Score",
+      "description": "De lopende ronde, anders het startscherm",
+      "url": "./golf-score.html?snel=score",
+      "icons": [
+        {
+          "src": "./snelkoppelingen/score.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        },
+        {
+          "src": "./snelkoppelingen/score.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "maskable"
+        }
+      ]
+    },
+    {
+      "name": "Statistiek",
+      "short_name": "Statistiek",
+      "description": "Het tabblad Statistiek",
+      "url": "./golf-score.html?snel=statistiek",
+      "icons": [
+        {
+          "src": "./snelkoppelingen/statistiek.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        },
+        {
+          "src": "./snelkoppelingen/statistiek.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "maskable"
+        }
+      ]
+    }
+  ]
+}
