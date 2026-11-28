@@ -1,0 +1,21 @@
+<!-- Maskeerbare versie: geen eigen afronding en RANDVULLEND, zodat Android zijn eigen
+     vorm eroverheen kan leggen. De tekening staat in de veilige cirkel (de middelste
+     80%), want een maskeerbaar pictogram mag aan de randen bijgesneden worden.
+     Het verloop loopt door tot de rand: daardoor zijn er geen witte hoekjes meer op het
+     opstartscherm, waar Android het pictogram ongemaskeerd toont. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6ec6e8"/>
+      <stop offset="100%" stop-color="#1a8a54"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" fill="url(#sky)"/>
+  <!-- Tekening 20% kleiner en gecentreerd: alles blijft binnen de veilige cirkel. -->
+  <g transform="translate(50 50) scale(0.78) translate(-50 -50)">
+    <ellipse cx="50" cy="72" rx="27" ry="7" fill="#136b3f"/>
+    <rect x="47" y="26" width="5" height="46" fill="#e8c766"/>
+    <path d="M52 28 L77 36 L52 45 Z" fill="#d94b3c"/>
+    <circle cx="68" cy="66" r="6" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+  </g>
+</svg>
